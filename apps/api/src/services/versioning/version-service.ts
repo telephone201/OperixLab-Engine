@@ -3,7 +3,7 @@
  * @description Implements immutable workflow versioning and version chains.
  */
 
-import { db } from '../lib/db';
+import { db } from '../../lib/db';
 import { artifactService } from './artifact-service';
 import { hashService } from './hash-service';
 import { auditLogger } from '../core\logging\audit-logger';
@@ -169,3 +169,5 @@ export class WorkflowVersionService {
 }
 
 export const workflowVersionService = new WorkflowVersionService();
+
+

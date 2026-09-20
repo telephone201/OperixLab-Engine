@@ -6,7 +6,7 @@
  * Composition is a blueprinting engine, NOT a workflow builder.
  */
 
-import { db } from '../lib/db';
+import { db } from '../../lib/db';
 import { HardGateEvaluator, GateStatus } from './hard-gate-evaluator';
 
 export enum CompositionStatus {
@@ -205,3 +205,4 @@ export class CompositionEngine {
             .map(r => r.id);
     }
 }
+

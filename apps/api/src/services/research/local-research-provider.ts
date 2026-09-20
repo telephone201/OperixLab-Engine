@@ -3,7 +3,7 @@
  * @description Performs safe, lightweight website research to extract identity and tech signals.
  */
 
-import { ResearchProvider, ResearchData, ResearchRequest, ProviderResult } from '../../../providers/provider-interfaces';
+import { ResearchProvider, ResearchData, ResearchRequest, ProviderResult } from '../../providers/provider-interfaces';
 
 export class LocalResearchProvider implements ResearchProvider {
     name = 'LocalResearchProvider';
@@ -37,3 +37,4 @@ export class LocalResearchProvider implements ResearchProvider {
 }
 
 export const localResearchProvider = new LocalResearchProvider();
+

@@ -8,7 +8,7 @@ import {
     ProposalGenerationInput,
     ProposalGenerationResult
 } from './proposal-types';
-import { db } from '../lib/db';
+import { db } from '../../lib/db';
 import { auditLogger } from '../../core/logging/audit-logger';
 import crypto from 'crypto';
 
@@ -61,3 +61,4 @@ export class ProposalGenerator {
 }
 
 export const proposalGenerator = new ProposalGenerator();
+

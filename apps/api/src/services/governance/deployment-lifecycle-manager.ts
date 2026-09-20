@@ -3,7 +3,7 @@
  * @description Manages deterministic state transitions for workflow deployment and governance.
  */
 
-import { db } from '../lib/db';
+import { db } from '../../lib/db';
 import { GovernanceState } from './types';
 import { auditLogger } from '../../core/logging/audit-logger';
 
@@ -78,3 +78,4 @@ export class DeploymentLifecycleManager {
 }
 
 export const deploymentLifecycleManager = new DeploymentLifecycleManager();
+

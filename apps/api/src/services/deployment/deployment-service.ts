@@ -14,7 +14,7 @@ import { n8nProvider } from './providers/n8n-provider';
 import { deploymentSafetyPipeline } from './safety-pipeline';
 import { deploymentVerifier } from './deployment-verifier';
 import { activationGate } from './activation-gate';
-import { db } from '../lib/db';
+import { db } from '../../lib/db';
 import { auditLogger } from '../../core/logging/audit-logger';
 import { artifactService } from '../versioning/artifact-service';
 
@@ -293,3 +293,4 @@ export class DeploymentService {
 }
 
 export const deploymentService = new DeploymentService();
+

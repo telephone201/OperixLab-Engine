@@ -9,7 +9,7 @@ import { knownGoodVersionManager } from './known-good-manager';
 import { deploymentLifecycleManager } from './deployment-lifecycle-manager';
 import { DeploymentEnvironment, DeploymentStatus } from '../deployment/types';
 import { ApprovalType, ApprovalDecision } from './types';
-import { db } from '../lib/db';
+import { db } from '../../lib/db';
 import { workflowVersionService } from '../versioning/version-service';
 import crypto from 'crypto';
 
@@ -233,3 +233,4 @@ export class Phase9Step5Verify {
 }
 
 export const phase9Step5Verify = new Phase9Step5Verify();
+

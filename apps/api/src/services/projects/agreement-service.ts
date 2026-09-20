@@ -3,7 +3,7 @@
  * @description Orchestrates the Commercial Agreement lifecycle, enforcing approval gates and staleness.
  */
 
-import { db } from '../lib/db';
+import { db } from '../../lib/db';
 import {
     AgreementStatus,
     CommercialAgreement,
@@ -181,3 +181,4 @@ export class AgreementService {
 }
 
 export const agreementService = new AgreementService();
+

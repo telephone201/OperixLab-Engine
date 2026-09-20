@@ -6,7 +6,7 @@
 import { engagementService } from './engagement-service';
 import { commercialEngagementIntentAdapter } from './commercial-engagement-intent-adapter';
 import { EngagementEventType, EngagementChannel } from './engagement-types';
-import { db } from '../lib/db';
+import { db } from '../../lib/db';
 
 export class Phase11Step4Verify {
     async runTests() {
@@ -120,3 +120,4 @@ export class Phase11Step4Verify {
 }
 
 export const phase11Step4Verify = new Phase11Step4Verify();
+

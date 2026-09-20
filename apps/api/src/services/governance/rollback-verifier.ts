@@ -3,7 +3,7 @@
  * @description Verifies that a rollback operation has successfully restored the target version.
  */
 
-import { db } from '../lib/db';
+import { db } from '../../lib/db';
 import { RollbackOperation } from './types';
 import { n8nProvider } from '../deployment/providers/n8n-provider';
 import { deploymentVerifier } from '../deployment/deployment-verifier';
@@ -60,3 +60,4 @@ export class RollbackVerifier {
 }
 
 export const rollbackVerifier = new RollbackVerifier();
+

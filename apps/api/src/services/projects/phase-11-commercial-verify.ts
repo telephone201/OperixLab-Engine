@@ -17,7 +17,7 @@ import { paymentService } from './payment-service';
 import { paymentVerificationService } from './payment-verification-service';
 import { paymentReadinessService } from './payment-readiness-service';
 import { projectStartEligibilityGate } from './eligibility-gate';
-import { db } from '../lib/db';
+import { db } from '../../lib/db';
 import {
     AgreementStatus,
     CommercialPackageStatus
@@ -27,7 +27,7 @@ import { EngagementEventType, EngagementChannel } from './engagement-types';
 
 export class Phase11CommercialVerify {
     async runFullSuite() {
-        console.log('🚀 Starting Phase 11 End-to-End Commercial Verification...');
+        console.log('ðŸš€ Starting Phase 11 End-to-End Commercial Verification...');
         const results = [];
 
         try {
@@ -183,7 +183,7 @@ export class Phase11CommercialVerify {
             }
 
         } catch (e) {
-            console.error('❌ Suite crashed:', e);
+            console.error('âŒ Suite crashed:', e);
             results.push({ step: 'CRASH', status: 'FAIL', error: e.message });
         }
 
@@ -192,3 +192,4 @@ export class Phase11CommercialVerify {
 }
 
 export const phase11CommercialVerify = new Phase11CommercialVerify();
+

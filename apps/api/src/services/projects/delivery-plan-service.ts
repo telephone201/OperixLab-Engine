@@ -3,7 +3,7 @@
  * @description Service for persisting and managing the lifecycle of Delivery Plans.
  */
 
-import { db } from '../lib/db';
+import { db } from '../../lib/db';
 import {
     DeliveryPlan,
     DeliveryPlanStatus,
@@ -115,3 +115,4 @@ export class DeliveryPlanService {
 }
 
 export const deliveryPlanService = new DeliveryPlanService();
+

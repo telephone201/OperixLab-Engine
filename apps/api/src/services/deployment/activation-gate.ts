@@ -4,7 +4,7 @@
  */
 
 import { DeploymentStatus } from './types';
-import { db } from '../lib/db';
+import { db } from '../../lib/db';
 
 export class ActivationGate {
     /**
@@ -30,3 +30,4 @@ export class ActivationGate {
 }
 
 export const activationGate = new ActivationGate();
+

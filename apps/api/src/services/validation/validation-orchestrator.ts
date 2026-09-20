@@ -3,7 +3,7 @@
  * @description Orchestrates the six-layer validation process for workflow artifacts.
  */
 
-import { db } from '../lib/db';
+import { db } from '../../lib/db';
 import {
     ValidationStatus,
     ValidationLayer,
@@ -182,3 +182,4 @@ export class ValidationOrchestrator {
 }
 
 export const validationOrchestrator = new ValidationOrchestrator();
+

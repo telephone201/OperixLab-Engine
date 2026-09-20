@@ -6,7 +6,7 @@
 import { completionService } from './completion-service';
 import { completionEligibilityGate } from './completion-eligibility-gate';
 import { CompletionStatus, CompletionDecision, CompletionReviewStatus } from './completion-types';
-import { db } from '../lib/db';
+import { db } from '../../lib/db';
 import { ProjectStatus, PaymentStatus } from './types';
 
 export class Phase10Step7Verify {
@@ -116,3 +116,4 @@ export class Phase10Step7Verify {
 }
 
 export const phase10Step7Verify = new Phase10Step7Verify();
+

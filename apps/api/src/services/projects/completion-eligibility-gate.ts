@@ -3,7 +3,7 @@
  * @description Deterministic gate to determine if a project is eligible for completion.
  */
 
-import { db } from '../lib/db';
+import { db } from '../../lib/db';
 import { ProjectStatus } from './types';
 import { CompletionStatus } from './completion-types';
 
@@ -107,3 +107,4 @@ export class CompletionEligibilityGate {
 }
 
 export const completionEligibilityGate = new CompletionEligibilityGate();
+

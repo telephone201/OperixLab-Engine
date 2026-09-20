@@ -3,7 +3,7 @@
  * @description Deterministically evaluates if commercial payment conditions are satisfied.
  */
 
-import { db } from '../lib/db';
+import { db } from '../../lib/db';
 import { PaymentReadiness, PaymentReadinessStatus } from './payment-types';
 import { PaymentStatus } from './types';
 import { auditLogger } from '../../core/logging/audit-logger';
@@ -76,3 +76,4 @@ export class PaymentReadinessService {
 }
 
 export const paymentReadinessService = new PaymentReadinessService();
+

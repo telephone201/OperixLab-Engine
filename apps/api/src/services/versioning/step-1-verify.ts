@@ -8,7 +8,7 @@ import { artifactService } from './artifact-service';
 import { hashService } from './hash-service';
 import fs from 'fs/promises';
 import path from 'path';
-import { db } from '../lib/db';
+import { db } from '../../lib/db';
 
 export class Phase9Step1Verify {
     async runTests() {
@@ -159,3 +159,4 @@ export class Phase9Step1Verify {
 }
 
 export const phase9Step1Verify = new Phase9Step1Verify();
+

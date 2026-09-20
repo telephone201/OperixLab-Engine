@@ -6,7 +6,7 @@
 import { deliveryPlanService } from './delivery-plan-service';
 import { deliveryPlanner } from './delivery-planner';
 import { ProjectStatus, PaymentStatus } from './types';
-import { db } from '../lib/db';
+import { db } from '../../lib/db';
 import { OriginType } from '../versioning/version-service';
 
 export class Phase10Step3Verify {
@@ -135,3 +135,4 @@ export class Phase10Step3Verify {
 }
 
 export const phase10Step3Verify = new Phase10Step3Verify();
+

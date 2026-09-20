@@ -7,7 +7,7 @@
 
 import fs from 'fs/promises';
 import path from 'path';
-import { db } from '../lib/db';
+import { db } from '../../lib/db';
 import { hashService } from './hash-service';
 
 export interface ArtifactMetadata {
@@ -99,3 +99,4 @@ export class ArtifactService {
 }
 
 export const artifactService = new ArtifactService();
+

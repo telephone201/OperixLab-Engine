@@ -3,7 +3,7 @@
  * @description Orchestrates the project closure process, ensuring all delivery and governance gates are passed.
  */
 
-import { db } from '../lib/db';
+import { db } from '../../lib/db';
 import {
     CompletionStatus,
     CompletionReviewStatus,
@@ -186,3 +186,4 @@ export class CompletionService {
 }
 
 export const completionService = new CompletionService();
+

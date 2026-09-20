@@ -7,7 +7,7 @@ import { validationOrchestrator } from './validation-orchestrator';
 import { ValidationStatus, FindingSeverity } from './validation-types';
 import { workflowVersionService } from '../versioning/version-service';
 import { artifactService } from '../versioning/artifact-service';
-import { db } from '../lib/db';
+import { db } from '../../lib/db';
 import fs from 'fs/promises';
 import crypto from 'crypto';
 
@@ -266,3 +266,4 @@ export class Phase9Step3Verify {
 }
 
 export const phase9Step3Verify = new Phase9Step3Verify();
+

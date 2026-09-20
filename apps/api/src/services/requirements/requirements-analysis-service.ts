@@ -7,7 +7,7 @@ import { RequirementsAnalysis, Requirement, RequirementStatus } from './requirem
 import { RequirementExtractor } from './requirement-extractor'; // Mocked below
 import { RequirementValidator } from './requirement-validator';
 import { RequirementClassifier } from './requirement-classifier';
-import { auditLogger } from '../core/logging/audit-logger';
+import { auditLogger } from '../../core/logging/audit-logger';
 
 export class RequirementsAnalysisService {
     private validator = new RequirementValidator();
@@ -108,3 +108,4 @@ export class RequirementsAnalysisService {
         }];
     }
 }
+

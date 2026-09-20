@@ -4,7 +4,7 @@
  * Hard Gates are absolute; a FAIL result disqualifies a candidate from REUSE.
  */
 
-import { db } from '../lib/db';
+import { db } from '../../lib/db';
 
 export enum GateStatus {
     PASS = 'PASS',
@@ -189,3 +189,4 @@ export class HardGateEvaluator {
         }
     }
 }
+

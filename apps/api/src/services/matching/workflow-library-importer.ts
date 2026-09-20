@@ -5,7 +5,7 @@
 
 import fs from 'fs';
 import path from 'path';
-import { db } from '../lib/db'; // Adjust based on actual DB client path
+import { db } from '../../lib/db'; // Adjust based on actual DB client path
 
 export class WorkflowLibraryImporter {
     private indexFilePath = 'D:\\OperixLabs Engine\\workflow-library\\index.json';
@@ -63,3 +63,4 @@ export class WorkflowLibraryImporter {
         }
     }
 }
+

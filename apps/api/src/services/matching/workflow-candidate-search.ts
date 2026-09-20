@@ -3,7 +3,7 @@
  * @description Implements candidate discovery from the workflow library using hybrid search.
  */
 
-import { db } from '../lib/db';
+import { db } from '../../lib/db';
 
 export interface SearchParams {
     requirements: any[];
@@ -99,3 +99,4 @@ export class WorkflowCandidateSearch {
         return Array.from(integrations);
     }
 }
+

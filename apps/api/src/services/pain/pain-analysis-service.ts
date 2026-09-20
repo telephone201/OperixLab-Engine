@@ -5,7 +5,7 @@
 
 import { Pain, PainAnalysis, PainType, EvidenceLevel, PainStatus } from './pain-types';
 import { PainPromptGenerator } from './pain-prompt-generator';
-import { auditLogger } from '../core/logging/audit-logger';
+import { auditLogger } from '../../core/logging/audit-logger';
 
 export class PainAnalysisService {
     private promptGenerator = new PainPromptGenerator();
@@ -159,3 +159,4 @@ export class PainAnalysisService {
         return ['How are inbound leads currently assigned?'];
     }
 }
+

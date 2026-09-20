@@ -3,7 +3,7 @@
  * @description Deterministic guard that prevents project activation without commercial verification.
  */
 
-import { db } from '../lib/db';
+import { db } from '../../lib/db';
 import { ProjectStatus, PaymentStatus } from './types';
 import { paymentReadinessService } from './payment-readiness-service';
 
@@ -49,3 +49,4 @@ export class ProjectStartEligibilityGate {
 }
 
 export const projectStartEligibilityGate = new ProjectStartEligibilityGate();
+

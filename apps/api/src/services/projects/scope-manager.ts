@@ -3,7 +3,7 @@
  * @description Manages the Scope Baseline, Requirements Confirmation and Change Request governance.
  */
 
-import { db } from '../lib/db';
+import { db } from '../../lib/db';
 import {
     ConfirmationStatus,
     ScopeClassification,
@@ -337,3 +337,4 @@ export class ScopeManager {
 }
 
 export const scopeManager = new ScopeManager();
+

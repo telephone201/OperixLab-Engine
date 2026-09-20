@@ -3,7 +3,7 @@
  * @description Deterministic gate to verify commercial readiness and authorization.
  */
 
-import { db } from '../lib/db';
+import { db } from '../../lib/db';
 import { approvalGate } from '../governance/approval-gate';
 import { ApprovalType } from '../governance/types';
 import { CommercialPackageStatus } from './commercial-types';
@@ -70,3 +70,4 @@ export class CommercialApprovalGate {
 }
 
 export const commercialApprovalGate = new CommercialApprovalGate();
+

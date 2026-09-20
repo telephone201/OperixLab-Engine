@@ -3,7 +3,7 @@
  * @description Manages the request and decision lifecycle for human approvals.
  */
 
-import { db } from '../lib/db';
+import { db } from '../../lib/db';
 import { ApprovalType, ApprovalDecision, HumanApproval } from './types';
 
 export class HumanApprovalService {
@@ -106,3 +106,4 @@ export class HumanApprovalService {
 }
 
 export const humanApprovalService = new HumanApprovalService();
+

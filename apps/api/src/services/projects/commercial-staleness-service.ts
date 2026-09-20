@@ -3,7 +3,7 @@
  * @description Detects if a commercial artifact has become stale due to upstream dependency changes.
  */
 
-import { db } from '../lib/db';
+import { db } from '../../lib/db';
 import { CommercialPackage, PricingRecommendation, ProposalVersion } from './commercial-types';
 
 export interface StalenessResult {
@@ -95,3 +95,4 @@ export class CommercialStalenessService {
 }
 
 export const commercialStalenessService = new CommercialStalenessService();
+

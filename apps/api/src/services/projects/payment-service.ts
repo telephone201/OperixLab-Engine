@@ -3,7 +3,7 @@
  * @description Manages payment submissions and requirements derived from agreements.
  */
 
-import { db } from '../lib/db';
+import { db } from '../../lib/db';
 import { Payment, PaymentPurpose, PaymentReadinessStatus } from './payment-types';
 import { PaymentStatus } from './types';
 import { manualInstaPayProvider } from './manual-instapay-provider';
@@ -111,3 +111,4 @@ export class PaymentService {
 }
 
 export const paymentService = new PaymentService();
+

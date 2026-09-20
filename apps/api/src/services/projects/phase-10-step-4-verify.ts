@@ -5,7 +5,7 @@
 
 import { scopeManager } from './scope-manager';
 import { ScopeClassification, ConfirmationStatus, ScopeBaselineStatus, ChangeRequestStatus } from './scope-types';
-import { db } from '../lib/db';
+import { db } from '../../lib/db';
 
 export class Phase10Step4Verify {
     async runTests() {
@@ -103,3 +103,4 @@ export class Phase10Step4Verify {
 }
 
 export const phase10Step4Verify = new Phase10Step4Verify();
+

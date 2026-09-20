@@ -3,7 +3,7 @@
  * @description Orchestrates the transition from Client Acceptance to Formal Handover and Support Activation.
  */
 
-import { db } from '../lib/db';
+import { db } from '../../lib/db';
 import {
     Handover,
     HandoverStatus,
@@ -297,3 +297,4 @@ export class HandoverService {
 }
 
 export const handoverService = new HandoverService();
+

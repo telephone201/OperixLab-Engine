@@ -5,7 +5,7 @@
 
 import { n8nProvider } from '../deployment/providers/n8n-provider';
 import { KnownGoodVersion } from './types';
-import { db } from '../lib/db';
+import { db } from '../../lib/db';
 import { artifactService } from '../versioning/artifact-service';
 
 export class RollbackExecutor {
@@ -58,3 +58,4 @@ export class RollbackExecutor {
 }
 
 export const rollbackExecutor = new RollbackExecutor();
+

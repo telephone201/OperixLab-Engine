@@ -11,7 +11,7 @@ import {
     DeploymentErrorCode
 } from './types';
 import { deploymentEligibilityGate } from './eligibility-gate';
-import { db } from '../lib/db';
+import { db } from '../../lib/db';
 import { artifactService } from '../versioning/artifact-service';
 
 export class DeploymentSafetyPipeline {
@@ -102,3 +102,4 @@ export class DeploymentSafetyPipeline {
 }
 
 export const deploymentSafetyPipeline = new DeploymentSafetyPipeline();
+

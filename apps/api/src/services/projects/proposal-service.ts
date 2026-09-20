@@ -3,7 +3,7 @@
  * @description Orchestrates proposal creation, versioning, and validation.
  */
 
-import { db } from '../lib/db';
+import { db } from '../../lib/db';
 import {
     Proposal,
     ProposalVersion,
@@ -126,3 +126,4 @@ export class ProposalService {
 }
 
 export const proposalService = new ProposalService();
+

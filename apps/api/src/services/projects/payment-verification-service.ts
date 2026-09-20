@@ -4,7 +4,7 @@
  * AI verification is explicitly forbidden.
  */
 
-import { db } from '../lib/db';
+import { db } from '../../lib/db';
 import { PaymentStatus } from './types';
 import { auditLogger } from '../../core/logging/audit-logger';
 import { notifications } from '../../core/notifications/notification-system';
@@ -63,3 +63,4 @@ export class PaymentVerificationService {
 }
 
 export const paymentVerificationService = new PaymentVerificationService();
+

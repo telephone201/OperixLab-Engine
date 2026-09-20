@@ -5,7 +5,7 @@
 
 import { commercialFoundationService } from './commercial-foundation-service';
 import { CommercialPackageStatus, PricingStatus, OfferStatus } from './commercial-types';
-import { db } from '../lib/db';
+import { db } from '../../lib/db';
 
 export class Phase11Step1Verify {
     async runTests() {
@@ -95,3 +95,4 @@ export class Phase11Step1Verify {
 }
 
 export const phase11Step1Verify = new Phase11Step1Verify();
+

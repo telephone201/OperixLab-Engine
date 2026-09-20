@@ -3,7 +3,7 @@
  * @description Service for manual adjustments to qualification scores and intent states with audit trail.
  */
 
-import { auditLogger } from '../core/logging/audit-logger';
+import { auditLogger } from '../../core/logging/audit-logger';
 
 export interface OverrideRequest {
     leadId: string;
@@ -42,3 +42,4 @@ export class HumanOverrideService {
         // await db.human_overrides.create(request);
     }
 }
+

@@ -5,7 +5,7 @@
 
 import { handoverService } from './handover-service';
 import { HandoverStatus, HandoverItemStatus, SupportReadinessStatus, SupportTransitionStatus } from './handover-types';
-import { db } from '../lib/db';
+import { db } from '../../lib/db';
 import { ProjectStatus, PaymentStatus } from './types';
 
 export class Phase10Step6Verify {
@@ -111,3 +111,4 @@ export class Phase10Step6Verify {
 }
 
 export const phase10Step6Verify = new Phase10Step6Verify();
+

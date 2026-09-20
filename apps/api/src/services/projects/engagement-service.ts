@@ -3,7 +3,7 @@
  * @description Records proposal engagement events and updates engagement metrics.
  */
 
-import { db } from '../lib/db';
+import { db } from '../../lib/db';
 import {
     EngagementEvent,
     EngagementEventType,
@@ -152,3 +152,4 @@ export class EngagementService {
 }
 
 export const engagementService = new EngagementService();
+

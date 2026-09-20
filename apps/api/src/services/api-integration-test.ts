@@ -8,7 +8,7 @@ import axios from 'axios';
 import { db } from '../lib/db';
 
 async function runIntegrationTests() {
-    console.log('🚀 Starting API Bridge Integration Tests...');
+    console.log('ðŸš€ Starting API Bridge Integration Tests...');
     const API_BASE = 'http://localhost:3000/api';
     const results = [];
 
@@ -77,14 +77,16 @@ async function runIntegrationTests() {
         }
 
     } catch (e: any) {
-        console.error('❌ Integration test crashed:', e.message);
+        console.error('âŒ Integration test crashed:', e.message);
         results.push({ test: 'GENERAL_INTEGRATION', status: 'FAIL', error: e.message });
     }
 
     console.log('\n--- INTEGRATION RESULTS ---');
-    results.forEach(r => console.log(`${r.test}: ${r.status === 'PASS' ? '✅' : '❌'} ${r.error || ''}`));
+    results.forEach(r => console.log(`${r.test}: ${r.status === 'PASS' ? 'âœ…' : 'âŒ'} ${r.error || ''}`));
 
     return results;
 }
 
 export { runIntegrationTests };
+
+

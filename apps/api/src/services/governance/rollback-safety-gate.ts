@@ -3,7 +3,7 @@
  * @description Verifies that a rollback target is safe and eligible.
  */
 
-import { db } from '../lib/db';
+import { db } from '../../lib/db';
 import { KnownGoodVersion } from './types';
 import { DeploymentEnvironment } from '../deployment/types';
 import { artifactService } from '../versioning/artifact-service';
@@ -54,3 +54,4 @@ export class RollbackSafetyGate {
 }
 
 export const rollbackSafetyGate = new RollbackSafetyGate();
+

@@ -3,7 +3,7 @@
  * @description Service for managing the Project lifecycle and state transitions.
  */
 
-import { db } from '../lib/db';
+import { db } from '../../lib/db';
 import { ProjectStatus, Project, ProjectStateTransition } from './types';
 import { auditLogger } from '../../core/logging/audit-logger';
 
@@ -99,3 +99,4 @@ export class ProjectService {
 }
 
 export const projectService = new ProjectService();
+

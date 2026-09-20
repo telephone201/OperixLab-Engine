@@ -3,7 +3,7 @@
  * @description Orchestrates commercial approvals and readiness checks.
  */
 
-import { db } from '../lib/db';
+import { db } from '../../lib/db';
 import { humanApprovalService } from '../governance/approval-service';
 import { ApprovalType, ApprovalDecision } from '../governance/types';
 import { commercialApprovalGate } from './commercial-approval-gate';
@@ -71,3 +71,4 @@ export class CommercialGovernanceService {
 }
 
 export const commercialGovernanceService = new CommercialGovernanceService();
+

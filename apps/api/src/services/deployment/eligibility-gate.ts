@@ -4,7 +4,7 @@
  */
 
 import { DeploymentStatus, DeploymentErrorCode } from './types';
-import { db } from '../lib/db';
+import { db } from '../../lib/db';
 
 export class DeploymentEligibilityGate {
     /**
@@ -52,3 +52,4 @@ export class DeploymentEligibilityGate {
 }
 
 export const deploymentEligibilityGate = new DeploymentEligibilityGate();
+

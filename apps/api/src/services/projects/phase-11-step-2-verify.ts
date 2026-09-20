@@ -6,7 +6,7 @@
 import { proposalService } from './proposal-service';
 import { ProposalStatus } from './proposal-types';
 import { commercialFoundationService } from './commercial-foundation-service';
-import { db } from '../lib/db';
+import { db } from '../../lib/db';
 
 export class Phase11Step2Verify {
     async runTests() {
@@ -131,3 +131,4 @@ export class Phase11Step2Verify {
 }
 
 export const phase11Step2Verify = new Phase11Step2Verify();
+

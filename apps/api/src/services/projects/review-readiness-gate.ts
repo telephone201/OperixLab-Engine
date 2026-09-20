@@ -3,7 +3,7 @@
  * @description Deterministic guard to ensure a project is ready for client review.
  */
 
-import { db } from '../lib/db';
+import { db } from '../../lib/db';
 import { ProjectStatus } from './types';
 import { DeliveryPlanStatus } from './delivery-plan-types';
 
@@ -63,3 +63,4 @@ export class ReviewReadinessGate {
 }
 
 export const reviewReadinessGate = new ReviewReadinessGate();
+

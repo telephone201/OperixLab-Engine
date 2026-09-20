@@ -3,7 +3,7 @@
  * @description Manages versions certified as safe for rollback.
  */
 
-import { db } from '../lib/db';
+import { db } from '../../lib/db';
 import { DeploymentEnvironment } from '../deployment/types';
 import { KnownGoodVersion } from './types';
 
@@ -84,3 +84,4 @@ export class KnownGoodVersionManager {
 }
 
 export const knownGoodVersionManager = new KnownGoodVersionManager();
+

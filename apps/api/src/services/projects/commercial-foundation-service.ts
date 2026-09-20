@@ -3,7 +3,7 @@
  * @description Manages the foundation of the commercialization engine, including packages, pricing, and offers.
  */
 
-import { db } from '../lib/db';
+import { db } from '../../lib/db';
 import {
     CommercialPackage,
     CommercialPackageStatus,
@@ -250,3 +250,4 @@ export class CommercialFoundationService {
 }
 
 export const commercialFoundationService = new CommercialFoundationService();
+

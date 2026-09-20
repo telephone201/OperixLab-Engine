@@ -3,7 +3,7 @@
  * @description High-level orchestrator for the Governance layer.
  */
 
-import { db } from '../lib/db';
+import { db } from '../../lib/db';
 import {
     ApprovalType,
     ApprovalDecision,
@@ -272,3 +272,4 @@ export class GovernanceService {
 }
 
 export const governanceService = new GovernanceService();
+

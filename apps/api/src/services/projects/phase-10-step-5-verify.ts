@@ -6,7 +6,7 @@
 import { reviewService } from './review-service';
 import { reviewReadinessGate } from './review-readiness-gate';
 import { ReviewSessionStatus, ReviewItemStatus, FeedbackClassification, FindingSeverity, AcceptanceDecision } from './review-types';
-import { db } from '../lib/db';
+import { db } from '../../lib/db';
 import { ProjectStatus, PaymentStatus } from './types';
 
 export class Phase10Step5Verify {
@@ -158,3 +158,4 @@ export class Phase10Step5Verify {
 }
 
 export const phase10Step5Verify = new Phase10Step5Verify();
+

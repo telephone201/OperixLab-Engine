@@ -3,7 +3,7 @@
  * @description Orchestrates Client Review sessions, feedback, and acceptance governance.
  */
 
-import { db } from '../lib/db';
+import { db } from '../../lib/db';
 import {
     ReviewSession,
     ReviewSessionStatus,
@@ -263,3 +263,4 @@ export class ReviewService {
 }
 
 export const reviewService = new ReviewService();
+
