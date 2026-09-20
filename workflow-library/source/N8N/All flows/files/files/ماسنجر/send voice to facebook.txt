@@ -1,0 +1,14 @@
+{
+  "recipient": {
+    "id": "{{ $('Webhook').item.json.body.entry[0].messaging[0].sender.id }}"
+  },
+  "message": {
+    "attachment": {
+      "type": "audio",
+      "payload": {
+        "url": "{{ $json.webContentLink }}",
+        "is_reusable": true
+      }
+    }
+  }
+}

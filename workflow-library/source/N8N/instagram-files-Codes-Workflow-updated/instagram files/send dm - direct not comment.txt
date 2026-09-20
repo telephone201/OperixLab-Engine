@@ -1,0 +1,30 @@
+/////////////
+URL
+////////////
+
+https://graph.instagram.com/v22.0/{{ $('Get row(s) in sheet').item.json['ig page id'] }}/messages?access_token={{ $('Get row(s) in sheet').item.json['ig access token'] }}
+
+////////
+Send Body
+////////
+
+{
+  "recipient": {
+    "id": "{{ $('Webhook').item.json.body.entry[0].messaging[0].sender.id }}"
+  },
+  "message": {
+    "text":  {{ JSON.stringify($json.output) }}
+  }
+}
+
+///////////
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,589 @@
+{
+  "name": "Automate Email Discovery for Companies with Anymail Finder, Google Sheets & Telegram Alerts",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "24f96fe4-0e5f-4127-90d9-754ef254a48e",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "position": [
+        384,
+        688
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "1yH5f_z6HeHN5KJBdMbij_-KKX47rKnSIGPj_OUTO0LU",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1yH5f_z6HeHN5KJBdMbij_-KKX47rKnSIGPj_OUTO0LU/edit?usp=drivesdk",
+          "cachedResultName": "Find Email by Company"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gid=0",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1yH5f_z6HeHN5KJBdMbij_-KKX47rKnSIGPj_OUTO0LU/edit#gid=0",
+          "cachedResultName": "Foglio1"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "PROCESSING"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1eb2df5c-ad7f-43c7-bb51-26cac9111075",
+      "name": "Get Leads",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        592,
+        688
+      ],
+      "typeVersion": 4.7
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "1b4cb64a-d43b-4063-8884-e163fcd93c46",
+      "name": "Loop Over Items",
+      "type": "n8n-nodes-base.splitInBatches",
+      "position": [
+        800,
+        688
+      ],
+      "typeVersion": 3
+    },
+    {
+      "parameters": {
+        "content": "- Clone this [sheet](https://docs.google.com/spreadsheets/d/1yH5f_z6HeHN5KJBdMbij_-KKX47rKnSIGPj_OUTO0LU/edit?usp=sharing)\n- Get your [Anymail Finder](https://anymailfinder.com) API Key (FREE Trial)\n- In \"Email finder\" node Create a credential named “Anymail Finder” of type HTTP Header Auth. In the “Name” field, enter \"Authorization\" and in the “Value” field, enter your Anymail Finder API key (in the format YOUR_API_KEY)",
+        "height": 144,
+        "width": 608
+      },
+      "id": "a6da4992-d53b-4e09-9deb-4ce0aeaa79fe",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        368,
+        432
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": "",
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "e2d035e7-353e-4c3e-a82a-5ab3ad5de400",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.email_status }}",
+                    "rightValue": "valid"
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "valid"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": "",
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "7440ef17-b184-49f9-bc92-0ec289e11ccf",
+                    "operator": {
+                      "name": "filter.operator.equals",
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.email_status }}",
+                    "rightValue": "risky"
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "risky"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": "",
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "7eec38fb-005c-4ea7-9b7b-2e39e0ac4156",
+                    "operator": {
+                      "name": "filter.operator.equals",
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "",
+                    "rightValue": ""
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "not found"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "539a8f1c-bdcd-4450-bd63-a4845063d6bf",
+      "name": "Switch",
+      "type": "n8n-nodes-base.switch",
+      "position": [
+        1360,
+        672
+      ],
+      "typeVersion": 3.2
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "1yH5f_z6HeHN5KJBdMbij_-KKX47rKnSIGPj_OUTO0LU",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1yH5f_z6HeHN5KJBdMbij_-KKX47rKnSIGPj_OUTO0LU/edit?usp=drivesdk",
+          "cachedResultName": "Find Email by Company"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gid=0",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/108sjf89zpKRyZbGq9MjcNFQOezP4hi97SJ_uAkXc8WI/edit#gid=0",
+          "cachedResultName": "Foglio1"
+        },
+        "columns": {
+          "value": {
+            "EMAIL": "={{JSON.stringify( $json.emails) }}",
+            "PROCESSING": "x",
+            "row_number": "={{ $('Loop Over Items').item.json.row_number }}"
+          },
+          "schema": [
+            {
+              "id": "COMPANY NAME",
+              "type": "string",
+              "display": true,
+              "required": false,
+              "displayName": "COMPANY NAME",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "WEBSITE",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "WEBSITE",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "EMAIL",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "EMAIL",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "PROCESSING",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "PROCESSING",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "type": "number",
+              "display": true,
+              "removed": false,
+              "readOnly": true,
+              "required": false,
+              "displayName": "row_number",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            }
+          ],
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "row_number"
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "6259403f-2327-438d-97e1-7b4a8a369158",
+      "name": "Email found",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        1664,
+        640
+      ],
+      "typeVersion": 4.7
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "1yH5f_z6HeHN5KJBdMbij_-KKX47rKnSIGPj_OUTO0LU",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1yH5f_z6HeHN5KJBdMbij_-KKX47rKnSIGPj_OUTO0LU/edit?usp=drivesdk",
+          "cachedResultName": "Find Email by Company"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gid=0",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/108sjf89zpKRyZbGq9MjcNFQOezP4hi97SJ_uAkXc8WI/edit#gid=0",
+          "cachedResultName": "Foglio1"
+        },
+        "columns": {
+          "value": {
+            "EMAIL": "=",
+            "PROCESSING": "x",
+            "row_number": "={{ $('Loop Over Items').item.json.row_number }}"
+          },
+          "schema": [
+            {
+              "id": "COMPANY NAME",
+              "type": "string",
+              "display": true,
+              "required": false,
+              "displayName": "COMPANY NAME",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "WEBSITE",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "WEBSITE",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "EMAIL",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "EMAIL",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "PROCESSING",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "PROCESSING",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "type": "number",
+              "display": true,
+              "removed": false,
+              "readOnly": true,
+              "required": false,
+              "displayName": "row_number",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            }
+          ],
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "row_number"
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "02a1ec6c-4e58-44c5-b7ba-891e4065594d",
+      "name": "Email not found",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        1872,
+        720
+      ],
+      "typeVersion": 4.7
+    },
+    {
+      "parameters": {
+        "content": "Classify if email is valid, risky and not found.",
+        "height": 224,
+        "width": 224
+      },
+      "id": "2f24945d-a082-474b-86bf-d552f6728289",
+      "name": "Sticky Note1",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1312,
+        608
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "Find email",
+        "height": 224,
+        "width": 224
+      },
+      "id": "8dad63c6-d171-4895-86f0-65e7d73f56ae",
+      "name": "Sticky Note2",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1040,
+        608
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anymailfinder.com/v5.1/find-email/company",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "domain",
+              "value": "={{ $json[\"WEBSITE\"] }}"
+            },
+            {
+              "name": "company_name",
+              "value": "={{ $json[\"COMPANY NAME\"] }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 180000
+        }
+      },
+      "id": "4e1ff1f3-c0c8-406b-bd79-d008fabac373",
+      "name": "Email finder",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1088,
+        704
+      ],
+      "typeVersion": 4.2,
+      "onError": "continueErrorOutput",
+      "notes": "This node sends the request to Anymailfinder.\nMake sure you've connected your API key in the credentials (HTTP Header Auth)."
+    },
+    {
+      "parameters": {
+        "content": "## Find email address by company with Anymail Finder\n\nThis automation **retrieves company information** from a Google Sheet, uses the Anymail Finder API to **discover email addresses associated with each company**, and then writes the results (including the email status) back into the same Google Sheet.",
+        "width": 608,
+        "color": 3
+      },
+      "id": "3a741450-561c-49de-bb53-988b7afa2cb6",
+      "name": "Sticky Note3",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        368,
+        240
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "chatId": "XXXXXX",
+        "text": "Alert! Email not found",
+        "additionalFields": {}
+      },
+      "id": "2bd1b49d-7f98-4a80-aa07-48413a896ed6",
+      "name": "Send Alert",
+      "type": "n8n-nodes-base.telegram",
+      "position": [
+        2096,
+        720
+      ],
+      "webhookId": "16b603d6-121f-4531-b01f-0fb8e22c06ba",
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "content": "## تم التحضير بواسطة \n**م. أحمد الصيرفي**  \n\nللتعلّم وتطوير مهاراتك في الأتمتة، زور موقعنا: \n [ahmedelserafy.com](https://ahmedelserafy.com/automation_course)\n\n\n",
+        "height": 176,
+        "width": 288
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1152,
+        304
+      ],
+      "typeVersion": 1,
+      "id": "32e4f25a-7801-424c-8df3-10c6e81f698c",
+      "name": "Sticky Note6"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Email found",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Email found",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Email not found",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Leads": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Alert": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email found": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email finder": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email not found": {
+      "main": [
+        [
+          {
+            "node": "Send Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Email finder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "0ed6eece-6b4d-474b-b37b-69412f269d84",
+  "meta": {
+    "templateId": "10213",
+    "instanceId": "eb58054caf61c2552d4b13cc032edccc043473990c2938118b79640890b4e573"
+  },
+  "id": "hunEml8Vc4kuhNRl",
+  "tags": [
+    {
+      "updatedAt": "2025-11-28T22:29:34.032Z",
+      "createdAt": "2025-11-28T22:29:34.032Z",
+      "id": "HHSMeirOYyTwabhZ",
+      "name": "pack"
+    }
+  ]
+}

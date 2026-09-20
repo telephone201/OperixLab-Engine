@@ -1,0 +1,50 @@
+
+----------------------------
+HTTP URL
+
+
+https://graph.facebook.com/v22.0/{{ $('Webhook').item.json.body.entry[0].messaging[0].recipient.id }}/messages?access_token=
+
+
+
+---------------------------
+
+هتستخدم واحده بس متضيفش الملف كامل
+
+
+ده الكود لو هترد رد ثابت الي تم شرحه فى بداية الكورس
+
+
+------------------------
+
+JSON (Reply direct)
+-----------------------------------
+
+
+{
+  "recipient": {
+    "id": "{{ $('Webhook').item.json.body.entry[0].messaging[0].sender.id }}"
+  },
+  "messaging_type": "RESPONSE",
+  "message": {
+    "text": {{ JSON.stringify('hi') }}
+  }
+}
+
+
+
+
+---------------------------------------------
+JSON (Reply from Ai Agent)
+وده لما خلينا الذكاء الاصطناعي يرد 
+---------------------------------------------------
+
+{
+  "recipient": {
+    "id": "{{ $('Webhook').item.json.body.entry[0].messaging[0].sender.id }}"
+  },
+  "messaging_type": "RESPONSE",
+  "message": {
+    "text": {{ JSON.stringify($json.output) }}
+  }
+}

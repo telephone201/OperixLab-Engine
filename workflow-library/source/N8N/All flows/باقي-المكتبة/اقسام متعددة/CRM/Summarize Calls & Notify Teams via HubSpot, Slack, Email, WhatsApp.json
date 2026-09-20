@@ -1,0 +1,460 @@
+{
+  "name": "Summarize Calls & Notify Teams via HubSpot, Slack, Email, WhatsApp",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Router agent\nMakes decisions with the help of an LLM  \n- Analyzes the content\n- Decides which part of the transcript is relevant to the different departments\n- Sends the emails to the departments\n",
+        "height": 560,
+        "width": 540,
+        "color": 4
+      },
+      "id": "3d621f41-b73a-406a-bfda-fac0d2ed1499",
+      "name": "Sticky Note1",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1472,
+        544
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Webhook').item.json.body['Client Conversation'] }}",
+        "options": {
+          "systemMessage": "=You are provided with some client-company conversation and should decide who has to be informed about the feedback. Always only inform one person. Those are your options: \n- It's about a product, send an email to {{ $('Define routing emails').item.json['Support Email'] }}\n- It's about an invoicing problem, send an email to {{ $('Define routing emails').item.json['Administrative Email'] }}\n- It's  related to a travelling/trip, send an email to {{ $('Define routing emails').item.json['Commercial Email'] }}\n\nAdd the email of the person (\"{{ $('Webhook').item.json.body['Client Email'] }}\") at the beginning of the text preceded by \"FROM CLIENT: \"\nUse the Mailjet tool to inform each of the most related department. Provide mailjet with a subject, an email, and the email body formated as html which is the client conversation itself."
+        }
+      },
+      "id": "249c22aa-58ca-40df-9157-7a00fbfd3dff",
+      "name": "Router Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        1632,
+        752
+      ],
+      "notesInFlow": true,
+      "typeVersion": 1.8,
+      "notes": "Route the client feedback topics to the relevant department "
+    },
+    {
+      "parameters": {
+        "options": {
+          "summarizationMethodAndPrompts": {
+            "values": {
+              "summarizationMethod": "stuff",
+              "prompt": "=Summarize the following Converstaion in 2-3 sentences:\n\n\"{{ $('Webhook').item.json.body['Client Conversation'] }}\"\n\nJust output the summarized conversation and nothing else. Use the same language as the input"
+            }
+          }
+        }
+      },
+      "id": "cffeafac-75e0-4a60-91d3-0a7d3bdb7371",
+      "name": "Summarization",
+      "type": "@n8n/n8n-nodes-langchain.chainSummarization",
+      "position": [
+        1040,
+        352
+      ],
+      "notesInFlow": true,
+      "typeVersion": 2,
+      "alwaysOutputData": false,
+      "notes": "The transcript summarized here"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini"
+        },
+        "options": {}
+      },
+      "id": "ac5a16de-efb5-4603-bb52-2d85b007bf86",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "position": [
+        1136,
+        624
+      ],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('To', ``, 'string') }}",
+        "subject": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Subject', ``, 'string') }}",
+        "message": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Message', ``, 'string') }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "8644b46e-b64c-415b-acfc-103ef5c71903",
+      "name": "Gmail",
+      "type": "n8n-nodes-base.gmailTool",
+      "position": [
+        1712,
+        960
+      ],
+      "webhookId": "be3ad85f-a576-44d6-9383-6a038edfb25a",
+      "typeVersion": 2.1
+    },
+    {
+      "parameters": {
+        "content": "## Set emails here\nFor each responsible person",
+        "height": 260,
+        "width": 260,
+        "color": 4
+      },
+      "id": "b02e1dad-6f07-4215-a89b-fb0763232bcb",
+      "name": "Sticky Note2",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        656,
+        240
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## Webhook \nTo be used to send the transcription.",
+        "height": 260,
+        "width": 260,
+        "color": 4
+      },
+      "id": "fec711e6-837a-4722-83b9-dc838770fcb3",
+      "name": "Sticky Note3",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        368,
+        240
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## Save transcription to Hubspot\n- Search for the client ID based on his email\n- Upload the summarized conversation as meeting notes",
+        "height": 280,
+        "width": 540,
+        "color": 4
+      },
+      "id": "2af225aa-95b9-4578-9c8c-0c49bb5e8510",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1472,
+        240
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "C08VCE4AYNL",
+          "cachedResultName": "n8n"
+        },
+        "text": "=Below is the latest summary.\n\n{{ $json.response.text }}",
+        "otherOptions": {}
+      },
+      "id": "fb226ebf-b62f-48ef-b291-17b4beb30ebc",
+      "name": "Slack",
+      "type": "n8n-nodes-base.slack",
+      "position": [
+        1552,
+        48
+      ],
+      "webhookId": "ffba5d59-965e-4042-a5cd-d6d89c443e75",
+      "typeVersion": 2.3
+    },
+    {
+      "parameters": {
+        "content": "## Send the summary to Slack and WhatsApp\n- Configure Slack Channel\n- Configure WhatsApp Recepient",
+        "height": 300,
+        "width": 540,
+        "color": 4
+      },
+      "id": "5622a2af-726d-468c-88b2-22d66a449128",
+      "name": "Sticky Note4",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1472,
+        -80
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "phoneNumberId": "702894569566382",
+        "recipientPhoneNumber": "={{ $('Webhook').item.json.body['WhatsApp Contact Number'] }}",
+        "template": "n8n_workflow_latest|en",
+        "components": {
+          "component": [
+            {
+              "bodyParameters": {
+                "parameter": [
+                  {
+                    "text": "={{ $('Webhook').item.json.body['Your Name'] }}"
+                  },
+                  {
+                    "text": "={{ $('Summarization').item.json.response.text }}"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "id": "d8b2181f-1c52-417b-9fdd-776e64a920ab",
+      "name": "WhatsApp Business Cloud",
+      "type": "n8n-nodes-base.whatsApp",
+      "position": [
+        1792,
+        48
+      ],
+      "webhookId": "36dba7ba-f6f2-45a0-ad5d-cfd5c1622a49",
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "1ffeacc2-1dbd-4a9e-bf3f-6811ddd31642",
+        "options": {}
+      },
+      "id": "039c62d8-3a33-4436-9577-e2dc45f9e694",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        448,
+        352
+      ],
+      "webhookId": "1ffeacc2-1dbd-4a9e-bf3f-6811ddd31642",
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "099d5326-3452-47b8-9dc0-acc0e6fd951e",
+              "name": "Support Email",
+              "type": "string",
+              "value": "info@encoresky.com"
+            },
+            {
+              "id": "4ed84290-dbf7-47f7-8693-4f95e0c2fd7e",
+              "name": "Administrative Email",
+              "type": "string",
+              "value": "hr@encoresky.com"
+            },
+            {
+              "id": "614d4a5c-c9f2-4d82-bfcb-cfdcc8a4b07d",
+              "name": "Commercial Email",
+              "type": "string",
+              "value": "sales@encoresky.com"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "941ea710-68a5-46c7-b622-bf88b96430a7",
+      "name": "Define routing emails",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        736,
+        352
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "search",
+        "filterGroupsUi": {
+          "filterGroupsValues": [
+            {
+              "filtersUi": {
+                "filterValues": [
+                  {
+                    "propertyName": "email|string",
+                    "value": "={{ $('Webhook').item.json.body['Client Email'] }}"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {}
+      },
+      "id": "8af03b9d-b647-4d4c-8903-dd32e4b6a434",
+      "name": "HubSpot Search Client",
+      "type": "n8n-nodes-base.hubspot",
+      "position": [
+        1552,
+        368
+      ],
+      "notesInFlow": true,
+      "typeVersion": 2.1,
+      "notes": "Search for the id"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "engagement",
+        "type": "meeting",
+        "metadata": {
+          "body": "={{ $('Summarization').item.json.response.text }}",
+          "title": "New meeting"
+        },
+        "additionalFields": {
+          "associations": {
+            "contactIds": "={{ $json.properties.hs_object_id }}"
+          }
+        }
+      },
+      "id": "cb2bb828-ca8c-473a-a485-c8cde6116388",
+      "name": "HubSpot Save Notes",
+      "type": "n8n-nodes-base.hubspot",
+      "position": [
+        1792,
+        368
+      ],
+      "notesInFlow": true,
+      "typeVersion": 2.1,
+      "notes": "Add meeting notes in the contact form"
+    },
+    {
+      "parameters": {
+        "content": "## تم التحضير بواسطة \n**م. أحمد الصيرفي**  \n\nللتعلّم وتطوير مهاراتك في الأتمتة، زور موقعنا: \n [ahmedelserafy.com](https://ahmedelserafy.com/automation_course)\n\n\n",
+        "height": 176,
+        "width": 288
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1008,
+        0
+      ],
+      "typeVersion": 1,
+      "id": "e3c87267-3bb5-4126-a5c5-01709712ad86",
+      "name": "Sticky Note6"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail": {
+      "ai_tool": [
+        [
+          {
+            "node": "Router Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp Business Cloud",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Define routing emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Router Agent": {
+      "main": [
+        []
+      ]
+    },
+    "Summarization": {
+      "main": [
+        [
+          {
+            "node": "Router Agent",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HubSpot Search Client",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Summarization",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Router Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Define routing emails": {
+      "main": [
+        [
+          {
+            "node": "Summarization",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HubSpot Search Client": {
+      "main": [
+        [
+          {
+            "node": "HubSpot Save Notes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "f4554b08-a62e-44c4-b36f-2c3aa4507112",
+  "meta": {
+    "templateId": "4641",
+    "instanceId": "eb58054caf61c2552d4b13cc032edccc043473990c2938118b79640890b4e573"
+  },
+  "id": "JheLtiCtIzcg33dz",
+  "tags": [
+    {
+      "updatedAt": "2025-11-28T22:29:34.032Z",
+      "createdAt": "2025-11-28T22:29:34.032Z",
+      "id": "HHSMeirOYyTwabhZ",
+      "name": "pack"
+    }
+  ]
+}

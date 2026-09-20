@@ -1,0 +1,39 @@
+// الرد الحالي (نص عادي + JSON داخله)
+const rawResponse = $input.first().json.output;
+
+// استخراج الجزء بتاع JSON من النص
+const jsonStart = rawResponse.indexOf('{');
+const jsonString = rawResponse.slice(jsonStart);
+
+// تحويله لـ JSON فعلي
+const responseJSON = JSON.parse(jsonString);
+
+// النتيجة النهائية
+console.log(responseJSON);
+ return { json: responseJSON };
+
+
+-------------------------
+//to remove ```json from begining
+
+// الرد الحالي (نص عادي + JSON داخله)
+const rawResponse = $input.first().json['0'].content[0].text;
+
+// نحدد أول { وآخر }
+const jsonStart = rawResponse.indexOf('{');
+const jsonEnd = rawResponse.lastIndexOf('}');
+
+// لو في JSON فعلاً
+if (jsonStart === -1 || jsonEnd === -1) {
+  throw new Error("لم يتم العثور على JSON صالح داخل النص");
+}
+
+// ناخد الجزء اللي بين أول { و آخر }
+const jsonString = rawResponse.slice(jsonStart, jsonEnd + 1).trim();
+
+// تحويله لـ JSON فعلي
+const responseJSON = JSON.parse(jsonString);
+
+// النتيجة النهائية
+console.log(responseJSON);
+return { json: responseJSON };

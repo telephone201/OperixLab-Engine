@@ -1,0 +1,627 @@
+{
+  "name": "Create UGC Style Product Ad Video via Telegram + Gemini + Kie.ai’s Veo3.1 API",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "f89797fa-685e-412e-b186-b117c353d15e",
+      "name": "Google Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "position": [
+        960,
+        368
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "0fbdf6cb-a5a9-42fd-ada3-537d57e1c53b",
+      "name": "Receive Message",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "position": [
+        368,
+        240
+      ],
+      "webhookId": "81a497f1-32b6-4db0-aa84-850c32551e95",
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3911fb54-cca0-43bb-9482-c6da7641dc92",
+              "name": "message.caption",
+              "type": "string",
+              "value": "={{ $json.message.caption }}"
+            },
+            {
+              "id": "4edb62f8-7aa3-4a96-b0a2-2dfc702e0d45",
+              "name": "message.photo[3].file_id",
+              "type": "string",
+              "value": "={{ $json.message.photo[2].file_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "684d32b1-f04f-42fb-a11c-5a67ca378ae3",
+      "name": "Extract Image & Caption",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        592,
+        240
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.message.photo[3].file_id }}",
+        "additionalFields": {}
+      },
+      "id": "bacc3d5a-7b28-46a9-bdd7-57b6089ad91b",
+      "name": "Download Telegram Image",
+      "type": "n8n-nodes-base.telegram",
+      "position": [
+        816,
+        240
+      ],
+      "webhookId": "310b5f86-fa8f-46e9-8a3d-573fe949266e",
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Follow System Message",
+        "options": {
+          "systemMessage": "=You are a professional UGC ad scriptwriter. \nGenerate a 30-second UGC-style video script for Instagram Reels or TikTok \nthat sounds authentic, friendly, and relatable. \nIt should describe the product in a natural human tone, like a real person \nsharing their experience.\n\nProduct details:\n{{ $('Extract Image & Caption').item.json.message.caption }}\n{{ $json.result.file_path }}\n\nIf possible, mention benefits, sensory details, and an emotional payoff. \nEnd with a short, clear call to action like \"link in bio\" or \"try it yourself\".\n"
+        }
+      },
+      "id": "fb4a2389-db12-4cf3-9134-90e7d8a54165",
+      "name": "Generate Script",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        976,
+        240
+      ],
+      "typeVersion": 3
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.kie.ai/api/v1/veo/generate",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer <TOKEN>"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "prompt",
+              "value": "={{ $('Generate Script').item.json.output }}"
+            },
+            {
+              "name": "imageUrls",
+              "value": "={{ $json.data.downloadUrl }}"
+            },
+            {
+              "name": "model",
+              "value": "veo3_fast"
+            },
+            {
+              "name": "aspectRatio",
+              "value": "9:16"
+            },
+            {
+              "name": "seeds",
+              "value": "12345"
+            },
+            {
+              "name": "enableFallback",
+              "value": "false"
+            },
+            {
+              "name": "enableTranslation",
+              "value": "true"
+            },
+            {
+              "name": "generationType",
+              "value": "TEXT_2_VIDEO"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2c512f38-67d3-4c3f-a8b6-6a5fe8f6ecfe",
+      "name": "Create Video Generation Task",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1552,
+        240
+      ],
+      "typeVersion": 4.3
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "48af49b6-272a-41d6-bc92-af8aaa2d4dd5",
+              "operator": {
+                "type": "number",
+                "operation": "empty",
+                "singleValue": true
+              },
+              "leftValue": "={{ $json.data.completeTime }}",
+              "rightValue": ""
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "745edc27-4b5e-4ce2-a629-636448cea7da",
+      "name": "Is Video Ready?",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        1984,
+        96
+      ],
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "amount": 30
+      },
+      "id": "47a51398-cf01-4e8a-8489-60931fbc2fb9",
+      "name": "Wait 30 Seconds",
+      "type": "n8n-nodes-base.wait",
+      "position": [
+        2192,
+        80
+      ],
+      "webhookId": "1958d2df-5d70-4c70-b4dc-a34bee3bc94e",
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "url": "https://api.kie.ai/api/v1/veo/get-1080p-video",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": " taskId",
+              "value": "={{ $json.data.taskId }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer <TOKEN>"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "cbb402a4-bf3c-4312-892d-c833972f44dc",
+      "name": "Get HD Video URL",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        2240,
+        432
+      ],
+      "typeVersion": 4.3
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Check Video Status').item.json.data.response.resultUrls[0] }}",
+        "options": {}
+      },
+      "id": "dc079bec-5a2e-4b0c-a009-73799d99d3fc",
+      "name": "Download Generated Video",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        2416,
+        432
+      ],
+      "typeVersion": 4.3
+    },
+    {
+      "parameters": {
+        "operation": "sendVideo",
+        "chatId": "={{ $('Receive Message').item.json.message.chat.id }}",
+        "binaryData": true,
+        "additionalFields": {}
+      },
+      "id": "f27ca815-8a24-4d06-9d43-49444c8edc19",
+      "name": "Send Video to User",
+      "type": "n8n-nodes-base.telegram",
+      "position": [
+        2592,
+        432
+      ],
+      "webhookId": "1b38fa9e-79f5-4b18-98ce-92865e0c0c06",
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "content": "## 📝 Generate Script \nThis node creates a highly engaging ad script for the product using AI, written in a natural, UGC-style tone.",
+        "height": 416,
+        "width": 272,
+        "color": 3
+      },
+      "id": "18a58bee-1516-49a2-8e42-eea638feca20",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        944,
+        96
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## ☁️ Upload to Kie Storage\nUploads the downloaded Telegram image to Kie.ai storage via API for further video generation.",
+        "height": 368,
+        "width": 192,
+        "color": 4
+      },
+      "id": "431166b0-9f45-4ee8-879e-b41b95b8830c",
+      "name": "Sticky Note2",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1264,
+        64
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://kieai.redpandaai.co/api/file-url-upload",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer <TOKEN>"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "fileUrl",
+              "value": "=https://api.telegram.org/file/bot7759143820:AAHyXBFghzJd5OksfEmOfPYxz6THes5-c6o/{{ $('Download Telegram Image').item.json.result.file_path }}"
+            },
+            {
+              "name": "uploadPath",
+              "value": "images/downloaded"
+            },
+            {
+              "name": "fileName",
+              "value": "my-downloaded-image.jpg"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e40711bb-7d2f-42c9-a24c-4777ba2c6d67",
+      "name": "Upload image to Kie Storage",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1312,
+        240
+      ],
+      "typeVersion": 4.3
+    },
+    {
+      "parameters": {
+        "content": "## 🎥 Create Video Task\nSends the script and image URL to Kie.ai’s Veo3 API to start the UGC video generation process.",
+        "height": 384,
+        "width": 192,
+        "color": 7
+      },
+      "id": "1f446bb2-0f14-4bd8-a372-cbb947487f9e",
+      "name": "Sticky Note3",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1504,
+        48
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## 🛰️ Check Video Status\nChecks the current generation progress of the video on Kie.ai Veo3 using the task ID.",
+        "height": 336,
+        "width": 192,
+        "color": 4
+      },
+      "id": "0cb432ee-2e9d-4338-b262-44f6219cbe8e",
+      "name": "Sticky Note4",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1744,
+        -64
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "url": "https://api.kie.ai/api/v1/veo/record-info",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "taskId",
+              "value": "={{ $json.data.taskId }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer <TOKEN>"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "57ca7b44-1e55-4f01-a43f-f9fd1adced3d",
+      "name": "Check Video Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1792,
+        112
+      ],
+      "typeVersion": 4.3
+    },
+    {
+      "parameters": {
+        "content": "##  🔄 Video Status Loop\nChecks if the video generation is complete.\nIf not, waits 30 seconds before rechecking until it’s ready.",
+        "height": 272,
+        "width": 352,
+        "color": 5
+      },
+      "id": "c8417ecb-fa5a-4d9e-beb1-66b0a1f09ae0",
+      "name": "Sticky Note5",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1968,
+        -32
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## 🎬 Retrieve & Send Video\n\nFetches the HD video URL from Kie.ai, downloads the generated video, and sends it back to the user on Telegram.",
+        "height": 304,
+        "width": 608,
+        "color": 4
+      },
+      "id": "12f57a10-da0f-436d-8999-2b602045ff76",
+      "name": "Sticky Note6",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2176,
+        288
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "##  🖼️ Extract Image & Caption\nThis node extracts the product image file ID and its caption text from the Telegram message input for use in later workflow steps.",
+        "height": 352
+      },
+      "id": "8d4cfb49-5bf7-43a0-bae2-1c7398f015c7",
+      "name": "Sticky Note1",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        528,
+        48
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## تم التحضير بواسطة \n**م. أحمد الصيرفي**  \n\nللتعلّم وتطوير مهاراتك في الأتمتة، زور موقعنا: \n [ahmedelserafy.com](https://ahmedelserafy.com/automation_course)\n\n\n",
+        "width": 2144,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        544,
+        -320
+      ],
+      "typeVersion": 1,
+      "id": "5ad54e46-d172-48f2-9b2b-064b2ab8fa2f",
+      "name": "Sticky Note7"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Generate Script": {
+      "main": [
+        [
+          {
+            "node": "Upload image to Kie Storage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Video Ready?": {
+      "main": [
+        [
+          {
+            "node": "Wait 30 Seconds",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get HD Video URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Receive Message": {
+      "main": [
+        [
+          {
+            "node": "Extract Image & Caption",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 30 Seconds": {
+      "main": [
+        [
+          {
+            "node": "Check Video Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get HD Video URL": {
+      "main": [
+        [
+          {
+            "node": "Download Generated Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Video Status": {
+      "main": [
+        [
+          {
+            "node": "Is Video Ready?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Telegram Image": {
+      "main": [
+        [
+          {
+            "node": "Generate Script",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Image & Caption": {
+      "main": [
+        [
+          {
+            "node": "Download Telegram Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Generated Video": {
+      "main": [
+        [
+          {
+            "node": "Send Video to User",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generate Script",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload image to Kie Storage": {
+      "main": [
+        [
+          {
+            "node": "Create Video Generation Task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Video Generation Task": {
+      "main": [
+        [
+          {
+            "node": "Check Video Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "8e1f3603-8615-470d-bd13-188b98727759",
+  "meta": {
+    "templateId": "10393",
+    "instanceId": "eb58054caf61c2552d4b13cc032edccc043473990c2938118b79640890b4e573"
+  },
+  "id": "gTIF6Ej90NOULy47",
+  "tags": [
+    {
+      "updatedAt": "2025-11-28T22:29:34.032Z",
+      "createdAt": "2025-11-28T22:29:34.032Z",
+      "id": "HHSMeirOYyTwabhZ",
+      "name": "pack"
+    }
+  ]
+}

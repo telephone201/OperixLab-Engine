@@ -1,0 +1,194 @@
+{
+  "name": "Summarize youtube video",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "Add the full YouTube URL. ☝️\nYou can change this input to a webhook or anything else.",
+        "height": 80,
+        "width": 230
+      },
+      "id": "49d7b463-7155-4958-9442-3d7bdc375b64",
+      "name": "Sticky Note1",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -272,
+        192
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "Apify API_KEY Here ???",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n    \"startUrls\": [\n        \"{{ $json['Full URL'] }}\"\n    ]\n}",
+        "options": {}
+      },
+      "id": "c87bd7a0-62cf-4d34-a047-3997853fa585",
+      "name": "Request YouTube Transcript",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        64,
+        32
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "content": "Once you follow the Setup Instructions (mentioned in the template page description), you can insert the full URL endpoint, which includes both the POST Endpoint and API Key. 👇",
+        "height": 340,
+        "width": 280,
+        "color": 3
+      },
+      "id": "ac4ec463-ca76-4383-b16b-b4395dbf0060",
+      "name": "Sticky Note2",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -16,
+        -96
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {},
+      "id": "3d3441dd-d066-4b7d-af59-66512b7d860a",
+      "name": "No Operation, do nothing",
+      "type": "n8n-nodes-base.noOp",
+      "position": [
+        688,
+        32
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "2161c41b-5a1c-4b34-9a42-464c05e36ecc",
+      "name": "Summarization of a YouTube script",
+      "type": "@n8n/n8n-nodes-langchain.chainSummarization",
+      "position": [
+        320,
+        32
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "formTitle": "Summarize YouTube video's",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Full URL"
+            }
+          ]
+        },
+        "options": {
+          "path": "ddd"
+        }
+      },
+      "id": "10302f8b-eb4a-41ec-8e0e-3b1cf63b32f0",
+      "name": "YouTube video URL",
+      "type": "n8n-nodes-base.formTrigger",
+      "position": [
+        -144,
+        32
+      ],
+      "webhookId": "3dc17600-3020-40b1-be8f-e65ef45269b6",
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "495a05e5-dc5b-4ca2-ad1a-93e95adfc594",
+      "name": "Summarization Engine",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "position": [
+        320,
+        192
+      ],
+      "typeVersion": 1.1,
+      "credentials": {
+        "openAiApi": {
+          "id": "JcwIFXVK9Lxo9lj2",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "The summarization node works automatically and professionally, recognizing the input text and processing it directly without requiring any enhancements from your side👇",
+        "width": 280,
+        "color": 5
+      },
+      "id": "4ff60621-8c90-42d1-94a9-cbdc7d1deef8",
+      "name": "Sticky Note4",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        304,
+        -96
+      ],
+      "typeVersion": 1
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Request YouTube Transcript": {
+      "main": [
+        [
+          {
+            "node": "Summarization of a YouTube script",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarization of a YouTube script": {
+      "main": [
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "YouTube video URL": {
+      "main": [
+        [
+          {
+            "node": "Request YouTube Transcript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarization Engine": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Summarization of a YouTube script",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "41508716-c551-46f7-9119-072731baf220",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "eb58054caf61c2552d4b13cc032edccc043473990c2938118b79640890b4e573"
+  },
+  "id": "7TAK3JhMJM0sUt6u",
+  "tags": []
+}

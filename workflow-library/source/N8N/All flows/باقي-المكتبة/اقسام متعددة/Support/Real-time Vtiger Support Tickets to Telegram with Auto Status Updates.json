@@ -1,0 +1,211 @@
+{
+  "name": "Real-time Vtiger Support Tickets to Telegram with Auto Status Updates",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "e9ca7d91-ee88-4cc4-9c12-e638fbfb6e66",
+      "name": "Schedule Trigger Every n Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [
+        368,
+        240
+      ],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {},
+      "id": "81b830bc-e1d3-4d6b-9ef1-e323771b5b5f",
+      "name": "VtigerCRM get Tickets",
+      "type": "n8n-nodes-vtiger-crm.vtigerNode",
+      "position": [
+        592,
+        240
+      ],
+      "typeVersion": 1,
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "1a4121a1-3315-48c6-b319-be947242e291",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              },
+              "leftValue": "={{ $json.result[0].id }}",
+              "rightValue": ""
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ff439d91-3b2c-4f8e-9c38-aca0f09ce86c",
+      "name": "If there's a data returned",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        816,
+        240
+      ],
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "chatId": "6885236190",
+        "text": "=New ticket with the following details:\nTicketid: {{ $json.result[0].ticket_no }}\nTitle: {{ $json.result[0].ticket_title }}\nStatus: {{ $json.result[0].ticketstatus }}\nPriority: {{ $json.result[0].ticketpriorities }}\nSeverity: {{ $json.result[0].ticketseverities }}\nCategory: {{ $json.result[0].ticketcategories }}\nDescription: {{ $json.result[0].description }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "77eb4e5c-0048-4469-9815-df5534a7e9dd",
+      "name": "Send a Ticket detail to Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "position": [
+        1296,
+        64
+      ],
+      "webhookId": "78ebd6db-cd6a-4eac-af64-133af5c81e89",
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {},
+      "id": "70cd5610-46f4-42b0-8008-511a99b9888e",
+      "name": "VtigerCRM Update Ticket Status",
+      "type": "n8n-nodes-vtiger-crm.vtigerNode",
+      "position": [
+        1312,
+        272
+      ],
+      "typeVersion": 1,
+      "credentials": {}
+    },
+    {
+      "parameters": {},
+      "id": "49cff4dc-a89e-4ebe-a1a9-6e9ef6fdd958",
+      "name": "No Operation, do nothing",
+      "type": "n8n-nodes-base.noOp",
+      "position": [
+        1104,
+        432
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "### 🎟️ Auto-Send Vtiger Tickets to Telegram  \n**(Real-time alerts + CRM update)**\nThis workflow runs **every 1 minute** to:\n- 📥 Fetch the most recent **open ticket** from Vtiger HelpDesk\n- 📲 Send a detailed message to **Telegram**\n- 🔁 Update the ticket status to **\"In Progress\"** to avoid duplicate alerts\n---\n> 💡 **Note:**  \n> This workflow uses a custom **Vtiger CRM** node from the **Community Nodes** registry.  \n> To install it in self-hosted n8n:\n> 1. Go to `Settings` → `Community Nodes`  \n> 2. Click **Install Node** and enter:\n> ```bash\n> n8n-nodes-vtiger-crm\n> ```\n---\n> ✅ Ideal for support teams that need **real-time alerts** and want to sync ticket progress across tools.",
+        "height": 368,
+        "width": 688
+      },
+      "id": "4a8d8029-2a1d-4704-90bd-712adca45596",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        512,
+        -256
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## تم التحضير بواسطة \n**م. أحمد الصيرفي**  \n\nللتعلّم وتطوير مهاراتك في الأتمتة، زور موقعنا: \n [ahmedelserafy.com](https://ahmedelserafy.com/automation_course)\n\n\n",
+        "height": 304,
+        "width": 544
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1216,
+        -256
+      ],
+      "typeVersion": 1,
+      "id": "8008ef23-cf02-483a-9304-4657c4f96407",
+      "name": "Sticky Note6"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "VtigerCRM get Tickets": {
+      "main": [
+        [
+          {
+            "node": "If there's a data returned",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If there's a data returned": {
+      "main": [
+        [
+          {
+            "node": "Send a Ticket detail to Telegram",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "VtigerCRM Update Ticket Status",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "VtigerCRM Update Ticket Status": {
+      "main": [
+        []
+      ]
+    },
+    "Schedule Trigger Every n Minutes": {
+      "main": [
+        [
+          {
+            "node": "VtigerCRM get Tickets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a Ticket detail to Telegram": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "b013b0de-c46a-4df9-a739-6cc614ca9b7f",
+  "meta": {
+    "templateId": "6329",
+    "instanceId": "eb58054caf61c2552d4b13cc032edccc043473990c2938118b79640890b4e573"
+  },
+  "id": "HqaRBZJPfqudxXzT",
+  "tags": []
+}

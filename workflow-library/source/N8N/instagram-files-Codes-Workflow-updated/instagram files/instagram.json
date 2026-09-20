@@ -1,0 +1,1529 @@
+{
+  "name": "reply instagram &facebook comments",
+  "nodes": [
+    {
+      "parameters": {
+        "multipleMethods": true,
+        "path": "n8n-course-test",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -80,
+        -16
+      ],
+      "id": "1ea385fd-30e0-4bfa-af2c-be0c245c812d",
+      "name": "Webhook",
+      "webhookId": "49eb9eaf-b01d-41aa-8132-e92c37b28f0c"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.query['hub.challenge'] }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        160,
+        -208
+      ],
+      "id": "15183622-48d7-44a0-a08f-ba4ae0946e26",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.instagram.com/v22.0/{{ $json.body.entry[0].changes[0].value.id }}/replies\n",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "message",
+              "value": "hello"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        160,
+        -512
+      ],
+      "id": "6dba64e6-06f9-4d8c-aa85-ab4269a7499a",
+      "name": "reply to comment header auth",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "bVRjCi61UQfBQ91O",
+          "name": "Header Auth account shortitcuts"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.instagram.com/v22.0/{{ $('Webhook').item.json.body.entry[0].changes[0].value.id }}/replies?access_token={{ $('Get row(s) in sheet').item.json['ig access token'] }}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "message",
+              "value": "={{ $json.Comment }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2448,
+        464
+      ],
+      "id": "e4bb0488-d0a7-46f8-b50c-9ef5ee82b4ca",
+      "name": "reply to comment access"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.instagram.com/v22.0/{{ $('Get row(s) in sheet').item.json['ig page id'] }}/messages?access_token={{ $('Get row(s) in sheet').item.json['ig access token'] }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"recipient\": {\n    \"comment_id\": \"{{ $('Webhook').item.json.body.entry[0].changes[0].value.id }}\"\n  },\n  \"message\": {\n    \"text\":  {{ JSON.stringify($('Get Dms').item.json.Message) }}\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2640,
+        464
+      ],
+      "id": "ab755885-20e0-4599-bf46-f87742bb566b",
+      "name": "send dm"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "19lkA5xprAajo2L5WsRVU5mqRECrj3P-hm_XoBy4QQqA",
+          "mode": "list",
+          "cachedResultName": "My Clients",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "ig page id",
+              "lookupValue": "={{ $json.body.entry[0].id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        128,
+        80
+      ],
+      "id": "8ad1ec92-0fd1-42e8-8566-2c05aa68390e",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "tzedcJtsgD4exCHN",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b30af84f-5fb8-4e26-9848-4f2a9ea6bd9e",
+              "leftValue": "={{ $('Get row(s) in sheet').item.json['end date'] }}",
+              "rightValue": "={{ $json.now }}",
+              "operator": {
+                "type": "dateTime",
+                "operation": "afterOrEquals"
+              }
+            },
+            {
+              "id": "a9f434ea-cfe0-4782-b649-a8d8de11567b",
+              "leftValue": "={{ $('Get row(s) in sheet').item.json['message limit'] }}",
+              "rightValue": "={{ $('Get row(s) in sheet').item.json.usage }}",
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        800,
+        208
+      ],
+      "id": "e85c4634-5c94-47bd-8a79-ad2764ceb0e2",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = new Date();\nconst Y = d.getFullYear();\nconst M = String(d.getMonth() + 1).padStart(2, '0');\nconst D = String(d.getDate()).padStart(2, '0');\nconst h = String(d.getHours()).padStart(2, '0');\nconst m = String(d.getMinutes()).padStart(2, '0');\nconst s = String(d.getSeconds()).padStart(2, '0');\n// ${h}:${m}:${s}\nreturn [\n  {\n    json: {\n      now: `${M}-${D}-${Y}`,\n    },\n  },\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        208
+      ],
+      "id": "531b608f-6175-42c4-b370-7a4e5fd92968",
+      "name": "Code for time"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Get row(s) in sheet').item.json['dm temlates'] }}",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "=Dms",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "ig post id",
+              "lookupValue": "={{ $('Webhook').item.json.body.entry[0].changes[0].value.media.id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1440,
+        448
+      ],
+      "id": "1e2dde81-1f80-4091-8084-badccebdacd8",
+      "name": "Get Dms",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "tzedcJtsgD4exCHN",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Get row(s) in sheet').item.json['dm temlates'] }}",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "=Comments",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2048,
+        464
+      ],
+      "id": "539b34a4-bd79-4dfb-a49c-a0efb36fb4da",
+      "name": "Get comments",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "tzedcJtsgD4exCHN",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nif (items.length === 0) {\n  return [{ json: { error: 'No rows found' } }];\n}\n\n// نختار صف عشوائي\nconst randomIndex = Math.floor(Math.random() * items.length);\nreturn [ items[randomIndex] ];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2240,
+        464
+      ],
+      "id": "0b181811-66fb-4a52-9fc0-437cbebb7be8",
+      "name": "Code to get random comment reply"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "19lkA5xprAajo2L5WsRVU5mqRECrj3P-hm_XoBy4QQqA",
+          "mode": "list",
+          "cachedResultName": "My Clients",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "usage": "={{ $('Get row(s) in sheet').item.json.usage+1 }}",
+            "row_number": "={{ $('Get row(s) in sheet').item.json.row_number }}"
+          },
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "created date",
+              "displayName": "created date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "end date",
+              "displayName": "end date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "phone number",
+              "displayName": "phone number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "message limit",
+              "displayName": "message limit",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "monthly price",
+              "displayName": "monthly price",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "usage",
+              "displayName": "usage",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ig page id",
+              "displayName": "ig page id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ig expire date acces token",
+              "displayName": "ig expire date acces token",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "facebook page id",
+              "displayName": "facebook page id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ig access token",
+              "displayName": "ig access token",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "facebook access token",
+              "displayName": "facebook access token",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "dm temlates",
+              "displayName": "dm temlates",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2832,
+        464
+      ],
+      "id": "3187e267-88fe-4912-b8ab-9947190d2537",
+      "name": "Update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "tzedcJtsgD4exCHN",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Webhook').item.json.body.entry[0].messaging[0].message.text }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    },
+                    "id": "22ae3f76-f562-4495-ba13-e234212b2ba4"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Message"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "ded67a7d-0c51-4fc9-95df-93a16b6035e6",
+                    "leftValue": "={{ $('Webhook').item.json.body.entry[0].changes[0].value.text }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "comment"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        336,
+        64
+      ],
+      "id": "fc46d39b-1c4a-4d09-9356-43e3a7e095cd",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Webhook').item.json.body.entry[0].messaging[0].message.text }}",
+        "options": {
+          "systemMessage": "انت شغال للرد على العملاء فى انستجرام\n\nمعاك بيانات الشركة هتاخدها من الشيت الى اسمه \"Company Info\"\nبحيث لو عايز تبعتله اسم الشركة او تفاصيلها لو سأل مثلا على الهاتف"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        768,
+        -240
+      ],
+      "id": "e9cf8e3a-f129-4105-9ad3-75ba84728555",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Get row(s) in sheet').item.json['dm temlates'] }}",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "info",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        960,
+        -48
+      ],
+      "id": "9eca203f-13ad-4dab-8606-390d35491ce0",
+      "name": "Company Info",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "tzedcJtsgD4exCHN",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-5-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-5-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        704,
+        -48
+      ],
+      "id": "0b001fec-4ac1-4f76-8cfa-ba89e07f951f",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "JcwIFXVK9Lxo9lj2",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Get row(s) in sheet').item.json['ig page id'] }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        832,
+        -48
+      ],
+      "id": "e5b35601-79f9-4999-8f83-8baccd24dad3",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.instagram.com/v22.0/{{ $('Get row(s) in sheet').item.json['ig page id'] }}/messages?access_token={{ $('Get row(s) in sheet').item.json['ig access token'] }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"recipient\": {\n    \"id\": \"{{ $('Webhook').item.json.body.entry[0].messaging[0].sender.id }}\"\n  },\n  \"message\": {\n    \"text\":  {{ JSON.stringify($json.output) }}\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        -240
+      ],
+      "id": "09168f61-5480-440c-843c-564c1f4018f2",
+      "name": "send dm messages"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "19lkA5xprAajo2L5WsRVU5mqRECrj3P-hm_XoBy4QQqA",
+          "mode": "list",
+          "cachedResultName": "My Clients",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "usage": "={{ $('Get row(s) in sheet').item.json.usage+1 }}",
+            "row_number": "={{ $('Get row(s) in sheet').item.json.row_number }}"
+          },
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "created date",
+              "displayName": "created date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "end date",
+              "displayName": "end date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "phone number",
+              "displayName": "phone number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "message limit",
+              "displayName": "message limit",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "monthly price",
+              "displayName": "monthly price",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "usage",
+              "displayName": "usage",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ig page id",
+              "displayName": "ig page id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ig expire date acces token",
+              "displayName": "ig expire date acces token",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "facebook page id",
+              "displayName": "facebook page id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ig access token",
+              "displayName": "ig access token",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "facebook access token",
+              "displayName": "facebook access token",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "dm temlates",
+              "displayName": "dm temlates",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1360,
+        -240
+      ],
+      "id": "8bef488c-9165-43f0-8c1c-eb5e993f7d61",
+      "name": "Update row in sheet1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "tzedcJtsgD4exCHN",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "الرد على الكومنت بناءا على انه يحدد كلمة معينة \n\nعمل نظام للردود العامة على اي بوست\n"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1536,
+        -512
+      ],
+      "typeVersion": 1,
+      "id": "67fe5a2b-0119-4573-9d0d-4ea21dfd84a7",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "jsCode": "// الحصول على كومنت العميل من الـ Webhook\nconst msg = $('Webhook').first().json.body.entry[0].changes[0].value.text\n\n// الحصول على الكلمات المفتاحية من المدخلات\nconst checkfrom = $input.first().json.comment;\n// متغير لحفظ النتيجة النهائية\nlet isMatch = false;\n\n// التحقق مما إذا كان `checkfrom` فارغاً أو يحتوي على 'any'\nif (!checkfrom || checkfrom.trim() === '' || checkfrom.toLowerCase().includes('any')) {\n  isMatch = true;\n} else {\n  // تحويل الكومنت والكلمات المفتاحية إلى حروف صغيرة\n  const lowerCaseMsg = msg.toLowerCase();\n  const lowerCaseCheckfrom = checkfrom.toLowerCase();\n\n  // تقسيم الكلمات المفتاحية بناءً على الفاصلة\n  const keywords = lowerCaseCheckfrom.split(',');\n\n  // تكرار على كل كلمة مفتاحية\n  for (const keyword of keywords) {\n    // إزالة الفراغات البيضاء حول الكلمة المفتاحية\n    const trimmedKeyword = keyword.trim();\n    // التحقق إذا كان الكومنت يحتوي على الكلمة المفتاحية\n    if (trimmedKeyword !== '' && lowerCaseMsg.includes(trimmedKeyword)) {\n      isMatch = true;\n      // الخروج من الحلقة بمجرد العثور على تطابق واحد\n      break;\n    }\n  }\n}\n\n// إرجاع النتيجة\nreturn {\n  json: {\n    status: isMatch,\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1632,
+        480
+      ],
+      "id": "82d8e217-9005-4e3e-a104-92f96af484c6",
+      "name": "Code1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "6c4e6f52-5e63-4e1c-a58f-f2ee22d53260",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1840,
+        480
+      ],
+      "id": "0900b1ba-46d8-4d40-afe0-aad13b8f67f8",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.instagram.com/v22.0/{{ $('Webhook').item.json.body.entry[0].changes[0].value.id }}/replies?access_token={{ $('Get row(s) in sheet').item.json['ig access token'] }}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "message",
+              "value": "={{ $json.Comment }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2048,
+        256
+      ],
+      "id": "a88d9b67-9fd5-47f5-aef6-95bfc83ed937",
+      "name": "reply to comment access1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.instagram.com/v22.0/{{ $('Get row(s) in sheet').item.json['ig page id'] }}/messages?access_token={{ $('Get row(s) in sheet').item.json['ig access token'] }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"recipient\": {\n    \"comment_id\": \"{{ $('Webhook').item.json.body.entry[0].changes[0].value.id }}\"\n  },\n  \"message\": {\n    \"text\":  {{ JSON.stringify($('Get public comments').item.json.message) }}\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2240,
+        256
+      ],
+      "id": "34d73bdb-0f43-4a59-9bb6-863e84796457",
+      "name": "send dm1"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Get row(s) in sheet').item.json['dm temlates'] }}",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "=Comments",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1648,
+        256
+      ],
+      "id": "f25c71a7-1ffe-4218-92b2-6f652b502976",
+      "name": "Get comments1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "tzedcJtsgD4exCHN",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nif (items.length === 0) {\n  return [{ json: { error: 'No rows found' } }];\n}\n\n// نختار صف عشوائي\nconst randomIndex = Math.floor(Math.random() * items.length);\nreturn [ items[randomIndex] ];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1840,
+        256
+      ],
+      "id": "f1184ebe-f9d3-46fe-b1d0-148856abff90",
+      "name": "Code to get random comment reply1"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "19lkA5xprAajo2L5WsRVU5mqRECrj3P-hm_XoBy4QQqA",
+          "mode": "list",
+          "cachedResultName": "My Clients",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "usage": "={{ $('Get row(s) in sheet').item.json.usage+1 }}",
+            "row_number": "={{ $('Get row(s) in sheet').item.json.row_number }}"
+          },
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "created date",
+              "displayName": "created date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "end date",
+              "displayName": "end date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "phone number",
+              "displayName": "phone number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "message limit",
+              "displayName": "message limit",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "monthly price",
+              "displayName": "monthly price",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "usage",
+              "displayName": "usage",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ig page id",
+              "displayName": "ig page id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ig expire date acces token",
+              "displayName": "ig expire date acces token",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "facebook page id",
+              "displayName": "facebook page id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ig access token",
+              "displayName": "ig access token",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "facebook access token",
+              "displayName": "facebook access token",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "dm temlates",
+              "displayName": "dm temlates",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2432,
+        256
+      ],
+      "id": "da918b6b-ca92-4679-be5a-dd245fe83756",
+      "name": "Update row in sheet2",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "tzedcJtsgD4exCHN",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Get row(s) in sheet').item.json['dm temlates'] }}",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "=public comments",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "comment",
+              "lookupValue": "={{ $('Webhook').item.json.body.entry[0].changes[0].value.text }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1072,
+        288
+      ],
+      "id": "56a06742-ece4-459a-b2d7-9016a9e027bd",
+      "name": "Get public comments",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "tzedcJtsgD4exCHN",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "2e7e0608-4f2a-4899-a225-3975407e58fb",
+              "leftValue": "={{ $json.row_number }}",
+              "rightValue": "",
+              "operator": {
+                "type": "number",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1280,
+        288
+      ],
+      "id": "bac66922-96a2-48ec-82f1-0541fd9f3663",
+      "name": "If2"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "send dm": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Get public comments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code for time": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Dms": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get comments": {
+      "main": [
+        [
+          {
+            "node": "Code to get random comment reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code to get random comment reply": {
+      "main": [
+        [
+          {
+            "node": "reply to comment access",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "reply to comment access": {
+      "main": [
+        [
+          {
+            "node": "send dm",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code for time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Company Info": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "send dm messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "send dm messages": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Get comments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "reply to comment access1": {
+      "main": [
+        [
+          {
+            "node": "send dm1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "send dm1": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get comments1": {
+      "main": [
+        [
+          {
+            "node": "Code to get random comment reply1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code to get random comment reply1": {
+      "main": [
+        [
+          {
+            "node": "reply to comment access1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get public comments": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "Get comments1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Dms",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Africa/Cairo",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "b973e58b-9a1e-4c38-968d-13f09874f4bf",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "eb58054caf61c2552d4b13cc032edccc043473990c2938118b79640890b4e573"
+  },
+  "id": "jQAQxp63Rs8kfJ67",
+  "tags": []
+}

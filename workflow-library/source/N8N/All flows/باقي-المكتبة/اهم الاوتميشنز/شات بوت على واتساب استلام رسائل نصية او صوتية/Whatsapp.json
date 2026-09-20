@@ -1,0 +1,547 @@
+{
+  "name": "Whatsapp",
+  "nodes": [
+    {
+      "parameters": {
+        "multipleMethods": true,
+        "httpMethod": [
+          "POST",
+          "GET"
+        ],
+        "path": "16a27e8e-f58d-470f-98da-a7aa04b077d1",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -4320,
+        392
+      ],
+      "id": "d9d93556-338d-4d6c-b576-7d3e1009702f",
+      "name": "Webhook",
+      "webhookId": "16a27e8e-f58d-470f-98da-a7aa04b077d1"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.query['hub.challenge'] }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.3,
+      "position": [
+        -4096,
+        496
+      ],
+      "id": "ac06ccba-7b1f-435e-807e-eefb66d78599",
+      "name": "Respond to Webhook",
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Webhook').item.json.body.entry[0].changes[0].value.messages[0].from }}",
+        "contextWindowLength": 50
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        -2840,
+        512
+      ],
+      "id": "50c9fe5b-81e6-46fa-bbc2-c1e283c22227",
+      "name": "Simple Memory2"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.text }}",
+        "options": {
+          "systemMessage": "#overview\nانت بتشتغل دعم فني على الواتساب\nوفى الغالب احنا الى بعتنا للعميل رسالة الاول بنعرفه على مميزات السيستم فممكن يوصلك رد ممكن يكون مش مفهوم فاعتبر ان اول رساله بينكم اننا بعتنالهم مميزات السيستم و هل هما مهتمين ولا لا\nالرسائل تكون مختصره وعن مجالنا فقط وتتكلم بالعامية المصرية بس باحترام يعني تقول حضرتك\nوالرساله لا تزيد عن 800 حرف\nاحنا بنقدم سيستم لادارة العيادات اسمه طبيب ميت نظام كلاود يعني اونلاين\nتقدر تشترك في دقيقه وتاخد 7 ايام تجربة مجانية\nالسيستم بسيط لا يحتاج خبرة فى التعامل ,بمجرد التسجيل سيتم تحويلك الى تسجيل الدخول ثم ستجد حجوزات اليوم , فى القائمة الجانبية ستجد الاطباء , الخدمات يمكن من هنا اضافة خدمة جديدة مثل الكشف وتحديد السعر , المرضي , الحجوزات , التقارير\n\nوابعت تفاصيل السيستم كلها \n\nوفى البداية اسم الشركة طبيب ميت TabibMate \nوهتقوله فى البداية انا بوت ذكاء اصطناعي هقدر اساعد حضرتك ولا تقول هلا قول اهلا \n\n\nلو سألك عايز يتواصل مع شخص حقيقي ممكن على الرقم ده\n01032041548\n\nلما حد يسأل عن المميزات هتبعتله المميزات والسعر الحالى\n\nلو حد سألك على السعر فسعر الاشتراك 300 جنيه شهريا للطبيب الواحد وعليه خصم 10% لو اشتركنا سنويا\nلو حد سألك عن السعر ابعتله كمان رابط الاشتراك\n\nواذا ارسل لك رقم هاتفه قل له شكرا لك تم ارساله الى الدعم الفني وسيتواصلون معك فى اقرب وقت وانه تم ايقافي\nلو ارسل الرقم يعني لو لقيت فى الرساله بيبدا ب 01\nكده هو ارسلك الرقم غير كده يبقي لسه مبعتش الرقم\n\n\nلو هتبعت رابط زي المميزات او ال pdf او رابط التجربه \nمتحطوش بين اقواس عشان بيعمل مشكله ابعته زي ما هو كده\n\nلازم تعرف العميل ان عندنا نظام شات بوت وده بيميز السيستم بتاعنا\n\n#product\nفيديو شرح للسيستم بالكامل\n لكيفية الاشتراك وتهيئة السيستم فى اول 3 دقائق من الفيديو\nثم الباقى للحجز واضافة المرضي وعرض التقارير\nhttps://youtu.be/NR33ShquPHg?si=YBqxk1jdk-pr9VVx\n\n\n----\nهذه هي المميزات لسيستم طبيب ميت\n\n✅ تنظيم حجوزات المرضى\n✅ انشاء ملف للمريض\n✅ تحديد مواعيد الزيارة و حجز مواعيد القادمة\n✅ تقارير دورية عن ارباح العيادة\n\n✅ حجز اونلاين برسوم اضافية\n✅ يعمل على جميع الاجهزة والهواتف\n✅ اونلاين ويمكنك الوصول للسيستم من البيت\n✅ ارسال الرسائل عبر الواتس اب للمرضي\n\n\nالسيستم في نظام شات بوت اوتوماتيك تتقدر تربط صفحتك على فيس بوك بالسيستم فى خطوة واحده بس\nهيقدر البوت يرد على العملاء على ماسنجر يعرفهم مواعيد العيادة وتفاصيلها \nالمريض يقدر يحجز من خلاله و الحجز بيتسجل تلقائيًا في السيستم \nيقدر يعرف المواعيد المتاحة في أي يوم\n يقدر يعرف قدامه كام حالة دلوقتي على دوره يعني وهو في بيته ممكن يعرف فاضل على دوره قد ايه\nكل ده واكتر كمان\nنظام البوت بيبقي بباقات شهرية\nكمثال اول باقة بسعر 500 جنيه و تشمل 1000 رسالة شهريه\n\nفيديو شرح ربط  البوت بصفحة الفيس بوك وماسنجر\nhttps://youtu.be/9Hl1-4DR9Cw\n\n\nرابط السيستم\nhttps://tabibmate.com\n\n\nرابط التسجيل \nhttps://tabibmate.com/signup\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        -2976,
+        288
+      ],
+      "id": "d1fe80ff-a166-4bc1-9736-ef0defdd4fdc",
+      "name": "AI Agent5"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Webhook').item.json.body.entry[0].changes[0].value.messages[0].type }}",
+                    "rightValue": "text",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "f282b9de-f4c7-433b-82c8-7af7f2ba7730"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Text"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "2fb0b49e-4f53-467f-b2d7-d3b0b42f99ba",
+                    "leftValue": "={{ $('Webhook').item.json.body.entry[0].changes[0].value.messages[0].type }}",
+                    "rightValue": "image",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "image"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "24b54278-aa21-4f9c-8dcc-bdce93955c82",
+                    "leftValue": "={{ $('Webhook').item.json.body.entry[0].changes[0].value.messages[0].type }}",
+                    "rightValue": "audio",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Audio"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -4096,
+        272
+      ],
+      "id": "57bf9764-b802-47f4-8c04-8088ca2829e1",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "resource": "media",
+        "operation": "mediaUrlGet",
+        "mediaGetId": "={{ $('Webhook').item.json.body.entry[0].changes[0].value.messages[0].audio.id }}"
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        -3872,
+        384
+      ],
+      "id": "8b792340-3149-41f0-a24c-2095ead3f305",
+      "name": "WhatsApp Business Cloud1",
+      "webhookId": "e4fe1f5a-4c1f-4809-98b6-b5d095fd7ff8",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "EUc107B1qkGmMYQ6",
+          "name": "WhatsApp account test"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -3648,
+        384
+      ],
+      "id": "f3db0d56-d0a3-4799-bff9-7eb6b404a431",
+      "name": "HTTP Request1",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "Atggv74A1Nd1cvM3",
+          "name": "test dlco"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "speech",
+        "operation": "speechToText",
+        "additionalOptions": {},
+        "requestOptions": {}
+      },
+      "type": "@elevenlabs/n8n-nodes-elevenlabs.elevenLabs",
+      "typeVersion": 1,
+      "position": [
+        -3424,
+        384
+      ],
+      "id": "264c6366-c780-4523-b3e1-3672cf8ef7ec",
+      "name": "ElevenLabs2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2e4fdd6c-de8f-479b-9fb9-968b255f9934",
+              "name": "text",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            },
+            {
+              "id": "9132966d-ef25-4805-b23d-5e00ba9d7b46",
+              "name": "body.entry[0].changes[0].value.messages[0].from",
+              "value": "={{ $('Webhook').item.json.body.entry[0].changes[0].value.messages[0].from }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -3200,
+        384
+      ],
+      "id": "b096d756-9efc-4b41-9bcc-90e326be4164",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -2968,
+        512
+      ],
+      "id": "95e5e0da-9323-4608-b79e-13ae876c92f3",
+      "name": "OpenAI Chat Model"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9132966d-ef25-4805-b23d-5e00ba9d7b46",
+              "name": "body.entry[0].changes[0].value.messages[0].from",
+              "value": "={{ $('Webhook').item.json.body.entry[0].changes[0].value.messages[0].from }}",
+              "type": "string"
+            },
+            {
+              "id": "debee26d-db38-4dbb-a4f3-ddf60836c6ab",
+              "name": "text",
+              "value": "={{ $('Webhook').item.json.body.entry[0].changes[0].value.messages[0].text.body }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -3200,
+        192
+      ],
+      "id": "4892249c-6479-43e4-9636-fa5fe0f0e526",
+      "name": "Edit Fields4"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "673691855833345",
+        "recipientPhoneNumber": "={{ $('Webhook').item.json.body.entry[0].changes[0].value.messages[0].from }}",
+        "textBody": "={{ $('AI Agent5').item.json.output }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        -2624,
+        288
+      ],
+      "id": "1ec273e2-d65e-4840-9a44-4fa062bd8b13",
+      "name": "WhatsApp Business Cloud6",
+      "webhookId": "dc854325-7b3a-4754-a321-276b9632869e",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "EUc107B1qkGmMYQ6",
+          "name": "WhatsApp account test"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## تم الانشاء بواسطة \nتم الانشاء بواسطة **م. أحمد الصيرفي**  \n\nللتعلّم وتطوير مهاراتك في الأتمتة، زور موقعنا: \n [ahmedelserafy.com](https://ahmedelserafy.com/automation_course)\n",
+        "height": 224,
+        "width": 336
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -3600,
+        -176
+      ],
+      "typeVersion": 1,
+      "id": "2dc28318-8fc1-4ba8-8acb-cc03d5504144",
+      "name": "Sticky Note"
+    }
+  ],
+  "pinData": {
+    "Webhook": [
+      {
+        "json": {
+          "headers": {
+            "connection": "upgrade",
+            "host": "n8n.ahmedelserafy.com",
+            "content-length": "560",
+            "x-forwarded-for": "2a03:2880:12ff:74::",
+            "accept-encoding": "gzip, br",
+            "user-agent": "facebookexternalua",
+            "x-hub-signature-256": "sha256=0b75d1c306a553952255a0e0e8e2d9029721162c23f8e44f85b18d637cfb37e9",
+            "x-hub-signature": "sha1=82027011f30d9e0e8a13f689c8f5de0d4494670e",
+            "cf-ray": "9a02c4f94904ec2e-DFW",
+            "content-type": "application/json",
+            "accept": "*/*",
+            "cdn-loop": "cloudflare; loops=1",
+            "cf-connecting-ip": "2a03:2880:12ff:74::",
+            "cf-ipcountry": "US",
+            "cf-visitor": "{\"scheme\":\"https\"}",
+            "x-forwarded-proto": "https"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "object": "whatsapp_business_account",
+            "entry": [
+              {
+                "id": "1645997339390672",
+                "changes": [
+                  {
+                    "value": {
+                      "messaging_product": "whatsapp",
+                      "metadata": {
+                        "display_phone_number": "201008683879",
+                        "phone_number_id": "673691855833345"
+                      },
+                      "contacts": [
+                        {
+                          "profile": {
+                            "name": "ahmed"
+                          },
+                          "wa_id": "201551455149"
+                        }
+                      ],
+                      "messages": [
+                        {
+                          "from": "201551455149",
+                          "id": "wamid.HBgMMjAxNTUxNDU1MTQ5FQIAEhggQUM5MEIzRkI4M0NBMDM3MEJBNjU2MjEyQzFGRkQwMjYA",
+                          "timestamp": "1763419640",
+                          "text": {
+                            "body": "عرفني بخدماتكم"
+                          },
+                          "type": "text"
+                        }
+                      ]
+                    },
+                    "field": "messages"
+                  }
+                ]
+              }
+            ]
+          },
+          "webhookUrl": "https://n8n.ahmedelserafy.com:5678/webhook/16a27e8e-f58d-470f-98da-a7aa04b077d1",
+          "executionMode": "production"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory2": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent5",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent5": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp Business Cloud6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields4",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [],
+        [
+          {
+            "node": "WhatsApp Business Cloud1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp Business Cloud1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "ElevenLabs2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ElevenLabs2": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent5",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields4": {
+      "main": [
+        [
+          {
+            "node": "AI Agent5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "76219452-37bc-49fe-9e36-aed28779d486",
+  "meta": {
+    "instanceId": "eb58054caf61c2552d4b13cc032edccc043473990c2938118b79640890b4e573"
+  },
+  "id": "iteFVHGwfinlESM6",
+  "tags": []
+}

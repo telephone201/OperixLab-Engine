@@ -1,0 +1,818 @@
+{
+  "name": "Automate UGC Video Creation with Sora 2, OpenAI, and Gemini",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "eCommerce Product Video Generator",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Product",
+              "fieldType": "file",
+              "multipleFiles": false,
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Product Name",
+              "placeholder": "AG1",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "38d1b4e7-9d7a-4135-9ea8-990f8dc7a07a",
+      "name": "form_trigger",
+      "type": "n8n-nodes-base.formTrigger",
+      "position": [
+        736,
+        992
+      ],
+      "webhookId": "5b969756-591f-4d99-b40c-d8711b047689",
+      "typeVersion": 2.3
+    },
+    {
+      "parameters": {
+        "operation": "toBinary",
+        "sourceProperty": "data",
+        "options": {}
+      },
+      "id": "15bc2819-ed85-4c89-916a-892dd2cee5e9",
+      "name": "convert_product_to_image",
+      "type": "n8n-nodes-base.convertToFile",
+      "position": [
+        1184,
+        992
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "6ce95513-f1dd-4105-ab55-de5d073cb0c3",
+              "operator": {
+                "name": "filter.operator.equals",
+                "type": "string",
+                "operation": "equals"
+              },
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "completed"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4d1963b2-3b9c-450d-bb73-2afd606025b6",
+      "name": "check_status",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        1456,
+        2048
+      ],
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "amount": 15
+      },
+      "id": "9231b7bc-66e4-4ed8-b653-b65a1a2121f6",
+      "name": "delay",
+      "type": "n8n-nodes-base.wait",
+      "position": [
+        1008,
+        2048
+      ],
+      "webhookId": "30a9268e-34cc-477e-b843-5e2fb0f76930",
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "524da01b-f8b9-4c2c-9e28-319455903e4d",
+              "name": "=result",
+              "type": "string",
+              "value": "={{ $json.candidates[0].content.parts.filter(item => item.inlineData).first().inlineData.data }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "81919ddb-9e1d-42cc-a478-9a9d7589a579",
+      "name": "set_frame_result",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        1072,
+        1680
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "name": "=UGC Video #{{ $runIndex + 1 }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "mode": "url",
+          "value": "https://drive.google.com/drive/u/0/folders/1p67IRqOzntCDTHKIUci5oqlvTrTx0muj"
+        },
+        "options": {}
+      },
+      "id": "3c858488-bd4a-42a3-b253-ddeb777f9056",
+      "name": "upload_video",
+      "type": "n8n-nodes-base.googleDrive",
+      "position": [
+        1984,
+        2032
+      ],
+      "typeVersion": 3
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contents\": [{\n    \"parts\": [\n      { \"text\": {{ JSON.stringify($json.prompt) }} },\n      {\n        \"inline_data\": {\n          \"mime_type\": \"image/png\",\n          \"data\": \"{{ $node['Convert To Base 64'].json.data }}\"\n        }\n      }\n    ]\n  }]\n}",
+        "options": {}
+      },
+      "id": "57748cef-a1e7-44ae-b95c-53d43728e942",
+      "name": "generate_ad_prompts",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        848,
+        1376
+      ],
+      "retryOnFail": true,
+      "typeVersion": 4.2,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "operation": "binaryToPropery",
+        "binaryPropertyName": "Product",
+        "options": {}
+      },
+      "id": "7b39f207-f1c5-4bb1-97b2-a3d62dac47f5",
+      "name": "Convert To Base 64",
+      "type": "n8n-nodes-base.extractFromFile",
+      "position": [
+        960,
+        992
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "chatgpt-4o-latest",
+          "cachedResultName": "CHATGPT-4O-LATEST"
+        },
+        "text": "=// YOUR MISSION //\nYou are a master Character Architect and Human Behavior Specialist. Your expertise lies in constructing deeply authentic human profiles. Your assignment: analyze the product shown in the image and craft ONE richly detailed persona—the exact individual who should authentically champion this product in User-Generated Content.\n\nDeliver ONLY the persona. No ad copy. No campaign ideas. No marketing angles. Just a living, breathing character portrait so vivid they could walk off the page.\n\n// INPUT DATA //\n\nProduct Name: {{ $node['form_trigger'].json['Product Name'] }}\n\n// DELIVERABLE FORMAT //\nConstruct your persona using these five dimensions. Prioritize specificity and texture over generic descriptions.\n\n---\n\n### SECTION 1: Foundation & Social Coordinates\n\n**Full Name:** (First and last—make it feel real)\n**Exact Age:** (Choose one specific age)\n**Gender Identity:**\n**Geographic Context:** (Paint the picture: \"Lives in a converted loft in Nashville's Germantown district,\" \"Calls a quiet coastal town in Oregon home\")\n**Professional Life:** (Precision matters: instead of \"works in healthcare,\" say \"Emergency Room physician assistant\" or \"Runs a small batch bakery from a commercial kitchen\")\n\n---\n\n### SECTION 2: Visual Signature & Aesthetic Expression\n\n**Physical Presence:** How do they appear when they enter a room? Describe facial features, body language, and the energy they radiate.\n\n**Hair Story:** What's happening on their head? (e.g., \"Natural curls kept short and well-moisturized,\" \"Silver-streaked dark hair worn in a perpetual low ponytail\")\n\n**Wardrobe Philosophy:** What's their uniform? Use evocative, specific language. (e.g., \"Lives in quality basics—Everlane tees, raw denim, white leather sneakers,\" \"Maximalist thrifter with a weakness for oversized blazers and vintage band tees,\" \"Patagonia fleeces and functional outdoor gear year-round\")\n\n**Distinguishing Marks:** What makes them visually memorable? (e.g., \"Calloused hands from weekend woodworking,\" \"Smile lines that suggest they laugh often,\" \"A small tattoo on their wrist of coordinates,\" \"Always carries a well-worn canvas tote\")\n\n---\n\n### SECTION 3: Inner Wiring & Expression Style\n\n**Character Architecture:** Name 6-8 defining traits that shape who they are (Examples: Methodical, warmly skeptical, quietly ambitious, unfailingly punctual, empathetic but boundaried, playfully sarcastic)\n\n**Interpersonal Frequency:** What's their default mode with others? (e.g., \"Measured and thoughtful—the person who listens more than they talk,\" \"Radiates easy warmth without trying too hard,\" \"Direct and no-nonsense, but never harsh\")\n\n**Voice & Verbal Patterns:** Capture HOW they speak, not just what they say. (e.g., \"Uses precise language like someone who reads a lot,\" \"Peppers conversation with self-deprecating humor,\" \"Talks in practical, solution-oriented sentences,\" \"Speaks with the casual expertise of someone who actually knows their stuff\")\n\n---\n\n### SECTION 4: Life Texture & Operational Reality\n\n**Time Outside Work:** How do they spend their discretionary hours? (e.g., \"Refinishes vintage furniture found on Facebook Marketplace, trains for half-marathons, obsessively researches coffee brewing methods\")\n\n**Guiding Principles:** What philosophical operating system runs their decisions? (e.g., \"Believes in intentional consumption over mindless accumulation,\" \"Lives by the mantra 'done is better than perfect,'\" \"Prioritizes experiences and relationships over material possessions\")\n\n**Recurring Friction Points:** What low-grade problems nag at them regularly? Keep this category-adjacent, not product-specific. (e.g., \"Constantly battles decision fatigue about small purchases,\" \"Feels guilty about not drinking enough water,\" \"Struggles with managing digital clutter,\" \"Never feels like there's enough hours in the day\")\n\n**Living Space Aesthetic:** Describe their domestic environment. (e.g., \"Mid-century modern meets cozy—lots of wood tones, plants, and warm textiles,\" \"Functional minimalism with a few carefully chosen art pieces,\" \"Lived-in comfort with stacks of books and mismatched vintage furniture\")\n\n---\n\n### SECTION 5: The Trust Factor\n\n**Authenticity Anchor:** In 2-3 sentences, articulate the precise reason an audience would find THIS person's product endorsement credible and persuasive. What about their lived experience, expertise, or values makes their voice carry weight in this context?\n\n(e.g., \"As someone who's spent years optimizing small efficiencies in a chaotic work environment, her product recommendations feel battle-tested and practical, not theoretical,\" or \"His genuine obsession with understanding how things work—combined with zero tolerance for marketing fluff—makes his assessments feel refreshingly honest.\")",
+        "inputType": "base64",
+        "options": {}
+      },
+      "id": "6ec21e78-3cf0-42c4-9953-18944d5127f2",
+      "name": "Generate Ideal Persona",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "position": [
+        1408,
+        992
+      ],
+      "typeVersion": 1.8
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "796c02ea-66be-484c-a333-be4fffbe17db",
+              "name": "prompt",
+              "type": "string",
+              "value": "={{ $json.content }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "3f83b87d-23b5-4cf5-9c6b-ae8281e491db",
+      "name": "Persona Prompt Setup",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        1632,
+        992
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2c2bbb98-c6e4-4339-971a-2d6487f6bd29",
+              "name": "prompt",
+              "type": "string",
+              "value": "=You are a specialist in creating hyper-realistic User Generated Content (UGC) video scripts that capture the raw, unpolished essence of genuine social media content. These scripts must feel like spontaneous moments caught on camera—never staged, never scripted, never produced.\n\nCore Philosophy: Authentic Imperfection\nThe goal is anti-production. Every element should feel accidental, rushed, or improvised. We're creating scripts for videos that look like someone just opened their camera app and started talking because they had to share something right now.\n\nThe Golden Rule: If it feels intentional, it's wrong. If it feels polished, it's wrong. If it looks like advertising, it's wrong.\n\nThe Raw iPhone Reality\n✅ EMBRACE THESE ELEMENTS:\nCamera Behavior:\n\nHandheld shake and natural drift (people don't have steady hands)\nMid-video adjustments: sudden zooms, focus shifts, reframing\nPhone wobble from talking/gesturing/breathing\nOne-handed filming while other hand interacts with product\nAccidental tilts when attention shifts\nCamera drop/rise as arm gets tired\nVertical video (99% of the time - it's a phone)\nEnvironmental Truth:\n\nReal locations: unmade bed visible, dishes in sink, car dashboard clutter, bathroom counter chaos\nActual lighting: harsh overhead, window glare, lamp warmth, shadow inconsistencies\nBackground life: roommate sounds, TV murmur, street noise, pet appearances, notifications pinging\nNatural mess: laundry pile, scattered makeup, coffee cup in frame\nHuman Imperfections:\n\nFinger briefly covering lens corner\nFace cut off at top of frame temporarily\nProduct slipping in grip and readjusting\nLooking away to check what they're doing\nMid-sentence \"wait\" moments\nForgetting what they were saying and recovering\nNatural facial expressions (not camera-ready smiles)\nAudio Reality:\n\nRoom echo (bathroom tile bounce, bedroom fabric absorption)\nSlight distortion when excited/loud\nBackground ambient noise (fridge hum, AC, traffic)\nNatural breathing between thoughts\nVoice getting quieter when focused on demonstration\nSlight audio pop when moving phone quickly\n❌ ABSOLUTELY AVOID:\nText overlays, captions, stickers, graphics (ZERO on-screen elements)\nTripod stability or locked-down angles\nConsistent perfect framing throughout\nProfessional lighting setups or ring lights\nClean, styled backgrounds (no \"content corner\")\nScripted delivery cadence or brand language\nMultiple clean takes edited together\nTransitions, effects, or filters\nStrategic product placement (it should feel incidental)\n\"Content creator\" energy (avoid the performance of authenticity)\nThe 12-Second Structure (Flexible Framework)\nThis is a guide, not a rule. Real moments don't follow perfect timing.\n\nSECONDS 0-2: Immediate Entry\n\nStart mid-thought, mid-action, or mid-discovery\nCamera still finding the angle\nHook is situational, not manufactured\nExamples: \"Okay wait—\" / \"So I just tried—\" / \"This is insane\"\nSECONDS 2-9: Natural Demonstration\n\nShowing product while talking (not posed showing)\nCamera adjusts as hands move\nMain benefit emerges organically through use\nVerbal reaction happens in real-time\nCan include pauses, \"um\"s, self-corrections\nSECONDS 9-12: Casual Conclusion\n\nThought wraps up (might be mid-sentence at cutoff)\nProduct remains visible but not forced\nCan trail off naturally or end abruptly\nNo call-to-action feel, just personal opinion\nCritical: Final word must hit before/at 12-second mark\nScript Inputs (Use Exactly As Provided)\nProduct Image: First image in conversation\nCreator Profile: {{ $node['Persona Prompt Setup'].json.prompt }}\nProduct Name: {{ $node['form_trigger'].json['Product Name'] }}\n\nInput Rules:\nUse ONLY the exact product name provided (no invented brand speak)\nReference ONLY what's visible in the product image\nStay within the creator profile characteristics given\nDo NOT fabricate slogans, taglines, or marketing copy\nStick to observable product features and realistic use cases\nOutput Format: 3 Distinct Script Variations\nCreate three different authentic approaches to the same product:\n\nExcited Discovery - Just found it, can't wait to share\nCasual Recommendation - Talking like texting a friend\nIn-the-Moment Demo - Showing while actively using\nScript Template Structure\nFor each of the 3 scripts, use this exact format:\n\n\n---\nSCRIPT [1/2/3]: [Approach name - 3-5 words describing the vibe]\n\nTHE ENERGY: [One specific descriptor - examples: \"Caffeinated morning ramble\" / \"Half-asleep bathroom whisper\" / \"Can't believe this worked\" excitement / \"Chill bedtime chat\" / \"Running late but had to film\"]\n\nDIALOGUE WITH TIMESTAMPS:\n[0:00-0:02] \"[Opening - 3-6 words max, feels mid-conversation]\"\n[0:02-0:09] \"[Main content - 18-28 words total. Include natural speech: filler words, pauses marked with '...' or commas, self-corrections with em-dashes, conversational tone NOT script-read]\"\n[0:09-0:12] \"[Closing - 3-6 words, can trail off with '...' naturally]\"\n\n---\n\nFRAME-BY-FRAME BREAKDOWN:\n\n⏱️ SECOND 0-1\n📱 Camera Position: [Exact placement - height relative to body, angle, initial steadiness]\n🎬 Camera Movement: [Specific motion - wobble direction, adjustment type, speed]\n🖼️ Frame Composition: [What occupies frame % - face/body/background ratio, notable elements]\n💡 Lighting Quality: [Source, direction, characteristics - harsh/soft/natural/artificial]\n👤 Creator Action: [Physical movement - walking/sitting/reaching, eye direction, expression]\n📦 Product Status: [Visibility - where is it? In hand? Off-screen? Partially visible?]\n🔊 Audio Layer: \"[Exact words being spoken]\" + [Any background noise worth noting]\n\n⏱️ SECOND 1-2\n📱 Camera Position: [Changes from previous second or maintains?]\n🎬 Camera Movement: [New movements, stabilization attempts, drift]\n🖼️ Frame Composition: [How has framing shifted? Closer? Wider?]\n👤 Creator Action: [What they're doing with body/hands/face]\n📦 Product Status: [Movement toward/away from camera, handling changes]\n🔊 Audio Layer: \"[Words]\" + [Environmental sounds]\n\n⏱️ SECOND 2-3\n📱 Camera Position: [Adjustment details]\n🎬 Camera Movement: [Intentional or accidental movement]\n🖼️ Frame Composition: [What dominates the frame now?]\n🎯 Focus Point: [What's sharp? What's blurring? Focus hunting?]\n👤 Creator Action: [Interaction beginning]\n📦 Product Status: [How is product entering the demonstration?]\n🔊 Audio Layer: \"[Words]\" + [Tone shifts, volume changes]\n\n⏱️ SECOND 3-4\n📱 Camera Position: [Tighter? Looser? Tilted?]\n🎬 Camera Movement: [Response to demonstration action]\n🖼️ Frame Composition: [Product-to-face ratio shift]\n👤 Creator Action: [Specific demonstration move - opening, applying, showing detail]\n📦 Product Interaction: [Exact action with product - twisting cap, dispensing, holding up feature]\n🔊 Audio Layer: \"[Words]\" + [Product sounds - cap click, squeeze, etc.]\n\n⏱️ SECOND 4-5\n📱 Camera Position: [Following action or readjusting?]\n🎬 Camera Movement: [Smooth follow or jerky catch-up?]\n🖼️ Frame Composition: [Close-up details or pulling back?]\n👤 Creator Action: [Application/demonstration in progress]\n📦 Product Interaction: [Texture visible? Application shown? Feature highlighted?]\n✨ Physical Details: [Reaction to texture/scent/feel, visible product performance]\n🔊 Audio Layer: \"[Words - may include 'um' or pause]\" + [Ambient room tone]\n\n⏱️ SECOND 5-6\n📱 Camera Position: [Repositioning after close demo?]\n🎬 Camera Movement: [Steadying or continued adjustment?]\n🖼️ Frame Composition: [Balance between creator and product]\n👤 Creator Action: [Showing result, blending, positioning]\n📦 Product Visibility: [Where's product now - in hand, on counter, still being used?]\n🔊 Audio Layer: \"[Words]\" + [Background life - door, pet, car outside]\n\n⏱️ SECOND 6-7\n📱 Camera Position: [Settling into comfortable hold?]\n🎬 Camera Movement: [Natural body sway, weight shift wobble]\n🖼️ Frame Composition: [Face emphasis or product emphasis?]\n👤 Creator Action: [Gesturing to face/area of use, showing effect]\n🌍 Background Activity: [Anything spontaneous - pet cameo, person passing, notification, door movement]\n🔊 Audio Layer: \"[Words]\" + [Environmental interruption if any]\n\n⏱️ SECOND 7-8\n📱 Camera Position: [Intentional reframe or drift?]\n🎬 Camera Movement: [Pan to product? Back to face? Zoom attempt?]\n🖼️ Frame Composition: [What's the visual priority now?]\n👤 Creator Action: [Pointing, tapping, holding up, gesturing emphasis]\n📦 Product Highlight: [Specific feature being indicated - label, size, ingredient, color, texture]\n🔊 Audio Layer: \"[Words - emphasis or explanation]\"\n\n⏱️ SECOND 8-9\n📱 Camera Position: [Return to face? Stay on product?]\n🎬 Camera Movement: [Hand gesture wobble, emphasis movement]\n🖼️ Frame Composition: [Both face and product ideally visible]\n👤 Creator Action: [Authentic reaction - nodding, smiling, raised eyebrow, surprise]\n📦 Product Visibility: [Natural placement - not posed, just present]\n🔊 Audio Layer: \"[Words - building to wrap-up]\"\n\n⏱️ SECOND 9-10\n📱 Camera Position: [Slight drop as conclusion starts?]\n🎬 Camera Movement: [Relaxing grip, subtle lowering, pulling back]\n🖼️ Frame Composition: [Widening to show full context]\n👤 Creator Action: [Concluding gesture - shrug, satisfied nod, casual smile]\n📦 Product Visibility: [Set down? Still held? On counter in frame?]\n🔊 Audio Layer: \"[Final thought beginning]\"\n\n⏱️ SECOND 10-11\n📱 Camera Position: [Maintaining or drifting down?]\n🎬 Camera Movement: [Winding down energy, minimal adjustment]\n🖼️ Frame Composition: [Casual end state - not perfectly framed]\n👤 Creator Action: [Eye contact with camera, glance at product, finishing sentence]\n📦 Product Visibility: [Last clear view - organic placement]\n🔊 Audio Layer: \"[Final words]\"\n\n⏱️ SECOND 11-12\n📱 Camera Position: [Where does it end up?]\n🎬 Camera Movement: [Phone lowering? Stopping recording motion? Sudden cut?]\n🖼️ Frame Composition: [How does frame look at cutoff?]\n👤 Creator Action: [Wave off? Look away? Mid-laugh? Natural exit]\n🎬 How It Ends: [Abrupt cut? Fade as phone lowers? Mid-gesture stop? Cuts while still talking?]\n🔊 Final Audio: \"[Last word/sound - may cut off mid-word or trail off]\"\n\n---\n\nTECHNICAL SPECIFICATIONS:\n\n📱 Phone Orientation: [Vertical 9:16 / Horizontal 16:9 / Started vertical, rotated mid-video?]\n🎥 Filming Method: [Front camera selfie mode / Back camera in mirror / Someone else filming / Propped on object (specify) / Leaning against wall]\n✋ Dominant Hand: [Left hand holds phone, right demonstrates / Right hand holds, left demonstrates / Both hands (phone propped) / Switching hands mid-video]\n📍 Location Specifics: [Exact room + time of day indicators - \"Bedroom, morning light through blinds\" / \"Bathroom, overhead fluorescent evening\" / \"Car passenger seat, afternoon sun\" / \"Kitchen counter, nighttime pendant lamp\"]\n🔊 Audio Environment: [Tile echo / Fabric absorption / Open room reverb / Car ambient / Traffic through window / TV/music in background / Other people talking distance / Quiet intimate vs. echoey space]\n🌤️ Lighting Breakdown: [Primary source + quality - \"Window left side, soft diffused morning\" / \"Overhead harsh yellow\" / \"Ring light rejected - using desk lamp instead\" / \"Car dome light + streetlight mix\"]\n🎨 Background Details: [Specific visible elements that ground reality - \"Unmade bed with striped sheets, phone charger on nightstand, poster corner visible\" / \"Bathroom mirror with toothbrush cup, hand towel on bar, cabinet crack open\"]\n\n---\nEnhanced Authenticity: The Details That Sell Realness\nVerbal Authenticity Markers\nFiller Words (Use Liberally):\n\n\"like\" - \"so\" - \"literally\" - \"honestly\" - \"I mean\" - \"you know\" - \"kind of\" - \"sort of\" - \"basically\" - \"actually\"\nNatural Speech Patterns:\n\nFalse starts: \"So it's like—well, actually it's more...\"\nSelf-interruption: \"And the texture is... wait, yeah, it's really smooth\"\nConversational fragments: \"Yeah so this thing\"\nTrailing thoughts: \"which is... I don't know, just really good\"\nCorrections: \"It took like five minutes—okay maybe ten—but still\"\nVerbal Pacing Indicators:\n\nCommas = brief pause\nEllipsis (...) = longer pause/thinking\nEm-dash (—) = self-correction or interruption\nFast sections = excitement/enthusiasm\nSlow sections = demonstrating/focusing\nRegional/Personal Speech:\n\nIf creator profile indicates region, add appropriate: \"y'all\" / \"hella\" / \"wicked\" / \"mad\" / etc.\nGen Z markers: \"no because\" / \"the way that\" / \"not me\" / \"wait\" as emphasis\nMillennial markers: \"I'm obsessed\" / \"I'm dead\" / \"I cannot\"\nVisual Authenticity Markers\nCamera \"Mistakes\":\n\nFinger edge briefly in frame corner (1-2 seconds)\nLens flare from window/light source\nFocus hunting (sharp → blur → sharp) when switching between face and product\nSlight overexposure recovery when moving near window\nUnderexposure in corners when face-focused with backlight\nReal Life Interruptions:\n\nPet walking through frame\nRoommate door opening in background\nPhone notification banner briefly appearing\nSomeone calling out from another room\nDelivery knock/doorbell (reaction but continuing)\nSomething falling over off-screen (glance but recovery)\nNatural Product Handling:\n\nProduct slips, readjust grip\nTwo-hand open requires phone reposition\nPump/squeeze awkward with one hand\nSetting down isn't perfectly placed\nPicking back up means brief off-screen moment\nCap rolling off counter (optional chaos)\nPhysical Tells:\n\nHand shake increase when gesturing emphatically\nArm fatigue drop (phone slowly lowers from starting position)\nBlink rate increases when concentrating on demo\nHair falling in face, pushed away with wrist (not free hand)\nShifting weight = frame sway\nLeaning closer to show detail = temporary face cut-off\nTiming Authenticity\nPacing Realities:\n\n0-2 seconds often feels FAST (jumping right in)\n3-7 seconds can slow down (demonstration focus)\n8-10 speeds up slightly (wrapping up thought)\n11-12 might feel rushed (fitting in last point)\nNatural Breath Patterns:\n\nInhale before starting = slight pause at 0:00\nQuick breath between thoughts = marked with comma\nDeep breath before demonstration = \"Okay so...\"\nExhale laugh at end = audio trails off\nThe 12-Second Hard Stop:\n\nSentence CAN be incomplete at cutoff (feels more real)\nLast word can stretch into the cut \"...sooo—\"\nCan end on upward inflection (like asking question)\nCan end mid-laugh or mid-word\nBUT key message must be delivered by 11 seconds\nThe Three Script Approaches Explained\nSCRIPT 1: Excited Discovery\nEmotional Core: Just found this, mind blown, have to tell everyone right now\n\nEnergy Examples:\n\n\"Can't believe I found this\" enthusiasm\n\"Where has this been my whole life\" revelation\n\"Running to camera\" urgency\n\"This is insane\" rapid-fire excitement\nCharacteristics:\n\nFaster talking pace\nMore hand gestures (= more camera shake)\nLots of emphasis words: \"so good\" / \"literally\" / \"I'm obsessed\"\nMight start mid-action (already applying/using)\nLess structured thought = more authentic rambling\nCould repeat themselves in excitement\nCamera Behavior:\n\nMore erratic movement (enthusiasm = less control)\nZooming in accidentally when gesturing\nMight flip camera to show something then back to face\nProduct handling rushed/less precise\nSCRIPT 2: Casual Recommendation\nEmotional Core: Friend-to-friend advice, chill sharing, no pressure\n\nEnergy Examples:\n\n\"Bedtime chat\" relaxed\n\"Morning coffee vibe\" easy-going\n\"Just FYI this exists\" matter-of-fact\n\"Low-key obsessed\" understated enthusiasm\nCharacteristics:\n\nSlower, more measured pace\nConversational tone like texting out loud\n\"So I've been using...\" narrative structure\nCould include mini-story context\nMore pauses for natural thought flow\nRecommendations feel personal, not pushy\nCamera Behavior:\n\nSteadier hold (less excited energy)\nComfortable, settled position\nSmooth demonstrations (taking time)\nMight prop phone to use both hands\nFeels like they're in no rush\nSCRIPT 3: In-the-Moment Demo\nEmotional Core: Active use while filming, real-time reaction, showing not telling\n\nEnergy Examples:\n\n\"Getting ready and filming it\" multitask\n\"Trying this for the first time\" genuine discovery\n\"Morning routine capture\" incidental filming\n\"Problem-solving on camera\" authentic process\nCharacteristics:\n\nMore focus on showing than explaining\nShorter verbal sections, more visual demonstration\nReal-time reaction/commentary\n\"Okay wait watch this\" demo energy\nCould have longer pauses during application\nAction-focused = less scripted speech\nCamera Behavior:\n\nOne-handed filming majority of time\nCamera adjusts to follow action (not posed)\nMight set down phone to use both hands\nPerspective shifts (close for detail, back for context)\nLess eye contact (focused on task)\nQuality Control Checklist\nBefore finalizing scripts, verify:\n\n No text overlays mentioned anywhere\n All dialogue completes by 12-second mark\n Product name used exactly as provided (no creative additions)\n Only product features visible in image are referenced\n Creator profile characteristics are reflected\n Camera shake/movement described throughout\n Real location details included (not generic \"background\")\n Natural speech patterns (fillers, pauses, corrections)\n Product interaction feels necessary, not forced\n At least 2-3 \"imperfection moments\" per script\n Lighting specified with realistic sources\n Audio environment detailed\n Ending feels natural (not manufactured conclusion)\n Each second has specific camera + creator + product details\n No \"professional\" language or marketing speak\n Three scripts feel distinctly different from each other\nFinal Notes on Execution\nRemember:\n\nReal people don't think about cinematography while filming\nAuthentic UGC feels effortless because it is\nThe best scripts read like transcriptions of actual videos\nImperfection IS the perfection here\nWhen in doubt, make it messier, not cleaner\nThe goal is not to look authentic, but to be authentic\nThe Ultimate Test:\nIf someone saw this video in their feed, would they scroll past thinking \"ad\" or stop because it feels like genuine content from someone they could know?\n\nIf it's the latter, you've succeeded.\n\nGenerate 3 complete scripts now using all inputs provided."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "3b628adf-faf6-4b05-9878-9ecf365efc68",
+      "name": "UGC Video Prompts Setup",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        1856,
+        992
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini",
+          "cachedResultName": "GPT-5-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "={{ $json.candidates[0].content.parts[0].text }} - Extract all three video script prompts from the provided text and format them as a JSON object.The prompts should remain exactly as they were provided.\n\nStructure the output as follows:\n{\n  \"prompts\": {\n    \"prompt1\": \"<complete first script including title, energy, dialogue, shot-by-shot breakdown, and technical details>\",\n    \"prompt2\": \"<complete second script including title, energy, dialogue, shot-by-shot breakdown, and technical details>\",\n    \"prompt3\": \"<complete third script including title, energy, dialogue, shot-by-shot breakdown, and technical details>\"\n  }\n}\n\nEach prompt value should contain the full, unmodified text of that script from beginning to end, including all sections and formatting.\n\nReturn ONLY valid JSON, no additional text or explanation."
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {}
+      },
+      "id": "d1f330b7-4d19-4311-af47-885ee5c01a63",
+      "name": "Extract Prompts",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "position": [
+        1056,
+        1376
+      ],
+      "typeVersion": 1.8
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contents\": [{\n    \"parts\": [\n      { \"text\": \"Take the design, layout, and style of [Image A] exactly as it is, and seamlessly adapt it into the aspect ratio of [Image B]. Maintain all the visual elements, proportions, and composition of [Image A], but expand, crop, or extend the background naturally so that the final image perfectly matches the aspect ratio and dimensions of [Image B]. Do not distort or stretch any elements—use intelligent background extension, framing, or subtle composition adjustments to preserve the original design integrity while filling the new canvas size.\" },  \n      {\n        \"inline_data\": {\n          \"mime_type\": \"image/png\",\n          \"data\": \"{{ $node['Convert To Base 64'].json.data }}\"\n        }\n      },\n{\n        \"inline_data\": {\n          \"mime_type\": \"image/png\",\n          \"data\": \"iVBORw0KGgoAAAANSUhEUgAAAkAAAAQACAIAAACGcHE3AAAACXBIWXMAAA7EAAAOxAGVKw4bAAAExGlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSfvu78nIGlkPSdXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQnPz4KPHg6eG1wbWV0YSB4bWxuczp4PSdhZG9iZTpuczptZXRhLyc+CjxyZGY6UkRGIHhtbG5zOnJkZj0naHR0cDovL3d3dy53My5vcmcvMTk5OS8wMi8yMi1yZGYtc3ludGF4LW5zIyc+CgogPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9JycKICB4bWxuczpBdHRyaWI9J2h0dHA6Ly9ucy5hdHRyaWJ1dGlvbi5jb20vYWRzLzEuMC8nPgogIDxBdHRyaWI6QWRzPgogICA8cmRmOlNlcT4KICAgIDxyZGY6bGkgcmRmOnBhcnNlVHlwZT0nUmVzb3VyY2UnPgogICAgIDxBdHRyaWI6Q3JlYXRlZD4yMDI1LTEwLTA3PC9BdHRyaWI6Q3JlYXRlZD4KICAgICA8QXR0cmliOkV4dElkPjBmODViMDkwLTNmYjgtNGEzYi1iMjlmLTdjN2Y4MzJjNzY0MDwvQXR0cmliOkV4dElkPgogICAgIDxBdHRyaWI6RmJJZD41MjUyNjU5MTQxNzk1ODA8L0F0dHJpYjpGYklkPgogICAgIDxBdHRyaWI6VG91Y2hUeXBlPjI8L0F0dHJpYjpUb3VjaFR5cGU+CiAgICA8L3JkZjpsaT4KICAgPC9yZGY6U2VxPgogIDwvQXR0cmliOkFkcz4KIDwvcmRmOkRlc2NyaXB0aW9uPgoKIDxyZGY6RGVzY3JpcHRpb24gcmRmOmFib3V0PScnCiAgeG1sbnM6ZGM9J2h0dHA6Ly9wdXJsLm9yZy9kYy9lbGVtZW50cy8xLjEvJz4KICA8ZGM6dGl0bGU+CiAgIDxyZGY6QWx0PgogICAgPHJkZjpsaSB4bWw6bGFuZz0neC1kZWZhdWx0Jz5VbnRpdGxlZCAoNTc2IHggMTAyNCBweCkgLSAxPC9yZGY6bGk+CiAgIDwvcmRmOkFsdD4KICA8L2RjOnRpdGxlPgogPC9yZGY6RGVzY3JpcHRpb24+CgogPHJkZjpE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sCQwAJYEBsCSwABYEhgASwIDYElgACwJDIAlgQGwJDAAlgQGwJLAAFgSGABLAgNgSWAALAkMgCWBAbAkMACWBAbAksAAWBIYAEsCA2BJYAAsCQyAJYEBsCQwAJYEBsCSwABYEhgASwIDYElgACwJDIAlgQGwJDAAlgQGwJLAAFgSGABLAgNgSWAALAkMgCWBAbAkMACWBAbAksAAWBIYAEsCA2BJYAAsCQyAJYEBsCQwAJYEBsCSwABYEhgASwIDYElgACwJDIAlgQGwJDAAlgQGwJLAAFgSGABLAgNgSWAALAkMgCWBAbAkMACWBAbAksAAWBIYAEsCA2BJYAAsCQyAJYEBsCQwAJYEBsCSwABYEhgASwIDYElgACwJDIAlgQGwJDAAlgQGwJLAAFgSGABLAgNgSWAALAkMgCWBAbAkMACWBAbAksAAWBIYAEsCA2BJYAAsCQyAJYEBsCQwAJYEBsCSwABYEhgASwIDYElgACwJDIAlgQGwJDAAlgQGwJLAAFgSGABLAgNgSWAALAkMgCWBAbAkMACWBAbAksAAWBIYAEsCA2BJYAAsCQyAJYEBsCQwAJYEBsCSwABYEhgASwIDYElgACwJDIAlgQGwJDAAlgQGwJLAAFgSGABLAgNgSWAALAkMgCWBAbAkMACWBAbAksAAWBIYAEsCA2BJYAAsCQyAJYEBsCQwAJYEBsCSwABYEhgASwEAAP//7NUBCQAAAICg/6/bEegJBQbAksAAWBIYAEsCA2BJYAAsCQyAJYEBsCQwAJYEBsCSwABYEhgASwIDYElgACwJDIAlgQGwJDAAlgQGwJLAAFgSGABLAgNgSWAALAkMgCWBAbAkMACWBAbAksAAWBIYAEsCA2BJYAAsCQyAJYEBsCQwAJYEBsCSwABYEhgASwIDYElgACwJDIAlgQGwJDAAlgQGwJLAAFgSGABLAgNgSWAALAkMgCWBAbAkMACWBAbAksAAWBIYAEsCA2BJYAAsCQyAJYEBsCQwAJYEBsCSwABYEhgASwIDYElgACwJDIAlgQGwJDAAlgQGwJLAAFgSGABLAgNgSWAALAkMgCWBAbAkMACWBAbAksAAWBIYAEsCA2BJYAAsCQyAJYEBsCQwAJYEBsCSwABYEhgASwIDYElgACwJDIAlgQGwJDAAlgQGwJLAAFgSGABLAgNgSWAALAkMgCWBAbAkMACWBAbAksAAWBIYAEsCA2BJYAAsCQyAJYEBsCQwAJYEBsCSwABYEhgASwIDYElgACwJDIAlgQGwJDAAlgQGwJLAAFgSGABLAgNgSWAALAkMgCWBAbAkMACWBAbAksAAWBIYAEsCA2BJYAAsCQyAJYEBsCQwAJYEBsCSwABYEhgASwIDYElgACwJDIAlgQGwJDAAlgQGwJLAAFgSGABLAgNgSWAALAkMgCWBAbAkMACWBAbAksAAWBIYAEsCA2BJYAAsCQyAJYEBsCQwAJYEBsCSwABYEhgASwIDYElgACwJDIAlgQGwJDAAlgQGwJLAAFgSGABLAgNgSWAALAkMgCWBAbAkMACWBAbAksAAWAoAAP//7NUBCQAAAICg/6/bEegJBQbAksAAWBIYAEsCA2BJYAAsCQyAJYEBsCQwAJYEBsCSwABYEhgASwIDYElgACwJDIAlgQGwJDAAlgQGwJLAAFgSGABLAgNgSWAALAkMgCWBAbAkMACWBAbAksAAWBIYAEsCA2BJYAAsCQyAJYEBsCQwAJYEBsCSwABYEhgASwIDYElgACwJDIAlgQGwJDAAlgQGwJLAAFgSGABLAgNgSWAALAkMgCWBAbAkMACWBAbAksAAWBIYAEsCA2BJYAAsCQyAJYEBsCQwAJYEBsCSwABYEhgASwIDYElgACwJDIAlgQGwJDAAlgQGwJLAAFgSGABLAgNgSWAALAkMgCWBAbAkMACWBAbAksAAWBIYAEsCA2BJYAAsCQyAJYEBsCQwAJYEBsCSwABYEhgASwIDYElgACwJDIAlgQGwJDAAlgQGwJLAAFgSGABLAgNgSWAALAkMgCWBAbAkMACWBAbAksAAWBIYAEsCA2BJYAAsCQyAJYEBsCQwAJYEBsCSwABYEhgASwIDYElgACwJDIAlgQGwJDAAlgQGwJLAAFgSGABLAgNgSWAALAkMgCWBAbAkMACWBAbAksAAWBIYAEsCA2BJYAAsCQyAJYEBsCQwAJYEBsCSwABYEhgASwIDYElgACwJDIAlgQGwJDAAlgQGwJLAAFgSGABLAgNgSWAALAkMgCWBAbAkMACWBAbAksAAWBIYAEsCA2BJYAAsCQyAJYEBsCQwAJYEBsCSwABYEhgASwIDYElgACwJDIAlgQGwJDAAlgQGwJLAAFgSGABLAgNgSWAALAkMgCWBAbAkMACWBAbAksAAWBIYAEsBAAD//+3VAQkAAACAoP+v2xHoCQUGwJLAAFgSGABLAgNgSWAALAkMgCWBAbAkMACWBAbAksAAWBIYAEsCA2BJYAAsCQyAJYEBsCQwAJYEBsCSwABYEhgASwIDYElgACwJDIAlgQGwJDAAlgQGwJLAAFgSGABLAgNgSWAALAkMgCWBAbAkMACWBAbAksAAWBIYAEsCA2BJYAAsCQyAJYEBsCQwAJYEBsCSwABYEhgASwIDYElgACwJDIAlgQGwJDAAlgQGwJLAAFgSGABLAgNgSWAALAkMgCWBAbAkMACWBAbAksAAWBIYAEsCA2BJYAAsCQyAJYEBsCQwAJYEBsCSwABYEhgASwIDYElgACwJDIAlgQGwJDAAlgQGwJLAAFgSGABLAgNgSWAALAkMgCWBAbAkMACWBAbAksAAWBIYAEsCA2BJYAAsCQyAJYEBsCQwAJYEBsCSwABYEhgASwIDYElgACwJDIAlgQGwJDAAlgQGwJLAAFgSGABLAgNgSWAALAkMgCWBAbAkMACWBAbAksAAWBIYAEsCA2BJYAAsCQyAJYEBsCQwAJYEBsCSwABYEhgASwIDYElgACwJDIAlgQGwJDAAlgQGwJLAAFgSGABLAgNgSWAALAkMgCWBAbAkMACWBAbAksAAWBIYAEsCA2BJYAAsCQyAJYEBsCQwAJYEBsCSwABYEhgASwIDYElgACwJDIAlgQGwJDAAlgQGwJLAAFgSGABLAgNgSWAALAkMgCWBAbAkMACWBAbAksAAWBIYAEsCA2BJYAAsCQyAJYEBsCQwAJYEBsCSwABYEhgASwIDYElgACwJDIAlgQGwJDAAlgQGwJLAAFgSGABLAbB5Cu46XMHWAAAAAElFTkSuQmCC\"\n        }\n      }\n    ]\n  }]\n}",
+        "options": {}
+      },
+      "id": "5c7e5fb0-c3ac-48d8-bd9e-38403145a3be",
+      "name": "Generate First Frame Image",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        848,
+        1680
+      ],
+      "retryOnFail": true,
+      "typeVersion": 4.2,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "content": "## Script Generation\nHere the workflow uses AI to make detailed prompts for three short UGC scripts. Prompts are extracted, split, and stored for next steps where videos will be rendered.\n",
+        "height": 288,
+        "width": 1632,
+        "color": 6
+      },
+      "id": "b941b6cd-13df-4488-883b-ea96c3e171b8",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        544,
+        1248
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## Initial Setup\nThis part collects user input, converts data into proper format, and prepares brand persona for prompt creation. It ensures the product details are structured before AI prompt generation starts.\n",
+        "height": 304,
+        "width": 1632,
+        "color": 6
+      },
+      "id": "50b20ef2-4ac8-405e-99b2-421e3e7324b0",
+      "name": "Sticky Note1",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        544,
+        880
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## Video Generation\nThis part connects to Sora 2 API to generate UGC videos from prepared prompts and images. It waits till the video finishes rendering, downloads the file, and uploads it for final use.\n",
+        "height": 288,
+        "width": 1648,
+        "color": 6
+      },
+      "id": "639253eb-db30-4b9c-9342-37da1e21eb1e",
+      "name": "Sticky Note2",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        528,
+        1952
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "url": "=https://api.openai.com/v1/videos/{{ $json.id }}/content",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "options": {}
+      },
+      "id": "313fb506-526d-4be8-9412-2cce97203d75",
+      "name": "Download Video",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1776,
+        2032
+      ],
+      "retryOnFail": true,
+      "typeVersion": 4.2,
+      "waitBetweenTries": 5000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/videos",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "prompt",
+              "value": "={{ $node['Create 3 Videos'].json.prompt }}"
+            },
+            {
+              "name": "model",
+              "value": "sora-2"
+            },
+            {
+              "name": "seconds",
+              "value": "12"
+            },
+            {
+              "name": "size",
+              "value": "720x1280"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "input_reference",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "bc9b0109-7136-4cc2-bbb0-ac22a683b477",
+      "name": "Generate Video With SORA",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        784,
+        2048
+      ],
+      "retryOnFail": true,
+      "typeVersion": 4.2,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "url": "=https://api.openai.com/v1/videos/{{ $json.id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "options": {}
+      },
+      "id": "11a9cc36-6cfd-482c-acc0-8f4d8ffe385a",
+      "name": "Get Video Creation Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1232,
+        2048
+      ],
+      "retryOnFail": true,
+      "typeVersion": 4.2,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "content": "## Set First Frame Image\nThis section creates a blank or styled image that acts as the first video frame. It downloads, resizes and prepares the product image for smooth video generation.\n",
+        "height": 288,
+        "width": 1632,
+        "color": 6
+      },
+      "id": "57d32fc1-43c9-4915-820e-18f39aafecfe",
+      "name": "Sticky Note3",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        544,
+        1600
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "operation": "resize",
+        "width": 720,
+        "height": 1280,
+        "resizeOption": "ignoreAspectRatio",
+        "options": {}
+      },
+      "id": "4cd3b604-40e5-4f54-9d16-28d0dd990887",
+      "name": "Resize For Selfie Video",
+      "type": "n8n-nodes-base.editImage",
+      "position": [
+        1520,
+        1680
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "operation": "toBinary",
+        "sourceProperty": "result",
+        "options": {}
+      },
+      "id": "7a15b7cb-5f97-4e77-9760-4615bf914858",
+      "name": "Download First Frame",
+      "type": "n8n-nodes-base.convertToFile",
+      "position": [
+        1296,
+        1680
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "message.content.prompts",
+        "options": {
+          "destinationFieldName": "prompt"
+        }
+      },
+      "id": "2238f182-4ae9-4920-9bac-c3d632224eca",
+      "name": "Split Prompt To Arrays",
+      "type": "n8n-nodes-base.splitOut",
+      "position": [
+        1456,
+        1376
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "a863fd50-3151-4b51-abba-c12104f029ed",
+      "name": "Create 3 Videos",
+      "type": "n8n-nodes-base.splitInBatches",
+      "position": [
+        1760,
+        1376
+      ],
+      "typeVersion": 3
+    },
+    {
+      "parameters": {
+        "url": "=https://api.openai.com/v1/videos/video_68ee1fd1049c8193adba7dee0943e8820ea06435bb520207",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "options": {}
+      },
+      "id": "e37cef0e-a601-4e20-85ac-f293ee2e8bca",
+      "name": "Download Video1",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1216,
+        2448
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "content": "## How it works\nThis workflow is used to make UGC-style videos automatically by connecting n8n with Sora 2 and OpenAI. The process starts when the user submits a form with product name, idea or image. n8n first prepares the data, builds the brand or persona context, then asks AI to create detailed video prompts. These prompts are passed to Sora 2 to produce short realistic videos.\n\nIt follows a clear sequence: initial setup, prompt creation, image frame generation, and final video rendering. Each stage can be customized for different brands, niches or voice styles. Everything runs inside n8n, so there is no need for external editing tools.\n\n## Setup steps\n1. Create your OpenAI and Sora 2 API keys and add them in n8n credentials.  \n2. Connect the Form Trigger or Webhook to collect input from users.  \n3. Adjust prompt text inside “Persona Prompt Setup” node.  \n4. Test one sample run to confirm video generation and file upload.  \n5. After testing, turn on workflow to run automatically.\n",
+        "height": 432,
+        "width": 752
+      },
+      "id": "e420e458-34e8-4c93-ab53-fa495425b018",
+      "name": "Sticky Note5",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        368,
+        240
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## Notes\nAdjust API endpoints or keys as per your Sora 2 account plan. Each run will create three short UGC videos automatically.\n",
+        "height": 128,
+        "width": 576
+      },
+      "id": "54c7a939-89f4-4045-b0b8-48604894f4fc",
+      "name": "Sticky Note6",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        528,
+        2304
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## تم التحضير بواسطة \n**م. أحمد الصيرفي**  \n\nللتعلّم وتطوير مهاراتك في الأتمتة، زور موقعنا: \n [ahmedelserafy.com](https://ahmedelserafy.com/automation_course)\n\n\n",
+        "width": 2144,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        544,
+        688
+      ],
+      "typeVersion": 1,
+      "id": "ba47bce9-84dd-49c0-bb15-7354a04168f1",
+      "name": "Sticky Note7"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "delay": {
+      "main": [
+        [
+          {
+            "node": "Get Video Creation Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check_status": {
+      "main": [
+        [
+          {
+            "node": "Download Video",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "delay",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "form_trigger": {
+      "main": [
+        [
+          {
+            "node": "Convert To Base 64",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "upload_video": {
+      "main": [
+        [
+          {
+            "node": "Create 3 Videos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Video": {
+      "main": [
+        [
+          {
+            "node": "upload_video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create 3 Videos": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Generate First Frame Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Prompts": {
+      "main": [
+        [
+          {
+            "node": "Split Prompt To Arrays",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "set_frame_result": {
+      "main": [
+        [
+          {
+            "node": "Download First Frame",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert To Base 64": {
+      "main": [
+        [
+          {
+            "node": "convert_product_to_image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "generate_ad_prompts": {
+      "main": [
+        [
+          {
+            "node": "Extract Prompts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download First Frame": {
+      "main": [
+        [
+          {
+            "node": "Resize For Selfie Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Persona Prompt Setup": {
+      "main": [
+        [
+          {
+            "node": "UGC Video Prompts Setup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Ideal Persona": {
+      "main": [
+        [
+          {
+            "node": "Persona Prompt Setup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Prompt To Arrays": {
+      "main": [
+        [
+          {
+            "node": "Create 3 Videos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resize For Selfie Video": {
+      "main": [
+        [
+          {
+            "node": "Generate Video With SORA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "UGC Video Prompts Setup": {
+      "main": [
+        [
+          {
+            "node": "generate_ad_prompts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Video With SORA": {
+      "main": [
+        [
+          {
+            "node": "delay",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "convert_product_to_image": {
+      "main": [
+        [
+          {
+            "node": "Generate Ideal Persona",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Video Creation Status": {
+      "main": [
+        [
+          {
+            "node": "check_status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate First Frame Image": {
+      "main": [
+        [
+          {
+            "node": "set_frame_result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "d98c1ab9-0569-4424-86b8-d1d8afe5cc40",
+  "meta": {
+    "templateId": "10488",
+    "instanceId": "eb58054caf61c2552d4b13cc032edccc043473990c2938118b79640890b4e573"
+  },
+  "id": "4LTS9fAJgDwjNl5v",
+  "tags": [
+    {
+      "updatedAt": "2025-11-28T22:29:34.032Z",
+      "createdAt": "2025-11-28T22:29:34.032Z",
+      "id": "HHSMeirOYyTwabhZ",
+      "name": "pack"
+    }
+  ]
+}

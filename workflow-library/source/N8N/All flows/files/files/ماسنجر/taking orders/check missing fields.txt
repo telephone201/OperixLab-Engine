@@ -1,0 +1,17 @@
+const raw = $json.output;
+const cleaned = raw.replace(/\\n/g, "").trim();
+const data = JSON.parse(cleaned);
+
+const { items = [], address, phone } = data;
+
+// تحقق من وجود المنتجات
+const missing = [];
+if (!items.length) missing.push("المنتجات");
+if (!address) missing.push("العنوان");
+if (!phone) missing.push("الهاتف");
+
+// رجّع
+return [{ json: { items, address, phone, missing } }];
+
+
+

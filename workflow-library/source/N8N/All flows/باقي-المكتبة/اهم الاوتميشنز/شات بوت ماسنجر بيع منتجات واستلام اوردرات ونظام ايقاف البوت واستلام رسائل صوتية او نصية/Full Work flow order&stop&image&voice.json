@@ -1,0 +1,1157 @@
+{
+  "name": "Full Work flow order&stop&image&voice",
+  "nodes": [
+    {
+      "parameters": {
+        "multipleMethods": true,
+        "path": "7fabe8b5-9ab5-4c57-96ed-1f24a4803bf9",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -544,
+        1408
+      ],
+      "id": "c21cafa5-dbc0-4e03-b2f5-22ef52621539",
+      "name": "Webhook",
+      "webhookId": "7fabe8b5-9ab5-4c57-96ed-1f24a4803bf9"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.query['hub.challenge'] }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -384,
+        1120
+      ],
+      "id": "660598e6-6f55-4577-89a5-dbfab42d00e5",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v22.0/{{ $('Webhook').item.json.body.entry[0].messaging[0].recipient.id }}/messages?access_token=",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"recipient\": {\n    \"id\": \"{{ $('Webhook').item.json.body.entry[0].messaging[0].sender.id }}\"\n  },\n  \"messaging_type\": \"RESPONSE\",\n  \"message\": {\n    \"text\": {{ JSON.stringify($json.msg) }}\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2400,
+        1168
+      ],
+      "id": "ac25e24a-ddc0-4945-b392-e8b4281eed3e",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.text }}",
+        "options": {
+          "systemMessage": "=انت خدمة عملاء على ماسنجر ساعد العملاء فى الرد على استفساراتهم\nرد على العملاء باللغة العربية العامية المصرية\nويكون ردك بصيغة ال json وسارفك لك مثال للرد لا ترد بغيره\n\nلو العميل محتاج يعرف المنتجات باسعارها او بيستفسر عنها او هتعرض عليه المنتجات هتلاقى المنتجات فى شيت اكسيل سايبهولك باسم \n\"Products\"\nهتبعت بعض المنتجات وليس كلها\n\nالبيانات المطلوبة للاوردر\nبنحتاج لطلب الاوردر : اسم العميل , رقم الهاتف , العنوان , المنتجات بكمياتها والعنوان يحتوي على المحافظة و المدينة او المركز والشارع\n\n\n\nفي حالة الطلب: تستخرج نوع الأصناف والكميات المطلوبة، واسم العميل (لو موجود)، والعنوان (لو موجود) ورقم الهاتف ، وتراجع إذا فيه بيانات ناقصة وتطلبها منه.\n\n\nتكلفة الشحن 100 جنيه لا ترسلها للعميل الا اذا سأل وستحتاجها فى حساب اجمالى الاوردر\n\n\nفى كل الاحوال يجب الرج بذه الطريقة\n{\n  \"msg\": \"الرساله الموجهة للعميل\",\n  \"order\": [\n    { \"product\": \"...\", \"quantity\": \"...\" },\n    { \"product\": \"...\", \"quantity\": \"...\" }\n  ],\n  \"address\": \"\",\n  \"customer_name\": \"\",\n  \"phone\": \"\",\n  \"full_price\": \"\",\n  \"is_order_complete\": false\n}\n\nلا تقوم بالرد الا عن طريق json ولا تخرج عن صيفة الرد بالجيسون\nحقل msg: كل الرسالة الموجهة للعميل بالعربي (مناسبة ماسنجر مباشرة).\n\nفي حالة كان الطلب مظبوط هترجع المنتجات بكمياتها فى order in json\nاما اذا كان يستفسر او تريد ارسال له المنتجات باسعارها قم بارسالها فى Msg\n\n\nلو البيانات مش كاملة، خلي is_order_complete = false واسأل العميل عن البيانات الناقصة داخل msg.\n\nfull_price = السعر الاجمالى بالشحن\n\n\n\nلو العميل حب يوقف رد البوت او الرد التلقائي يبعت كلمة \n\"stop\"\nاو \n\"وقف البوت\"\nلا ترسل كلمات ايقاف البوت الا اذا ذكر لك العميل انه يريد التواصل مع شحص حقيقي او ايقاف الرد التلقائي"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        1792,
+        1168
+      ],
+      "id": "2ff751c1-9d33-43ab-bd51-98cfe0814662",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.0-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1792,
+        1520
+      ],
+      "id": "e16fb228-2a06-4a78-b3e9-e4a72fa19d73",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "XhpFwI2Io5SCN7iS",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $(\"Webhook\").item.json.body.entry[0].messaging[0].message.text }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    },
+                    "id": "b0e7ed8f-9b1f-4870-b00f-d199de19f7db"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Text"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "2a29301d-1de9-44f2-8317-bb4d4dc9a803",
+                    "leftValue": "={{ $(\"Webhook\").item.json.body.entry[0].messaging[0].message.attachments[0].type }}",
+                    "rightValue": "image",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Image"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "93dc03fa-1476-451b-b1f8-dce3db70d8b2",
+                    "leftValue": "={{ $(\"Webhook\").item.json.body.entry[0].messaging[0].message.attachments[0].type }}",
+                    "rightValue": "audio",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Audio"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        624,
+        1392
+      ],
+      "id": "b1a95642-c9c7-41c6-8d44-69ddf64ae058",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.body.entry[0].messaging[0].message.attachments[0].payload.url }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        976,
+        1552
+      ],
+      "id": "f4054f70-4077-47af-adf9-a172989a663b",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "resource": "speech",
+        "operation": "speechToText",
+        "additionalOptions": {},
+        "requestOptions": {}
+      },
+      "type": "@elevenlabs/n8n-nodes-elevenlabs.elevenLabs",
+      "typeVersion": 1,
+      "position": [
+        1216,
+        1552
+      ],
+      "id": "d117be48-529b-4aba-b339-9ec7c16dfd86",
+      "name": "Transcribe audio or video",
+      "credentials": {
+        "elevenLabsApi": {
+          "id": "lqDqVSvKxn9gbtta",
+          "name": "ElevenLabs account ze"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "117d776d-6163-47de-939f-ebf2decdfbac",
+              "name": "text",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1424,
+        1552
+      ],
+      "id": "ceda7d9b-1c19-420e-b097-42b59b4371c6",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a9a2e545-36af-4cce-b673-0539382f7817",
+              "name": "text",
+              "value": "={{ $(\"Webhook\").item.json.body.entry[0].messaging[0].message.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1424,
+        1200
+      ],
+      "id": "f90a4ff9-d1b9-4575-b712-92cbf4c15437",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c45a0855-6825-45d9-aa9d-3d1792c9d4ca",
+              "leftValue": "={{ $json.body.entry[0].messaging[0].message.text.toLowerCase().includes(\"stop\") }}",
+              "rightValue": "=",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "4593be00-2454-4589-b1b8-6c9af42e8dd1",
+              "leftValue": "={{ $json.body.entry[0].messaging[0].message.text.toLowerCase().includes(\"وقف البوت\") }}",
+              "rightValue": "وقف البوت",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -544,
+        688
+      ],
+      "id": "53a5bb2a-759e-42f8-b207-3f7378263c2a",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "69c2a280-6c6a-4f5c-b59b-de268bc2ec34",
+              "leftValue": "={{ $json.body.entry[0].messaging[0].message.text }}",
+              "rightValue": "stop",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "6272ff30-04a2-4bc6-9b47-6336e1967de1",
+              "leftValue": "={{ $json.body.entry[0].messaging[0].message.text }}",
+              "rightValue": "وقف البوت",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -240,
+        1328
+      ],
+      "id": "76b6355d-e7aa-40b0-a2dc-1b7ed3f504ee",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1aGl6Qvxw9GceNB8HngPgBfaJladdxpq9WsJdhqbRFis",
+          "mode": "list",
+          "cachedResultName": "workflow course stop bot",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "user_id",
+              "lookupValue": "={{ $('Webhook').item.json.body.entry[0].messaging[0].sender.id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -16,
+        1344
+      ],
+      "id": "92c71cb8-97ea-4f4f-92b3-1f3418f01b7d",
+      "name": "check if user blocked",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "OrqfwlW340pHk7zN",
+          "name": "Google Sheets account right one"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1aGl6Qvxw9GceNB8HngPgBfaJladdxpq9WsJdhqbRFis",
+          "mode": "list",
+          "cachedResultName": "workflow course stop bot",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "user_id": "={{ $('Webhook').item.json.body.entry[0].messaging[0].sender.id }}",
+            "created date": "={{ $json.now }}",
+            "end date": "={{ $json.after_2_min }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "user_id",
+              "displayName": "user_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "created date",
+              "displayName": "created date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "end date",
+              "displayName": "end date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        112,
+        1040
+      ],
+      "id": "e3073715-f2b8-4339-8a40-4d55aad4e43e",
+      "name": "block the user",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "OrqfwlW340pHk7zN",
+          "name": "Google Sheets account right one"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "4a97611b-89b5-45e2-a2c6-0f873a0290a7",
+              "leftValue": "={{ $json.row_number }}",
+              "rightValue": "",
+              "operator": {
+                "type": "number",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        416,
+        1328
+      ],
+      "id": "bc760ed1-ba49-45e1-9210-a981243da34e",
+      "name": "If user found in blocked list"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\n// لو مفيش صفوف\nif (items.length === 0) {\n  return [{ json: { error: 'No rows found' } }];\n}\n\n// نرتب حسب رقم الصف لو فيه row_number\nitems.sort((a, b) => {\n  if (a.json.row_number && b.json.row_number) {\n    return a.json.row_number - b.json.row_number;\n  }\n  return 0;\n});\n\n// نرجع آخر صف فقط\nreturn [ items[items.length - 1] ];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        1328
+      ],
+      "id": "39bbf28a-bed3-4a55-b9b4-49397ad33b61",
+      "name": "code to get last row"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "97d24fa8-5cb8-4763-addc-4ccecedad594",
+              "leftValue": "={{ $('code to get last row').item.json['end date'] }}",
+              "rightValue": "={{ $json.now }}",
+              "operator": {
+                "type": "dateTime",
+                "operation": "before"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        640,
+        1200
+      ],
+      "id": "b23f8561-1314-4f8b-bede-c3dd9a5655ba",
+      "name": "check block ended or not"
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = new Date();\nconst Y = d.getFullYear();\nconst M = String(d.getMonth() + 1).padStart(2, '0');\nconst D = String(d.getDate()).padStart(2, '0');\nconst h = String(d.getHours()).padStart(2, '0');\nconst m = String(d.getMinutes()).padStart(2, '0');\nconst s = String(d.getSeconds()).padStart(2, '0');\n// ${h}:${m}:${s}\n\n// وقت بعد دقيقتين\nconst d2 = new Date(d.getTime() + 1440 * 60 * 1000);\nconst Y2 = d2.getFullYear();\nconst M2 = String(d2.getMonth() + 1).padStart(2, '0');\nconst D2 = String(d2.getDate()).padStart(2, '0');\nconst h2 = String(d2.getHours()).padStart(2, '0');\nconst m2 = String(d2.getMinutes()).padStart(2, '0');\n\n\nreturn [\n  {\n    json: {\n      now: `${M}-${D}-${Y} ${h}:${m}:${s}`,\n      after_2_min: `${M2}-${D2}-${Y2} ${h2}:${m2}:${s}`,\n    },\n  },\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        1008
+      ],
+      "id": "59175943-5953-4ea3-a60b-254d9c8ed7e2",
+      "name": "Code for time"
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = new Date();\nconst Y = d.getFullYear();\nconst M = String(d.getMonth() + 1).padStart(2, '0');\nconst D = String(d.getDate()).padStart(2, '0');\nconst h = String(d.getHours()).padStart(2, '0');\nconst m = String(d.getMinutes()).padStart(2, '0');\nconst s = String(d.getSeconds()).padStart(2, '0');\n// ${h}:${m}:${s}\n\n// وقت بعد دقيقتين\nconst d2 = new Date(d.getTime() + 1440 * 60 * 1000);\nconst Y2 = d2.getFullYear();\nconst M2 = String(d2.getMonth() + 1).padStart(2, '0');\nconst D2 = String(d2.getDate()).padStart(2, '0');\nconst h2 = String(d2.getHours()).padStart(2, '0');\nconst m2 = String(d2.getMinutes()).padStart(2, '0');\n\n\nreturn [\n  {\n    json: {\n      now: `${M}-${D}-${Y} ${h}:${m}:${s}`,\n      after_2_min: `${M2}-${D2}-${Y2} ${h2}:${m2}:${s}`,\n    },\n  },\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -48,
+        1040
+      ],
+      "id": "cba54a59-b758-4633-8e1d-5585dbe80491",
+      "name": "code for time"
+    },
+    {
+      "parameters": {
+        "content": "## Stop bot",
+        "height": 256,
+        "width": 480
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -160,
+        960
+      ],
+      "typeVersion": 1,
+      "id": "3fd61004-eddf-4c35-a008-b44621fc1881",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1aGl6Qvxw9GceNB8HngPgBfaJladdxpq9WsJdhqbRFis",
+          "mode": "list",
+          "cachedResultName": "workflow course stop bot",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 740875713,
+          "mode": "list",
+          "cachedResultName": "products",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        2064,
+        1392
+      ],
+      "id": "188868b4-d707-4b1b-a378-a64224ce9ecf",
+      "name": "Products",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "OrqfwlW340pHk7zN",
+          "name": "Google Sheets account right one"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1760,
+        1360
+      ],
+      "id": "9f4a5f68-0cd9-4a01-a6e2-0ecd38570b9f",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "JcwIFXVK9Lxo9lj2",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// الرد الحالي (نص عادي + JSON داخله)\nconst rawResponse = $input.first().json.output;\n\n// استخراج الجزء بتاع JSON من النص\nconst jsonStart = rawResponse.indexOf('{');\nconst jsonString = rawResponse.slice(jsonStart);\n\n// تحويله لـ JSON فعلي\nconst responseJSON = JSON.parse(jsonString);\n\n// النتيجة النهائية\nconsole.log(responseJSON);\n return { json: responseJSON };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2192,
+        1168
+      ],
+      "id": "2c92bc6b-c8b8-48dc-ba6b-198bcb01e1bd",
+      "name": "Code to rewrite json"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Webhook').item.json.body.entry[0].messaging[0].sender.id }}k",
+        "contextWindowLength": 50
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        1904,
+        1392
+      ],
+      "id": "57a8669e-2a1e-485f-bd49-c56860fc3229",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "aa3c6285-8fbc-43ba-a2a5-5311327398c2",
+              "leftValue": "={{ $('Code to rewrite json').item.json.is_order_complete }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2624,
+        1136
+      ],
+      "id": "596c299d-6adc-4e62-978d-093961ddcd23",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1aGl6Qvxw9GceNB8HngPgBfaJladdxpq9WsJdhqbRFis",
+          "mode": "list",
+          "cachedResultName": "workflow course stop bot",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 287857107,
+          "mode": "list",
+          "cachedResultName": "orders",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ai reply": "={{ $('Code to rewrite json').item.json.msg }}",
+            "price": "={{ $('Code to rewrite json').item.json.full_price }}",
+            "address": "={{ $('Code to rewrite json').item.json.address }}",
+            "name": "={{ $('Code to rewrite json').item.json.customer_name }}",
+            "phone": "={{ $('Code to rewrite json').item.json.phone }}",
+            "date": "={{ $('Code for time').item.json.now }}",
+            "user id": "={{ $('Webhook').item.json.body.entry[0].messaging[0].sender.id }}",
+            "order": "={{ $json.order_text }}",
+            "status": "قيد التنفيذ"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "address",
+              "displayName": "address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "phone",
+              "displayName": "phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "date",
+              "displayName": "date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "order",
+              "displayName": "order",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "price",
+              "displayName": "price",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ai reply",
+              "displayName": "ai reply",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "note",
+              "displayName": "note",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "user id",
+              "displayName": "user id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3184,
+        1104
+      ],
+      "id": "c7c83e69-c580-4385-899f-e275f36aeecd",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "OrqfwlW340pHk7zN",
+          "name": "Google Sheets account right one"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $('Code to rewrite json').first().json.order;\n\n// لو البيانات فيها items جواها المنتجات\nconst items =  $('Code to rewrite json').first().json.order || [];\n\n// نحولها لنص بالشكل \"الكمية × اسم المنتج\"\nconst productsText = items\n  .map(item => `${item.quantity} × ${item.product}`)\n  .join('\\n');\n\n// نكوّن نص الرسالة النهائي\nconst message = ` ${productsText}`;\n\nreturn [\n  {\n    json: {\n      order_text: message.trim()\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2896,
+        1088
+      ],
+      "id": "4bcf192c-83a4-499a-8182-469ab209422b",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "content": "## تم الانشاء بواسطة \nتم الانشاء بواسطة **م. أحمد الصيرفي**  \n\nللتعلّم وتطوير مهاراتك في الأتمتة، زور موقعنا: \n [ahmedelserafy.com](https://ahmedelserafy.com/automation_course)\n",
+        "height": 224,
+        "width": 336
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        928,
+        800
+      ],
+      "typeVersion": 1,
+      "id": "5920a445-d7d0-4f99-9219-260dca34b902",
+      "name": "Sticky Note"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code to rewrite json",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [],
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Transcribe audio or video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcribe audio or video": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "code for time",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "check if user blocked",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check if user blocked": {
+      "main": [
+        [
+          {
+            "node": "code to get last row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If user found in blocked list": {
+      "main": [
+        [
+          {
+            "node": "Code for time",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "code to get last row": {
+      "main": [
+        [
+          {
+            "node": "If user found in blocked list",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check block ended or not": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "code for time": {
+      "main": [
+        [
+          {
+            "node": "block the user",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code for time": {
+      "main": [
+        [
+          {
+            "node": "check block ended or not",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Products": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code to rewrite json": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "e5cd7f94-6e01-4caf-9db5-ab69922e2159",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "eb58054caf61c2552d4b13cc032edccc043473990c2938118b79640890b4e573"
+  },
+  "id": "kRvcmFaB27lbALK8",
+  "tags": []
+}

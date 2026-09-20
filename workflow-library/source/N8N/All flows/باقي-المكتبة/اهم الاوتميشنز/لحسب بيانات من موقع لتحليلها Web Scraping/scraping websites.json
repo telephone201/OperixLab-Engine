@@ -1,0 +1,87 @@
+{
+  "name": "scraping websites",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -208,
+        48
+      ],
+      "id": "c08d9e2b-e4ac-4967-9d2e-72e7d437ddfe",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "url": "https://en.wikipedia.org/wiki/Asharq_Al-Awsat",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (compatible; n8n-scraper/1.0; +https://yourdomain.com)"
+            },
+            {
+              "name": "Accept",
+              "value": "text/html"
+            },
+            {
+              "name": "Accept-Language",
+              "value": "en-US,en;q=0.9"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        16,
+        48
+      ],
+      "id": "14009392-0d79-40a1-bb90-8508c345d845",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "content": "## تم الانشاء بواسطة \nتم الانشاء بواسطة **م. أحمد الصيرفي**  \n\nللتعلّم وتطوير مهاراتك في الأتمتة، زور موقعنا: \n [ahmedelserafy.com](https://ahmedelserafy.com/automation_course)\n\n\nقم باضافة الرابط الذي تريد ان تسحبه فى \nhttp request URL",
+        "height": 224,
+        "width": 336
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -176,
+        -256
+      ],
+      "typeVersion": 1,
+      "id": "0cba825d-8339-4216-96bc-5b2f41074218",
+      "name": "Sticky Note"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "4e808dcf-e9e6-498c-9781-70fe357832a4",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "eb58054caf61c2552d4b13cc032edccc043473990c2938118b79640890b4e573"
+  },
+  "id": "b3kXjyThyT2XHrBx",
+  "tags": []
+}

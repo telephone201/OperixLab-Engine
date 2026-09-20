@@ -1,0 +1,10 @@
+user_id
+{{ $json.user_id }}
+
+
+stopped_at
+{{ $json.stopped_at }}
+
+
+expires_at
+{{ $json.expires_at }}

@@ -1,0 +1,810 @@
+{
+  "name": "My workflow 4",
+  "nodes": [
+    {
+      "parameters": {
+        "multipleMethods": true,
+        "path": "464e9339-8c21-49a2-8357-02dff741eddb",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -780,
+        280
+      ],
+      "id": "8b790e6a-2382-433f-a843-8d31a58130c6",
+      "name": "Webhook",
+      "webhookId": "464e9339-8c21-49a2-8357-02dff741eddb"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.query['hub.challenge'] }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -520,
+        -20
+      ],
+      "id": "0b94c88d-e32f-4138-9a47-db7d75214e59",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Webhook').item.json.body.entry[0].messaging[0].message.text }}",
+        "options": {
+          "systemMessage": "#overview\nانت بتشتغل كبائع على ماسنجر \nالرسائل تكون مختصره وعن مجالنا فقط وتتكلم بالعامية المصرية بس باحترام يعني تقول يا فندم وحضرتك\nاحنا متجر لبيع اللابتوبات\n\nوالرساله لا تزيد عن 500 حرف\n\nلو حد كلمك متقولش فيه ايه قول اقدر اساعد حضرتك ازاي\nلو بعتلك رساله زي مثلا رسالة استفسار او ترحيب او قالك السلام عليكم او مرحبا \nرحب بيه او رد عليه \n\n\nواذا ارسل لك رقم هاتفه قل له شكرا لك تم ارساله الى الدعم الفني وسيتواصلون معك فى اقرب وقت وانه تم ايقافي\nلو ارسل الرقم يعني لو لقيت فى الرساله بيبدا ب 01\nكده هو ارسلك الرقم غير كده يبقي لسه مبعتش الرقم\n\n\nارسل له فى نهاية كل رساله \nاذا اردت ايقاف البوت وانتظار رد من شخص حقيقي ارسل وقف البوت او stop bot\n واذا تم ايقاف البوت لا ترسل هذه الرساله\n\nرقم الواتساب لو احتاجه\n010123456789\n\n\n#product\nبنقدم لابتوبات\nومعاك شيت اسمه \"product info\"\nهتقدر توصله وتاخد معلومات المنتجات وسعرها والوصف\nونهائي لا ترسل رابط الشيت للعميل فقط ارسل البيانات من الملف ورابط المنتج\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        560,
+        320
+      ],
+      "id": "c507bca5-a876-4eca-bc57-5602f5ad5be5",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.body.entry[0].messaging[0].sender.id }}",
+        "contextWindowLength": 50
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        660,
+        560
+      ],
+      "id": "0b8d9e61-dfbf-49f3-a374-764c33e9442a",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v22.0/{{ $('Webhook').item.json.body.entry[0].messaging[0].recipient.id }}/messages?access_token=",
+        "sendBody": true,
+        "specifyBody": "=json",
+        "bodyParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "jsonBody": "={\n  \"recipient\": {\n    \"id\": \"{{ $('Webhook').item.json.body.entry[0].messaging[0].sender.id }}\"\n  },\n  \"messaging_type\": \"RESPONSE\",\n  \"message\": {\n    \"text\": {{ JSON.stringify($json.output) }}\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1040,
+        20
+      ],
+      "id": "b01c0378-02bd-441c-adea-7ac7fcd98ec6",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.body.entry[0].messaging[0].message.text }}\n",
+              "operation": "contains",
+              "value2": "كلم شخص حقيقي"
+            },
+            {
+              "value1": "={{ $json.body.entry[0].messaging[0].message.text }}",
+              "operation": "contains",
+              "value2": "وقف البوت"
+            },
+            {
+              "value1": "={{ $json.body.entry[0].messaging[0].message.text }}",
+              "operation": "contains",
+              "value2": "stop bot"
+            },
+            {
+              "value1": "={{ $json.body.entry[0].messaging[0].message.text }}",
+              "operation": "contains",
+              "value2": "Stop bot"
+            },
+            {
+              "value1": "={{ $json.body.entry[0].messaging[0].message.text }}",
+              "operation": "contains",
+              "value2": "اتكلم مع حد"
+            }
+          ]
+        },
+        "combineOperation": "any"
+      },
+      "name": "Check Stop Keywords?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -360,
+        240
+      ],
+      "id": "1986bd9d-52ea-44eb-b129-0d0d1ab5ad98"
+    },
+    {
+      "parameters": {
+        "jsCode": "// في Code Node\nconst currentTimestamp = $input.first().json.body.entry[0].messaging[0].timestamp; // 1748740358256\nconst currentDate = new Date(currentTimestamp); // تحويل لتاريخ عادي\nconst expiryDate = new Date(currentTimestamp + (24 * 60 * 60 * 1000)); // إضافة 24 ساعة\n\n// تحويل للصيغة المطلوبة للـ MySQL\nconst stoppedAt = currentDate.toISOString().slice(0, 19).replace('T', ' ');\nconst expiresAt = expiryDate.toISOString().slice(0, 19).replace('T', ' ');\n\nreturn [{\n  json: {\n    user_id: $input.first().json.body.entry[0].messaging[0].sender.id,\n    stopped_at: stoppedAt,    // مثال: 2025-01-31 15:45:58\n    expires_at: expiresAt     // مثال: 2025-02-01 15:45:58\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        80,
+        -60
+      ],
+      "id": "720b3c67-cfe1-45cb-a785-4f93d154d4e3",
+      "name": "change timestamp"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d5a65c21-4bd9-4e19-bc5f-23cba4c3e6d5",
+              "name": "body.entry[0].messaging[0].sender.id",
+              "value": "={{ $('Webhook').item.json.body.entry[0].messaging[0].sender.id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        360,
+        260
+      ],
+      "id": "2ace8985-8602-4446-a594-aa8f66a9f99a",
+      "name": "set node for sender id"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c4a66273-2e0f-4570-9ca3-0da0d882c5bd",
+              "leftValue": "={{ $json }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "empty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "1f0d3fa0-f1ed-405a-bf2a-ad548750d87b",
+              "leftValue": "={{ $json.expires_at }}",
+              "rightValue": "={{ require('luxon').DateTime.now().setZone('Africa/Cairo').toFormat('yyyy-MM-dd HH:mm:ss') }}",
+              "operator": {
+                "type": "dateTime",
+                "operation": "before"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        120,
+        220
+      ],
+      "id": "8076e7e3-1850-48d5-a460-a8e8dec97487",
+      "name": "check if block over"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "5047b2ed-8ef4-4de6-baa4-20cfa6d31765",
+              "leftValue": "={{ $json.body.entry[0].messaging[0].message.text }}",
+              "rightValue": "01",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "aab95324-0c26-4663-b4b7-ea6826ed30b0",
+              "leftValue": "={{ $json.body.entry[0].messaging[0].message.text }}",
+              "rightValue": "٠١",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -600,
+        700
+      ],
+      "id": "911f07c3-a291-497d-9bae-e436c189bad3",
+      "name": "if contain number"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "71e86325-f572-4625-b2e6-076283b2308a",
+              "name": "body.entry[0].messaging[0].sender.id",
+              "value": "={{ $('Webhook').item.json.body.entry[0].messaging[0].sender.id }}",
+              "type": "string"
+            },
+            {
+              "id": "9b08dbaa-f15e-482d-bda9-d3926cf80a82",
+              "name": "body.entry[0].messaging[0].timestamp",
+              "value": "={{ $('Webhook').item.json.body.entry[0].messaging[0].timestamp }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -220,
+        680
+      ],
+      "id": "2a1b8334-e53c-4375-ad74-70c86de5cd0a",
+      "name": "set sender id"
+    },
+    {
+      "parameters": {
+        "content": "## insert to db to block bot from reply\n",
+        "height": 260,
+        "width": 580
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        -140
+      ],
+      "id": "7a9e63e8-f679-4c87-be28-c8b8eb49974d",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## check if contain number to add to db then stop bot and send that number saved\n\n",
+        "height": 280,
+        "width": 960,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -820,
+        620
+      ],
+      "typeVersion": 1,
+      "id": "c6b6a59e-0bd8-4bd9-a339-ee88be96df2e",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        340,
+        720
+      ],
+      "id": "1c90b7b0-c5ad-48d4-ac48-411a013a528b",
+      "name": "Do nothing cuz he is blocked"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1CpGdkBMysfKYNxpouPr-aifixW4r9JOamnaKLdYUTqY",
+          "mode": "list",
+          "cachedResultName": "phone numbers",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1CpGdkBMysfKYNxpouPr-aifixW4r9JOamnaKLdYUTqY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1CpGdkBMysfKYNxpouPr-aifixW4r9JOamnaKLdYUTqY/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "name": "={{ $('Webhook').item.json.body.entry[0].messaging[0].message.text }}",
+            "created date": "={{ new Date().toISOString().slice(0, 19).replace('T', ' ') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "number",
+              "displayName": "number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "created date",
+              "displayName": "created date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "notes",
+              "displayName": "notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "اسمه",
+              "displayName": "اسمه",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "السعر",
+              "displayName": "السعر",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        -260,
+        960
+      ],
+      "id": "a469bc30-8454-43b2-a098-24ed9902793b",
+      "name": "Google Sheets1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "tzedcJtsgD4exCHN",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-4o-mini",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        560,
+        580
+      ],
+      "id": "ca16ac6e-1cc2-479b-b0f6-6352805320bb",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "9DvuSvgjX9tiEynh",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1f78H2YWRyqYgP3Q6RInapVukv8ZoiZ8DGmf5hdzx3fs",
+          "mode": "list",
+          "cachedResultName": "products list",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1f78H2YWRyqYgP3Q6RInapVukv8ZoiZ8DGmf5hdzx3fs/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1f78H2YWRyqYgP3Q6RInapVukv8ZoiZ8DGmf5hdzx3fs/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.6,
+      "position": [
+        840,
+        580
+      ],
+      "id": "51476b0b-4ad3-483c-84b5-ec1558bc5e96",
+      "name": "Product info",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "tzedcJtsgD4exCHN",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "137hfiixOxxWOK06cRnluJCOh2CQGgVOM1isnMdF8Qgg",
+          "mode": "list",
+          "cachedResultName": "stop bot",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/137hfiixOxxWOK06cRnluJCOh2CQGgVOM1isnMdF8Qgg/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/137hfiixOxxWOK06cRnluJCOh2CQGgVOM1isnMdF8Qgg/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "user_id": "={{ $json.user_id }}",
+            "stopped_at": "={{ $json.stopped_at }}",
+            "expires_at": "={{ $json.expires_at }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "user_id",
+              "displayName": "user_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "stopped_at",
+              "displayName": "stopped_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "expires_at",
+              "displayName": "expires_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        320,
+        -60
+      ],
+      "id": "11b08251-38a6-4ddb-a7ce-5566f6b78b10",
+      "name": "Google Sheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "tzedcJtsgD4exCHN",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "137hfiixOxxWOK06cRnluJCOh2CQGgVOM1isnMdF8Qgg",
+          "mode": "list",
+          "cachedResultName": "stop bot",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/137hfiixOxxWOK06cRnluJCOh2CQGgVOM1isnMdF8Qgg/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/137hfiixOxxWOK06cRnluJCOh2CQGgVOM1isnMdF8Qgg/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "user_id",
+              "lookupValue": "={{ $json.body.entry[0].messaging[0].sender.id }}"
+            }
+          ]
+        },
+        "options": {
+          "returnFirstMatch": true
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        -120,
+        300
+      ],
+      "id": "d5241973-6547-4c46-96f7-79882845ac2a",
+      "name": "Google Sheets2",
+      "retryOnFail": true,
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "tzedcJtsgD4exCHN",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v22.0/{{ $('Webhook').item.json.body.entry[0].messaging[0].recipient.id }}/messages?access_token=",
+        "sendBody": true,
+        "specifyBody": "=json",
+        "bodyParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "jsonBody": "={\n  \"recipient\": {\n    \"id\": \"{{ $('Webhook').item.json.body.entry[0].messaging[0].sender.id }}\"\n  },\n  \"messaging_type\": \"RESPONSE\",\n  \"message\": {\n    \"text\": \"تم ارسال رقم حضرتك الى ا لدعم الفني وسيتم التواصل معك قريبا وتم ايقاي مؤقتا انتظارا للدعم الفني\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -40,
+        780
+      ],
+      "id": "f38d6541-7832-4a48-a7e1-856e82700b6e",
+      "name": "HTTP Request1"
+    }
+  ],
+  "pinData": {
+    "Webhook": []
+  },
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "if contain number",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Stop Keywords?": {
+      "main": [
+        [
+          {
+            "node": "change timestamp",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Google Sheets2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "change timestamp": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "set node for sender id": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check if block over": {
+      "main": [
+        [
+          {
+            "node": "set node for sender id",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Do nothing cuz he is blocked",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "if contain number": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "set sender id",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check Stop Keywords?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "set sender id": {
+      "main": [
+        [
+          {
+            "node": "change timestamp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Product info": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets2": {
+      "main": [
+        [
+          {
+            "node": "check if block over",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "eb58054caf61c2552d4b13cc032edccc043473990c2938118b79640890b4e573"
+  },
+  "tags": []
+}

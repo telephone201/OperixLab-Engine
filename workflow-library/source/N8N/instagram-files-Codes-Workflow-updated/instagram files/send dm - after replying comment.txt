@@ -1,0 +1,31 @@
+/////////////
+URL
+////////////
+
+https://graph.instagram.com/v22.0/{{ $('Get row(s) in sheet').item.json['ig page id'] }}/messages?access_token={{ $('Get row(s) in sheet').item.json['ig access token'] }}
+
+
+////////
+Send Body
+////////
+
+{
+  "recipient": {
+    "comment_id": "{{ $('Webhook').item.json.body.entry[0].changes[0].value.id }}"
+  },
+  "message": {
+    "text":  {{ JSON.stringify($('Get public comments').item.json.message) }}
+  }
+}
+
+///////////
+
+
+
+
+
+
+
+
+
+

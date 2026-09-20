@@ -1,0 +1,10 @@
+Name ↓
+
+{{ $('Webhook').item.json.body.entry[0].messaging[0].message.text }}
+
+
+
+Created Date ↓
+
+{{ new Date().toISOString().slice(0, 19).replace('T', ' ') }}
+

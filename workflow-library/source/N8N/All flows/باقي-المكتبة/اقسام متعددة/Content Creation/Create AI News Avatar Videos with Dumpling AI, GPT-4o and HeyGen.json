@@ -1,0 +1,540 @@
+{
+  "name": "Create AI News Avatar Videos with Dumpling AI, GPT-4o and HeyGen",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {}
+          ]
+        }
+      },
+      "id": "8a457904-7d80-4bf8-a433-d25dbce33c45",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [
+        368,
+        848
+      ],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://app.dumplingai.com/api/v1/search-news",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"query\": \"AI Agent\",\n  \"language\": \"en\",\n  \"dateRange\": \"pastHour\",\n  \"page\": \"1\"\n}\n",
+        "options": {}
+      },
+      "id": "90cf1daa-9652-4717-84af-f96a1a3d7dc6",
+      "name": "Dumpling AI: Search AI News",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        592,
+        848
+      ],
+      "typeVersion": 4.2,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "SzJvaJkEsYnd79U0",
+          "name": "Header Auth account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "news",
+        "options": {}
+      },
+      "id": "321da41d-6a13-4a00-95c1-915fa6d8f5e6",
+      "name": "Split: Individual News Items",
+      "type": "n8n-nodes-base.splitOut",
+      "position": [
+        816,
+        848
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "maxItems": 4
+      },
+      "id": "d7e5fcf2-7a24-4277-9459-9e828d3a98ef",
+      "name": "Limit: Top 4 News Results",
+      "type": "n8n-nodes-base.limit",
+      "position": [
+        1040,
+        848
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://app.dumplingai.com/api/v1/scrape",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"url\": \"{{ $json.link }}\",\n  \"cleaned\": \"true\"\n}\n",
+        "options": {}
+      },
+      "id": "c1847dce-9564-44ae-b9a9-1ac48e42d2c8",
+      "name": "Dumpling AI: Scrape Article Content",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1248,
+        848
+      ],
+      "typeVersion": 4.2,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "SzJvaJkEsYnd79U0",
+          "name": "Header Auth account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "content"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f6e8c80e-72b7-47ba-a3b6-0d43a0ee1615",
+      "name": " Combine: Merge Scraped News Content",
+      "type": "n8n-nodes-base.aggregate",
+      "position": [
+        1472,
+        848
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Here is the topic:{{ $json.content }}\n\n\nHere is the news article:{{ $('Dumpling AI: Search AI News').item.json.searchParameters.q }}\n",
+        "options": {
+          "systemMessage": "=You are a creative content writer. I will give you a news article and the intended topic or angle I want to focus on. Your job is to turn that into a short, engaging script suitable for a 30 to 60-second video. Write in a natural, conversational tone that sounds like someone talking to a general audience. Keep it simple, clear, and focused on the most interesting or important angle based on the topic I provide. Avoid technical jargon. The goal is to grab attention and make the message easy to understand and relatable. Very important: Output the final script as a single line only — no new lines, no paragraph breaks, no titles or formatting. Just plain text in one continuous sentence."
+        }
+      },
+      "id": "7c203f11-51ca-4aaa-a3c5-a571af36accd",
+      "name": "GPT-4o Agent: Write Video Script",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        1696,
+        848
+      ],
+      "typeVersion": 1.9
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini"
+        },
+        "options": {}
+      },
+      "id": "b5bc7652-ba15-4d8d-a3ab-08e65f7ea54f",
+      "name": " GPT-4o Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "position": [
+        1776,
+        1072
+      ],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.heygen.com/v2/video/generate",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"video_inputs\": [\n    {\n      \"character\": {\n        \"type\": \"avatar\",\n        \"avatar_id\": \"\",\n        \"avatar_style\": \"normal\"\n      },\n      \"voice\": {\n        \"type\": \"text\",\n        \"input_text\": \"{{ $json.output }}\",\n        \"voice_id\": \"\",\n        \"speed\": 1.1\n      }\n    }\n  ],\n  \"dimension\": {\n    \"width\": 1280,\n    \"height\": 720\n  }\n}",
+        "options": {}
+      },
+      "id": "c60ba871-f5a9-4ec2-b3d9-5aa4583c8f43",
+      "name": " HeyGen: Generate Avatar Video",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        2064,
+        848
+      ],
+      "typeVersion": 4.2,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "SzJvaJkEsYnd79U0",
+          "name": "Header Auth account 2"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "97b7db8d-2233-4bb5-b615-a93885ddfcfa",
+      "name": "Wait: For HeyGen to Process",
+      "type": "n8n-nodes-base.wait",
+      "position": [
+        2288,
+        848
+      ],
+      "webhookId": "f78db6d8-9a63-4961-8abb-ac44b4c230d1",
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "url": "https://api.heygen.com/v1/video_status.get",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "video_id",
+              "value": "={{ $json.data.video_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "33b34d1e-4674-44fe-937e-ad907a6ff6ca",
+      "name": "HeyGen: Check Video Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        2512,
+        848
+      ],
+      "typeVersion": 4.2,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "SzJvaJkEsYnd79U0",
+          "name": "Header Auth account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "fbed8c0e-f2ad-4519-9eb9-1423731654ea",
+              "operator": {
+                "name": "filter.operator.equals",
+                "type": "string",
+                "operation": "equals"
+              },
+              "leftValue": "={{ $json.data.status }}",
+              "rightValue": "completed"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "27a6d57c-f518-43fd-93f0-2a237ccf0a99",
+      "name": "IF: Video Completed?",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        2736,
+        784
+      ],
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "amount": 20
+      },
+      "id": "99219ffb-7d15-4393-877a-a9cb592c025b",
+      "name": " Wait: Retry if Not Complete",
+      "type": "n8n-nodes-base.wait",
+      "position": [
+        2944,
+        960
+      ],
+      "webhookId": "82e9f0a0-05e2-4eae-9b8c-d08e554a9704",
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1AUADRf5MafbEazIZKuEBuDb7ETBEpCI0WSEnxFDJqn4/edit?usp=drivesdk",
+          "cachedResultName": "Videos"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gid=0",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1AUADRf5MafbEazIZKuEBuDb7ETBEpCI0WSEnxFDJqn4/edit#gid=0",
+          "cachedResultName": "Sheet1"
+        },
+        "columns": {
+          "value": {
+            "Video link": "={{ $json.data.video_url }}"
+          },
+          "schema": [
+            {
+              "id": "Video link",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "Video link",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            }
+          ],
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "Video link"
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "6761efd6-79c8-4a79-970e-a30d26a18336",
+      "name": "Google Sheets: Log Video URL",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        2944,
+        720
+      ],
+      "typeVersion": 4.6,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "OrqfwlW340pHk7zN",
+          "name": "Google Sheets account right one"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "### 🎥 Workflow Overview: Auto-Generate AI News Avatar Videos\n\nThis workflow runs every hour and creates an avatar-style video summarizing \nthe latest AI-related news.\n\n**Here’s what it does:**\n- Searches for recent AI Agent news using Dumpling AI\n- Scrapes the content from the top 4 articles\n- Merges article content into one body of text\n- Uses GPT-4o to generate a short, casual video script\n- Sends the script to HeyGen to create an avatar video\n- Waits for the video to finish rendering\n- Logs the video link in a Google Sheet\n\n🛠 Tools Used:\n- Dumpling AI (News search + scraping)\n- OpenAI GPT-4o (Script writing)\n- HeyGen (Video generation)\n- Google Sheets (Tracking links)\n\n📌 Credentials Required:\n- Dumpling AI API (via HTTP Header credentials)\n- HeyGen API key (via Bearer YOUR_TOKEN_HERE credential)\n- Google Sheets + OpenAI account\n\nCustomize the topic (e.g., change \"AI Agent\" to something else), avatar, voice, \nor video style to suit your brand.\n",
+        "height": 660,
+        "width": 800
+      },
+      "id": "294f5c10-e0fa-42c2-8a7a-f823ae4ed477",
+      "name": "Sticky Note2",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        368,
+        240
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## تم التحضير بواسطة \n**م. أحمد الصيرفي**  \n\nللتعلّم وتطوير مهاراتك في الأتمتة، زور موقعنا: \n [ahmedelserafy.com](https://ahmedelserafy.com/automation_course)\n\n\n",
+        "width": 2144,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        368,
+        16
+      ],
+      "typeVersion": 1,
+      "id": "fc2a8aba-cfda-45c8-b436-b4b9f5ecbb5f",
+      "name": "Sticky Note6"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    " GPT-4o Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "GPT-4o Agent: Write Video Script",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Dumpling AI: Search AI News",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Video Completed?": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets: Log Video URL",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": " Wait: Retry if Not Complete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit: Top 4 News Results": {
+      "main": [
+        [
+          {
+            "node": "Dumpling AI: Scrape Article Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HeyGen: Check Video Status": {
+      "main": [
+        [
+          {
+            "node": "IF: Video Completed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dumpling AI: Search AI News": {
+      "main": [
+        [
+          {
+            "node": "Split: Individual News Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait: For HeyGen to Process": {
+      "main": [
+        [
+          {
+            "node": "HeyGen: Check Video Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    " Wait: Retry if Not Complete": {
+      "main": [
+        [
+          {
+            "node": "HeyGen: Check Video Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split: Individual News Items": {
+      "main": [
+        [
+          {
+            "node": "Limit: Top 4 News Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    " HeyGen: Generate Avatar Video": {
+      "main": [
+        [
+          {
+            "node": "Wait: For HeyGen to Process",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT-4o Agent: Write Video Script": {
+      "main": [
+        [
+          {
+            "node": " HeyGen: Generate Avatar Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dumpling AI: Scrape Article Content": {
+      "main": [
+        [
+          {
+            "node": " Combine: Merge Scraped News Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    " Combine: Merge Scraped News Content": {
+      "main": [
+        [
+          {
+            "node": "GPT-4o Agent: Write Video Script",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "caa4d574-ed2f-40ab-8671-31544c49041e",
+  "meta": {
+    "templateId": "5796",
+    "instanceId": "eb58054caf61c2552d4b13cc032edccc043473990c2938118b79640890b4e573"
+  },
+  "id": "esV7ztw5EAnsMY0A",
+  "tags": [
+    {
+      "updatedAt": "2025-11-28T22:29:34.032Z",
+      "createdAt": "2025-11-28T22:29:34.032Z",
+      "id": "HHSMeirOYyTwabhZ",
+      "name": "pack"
+    }
+  ]
+}

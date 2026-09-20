@@ -1,0 +1,16 @@
+// في Code Node
+const currentTimestamp = $input.first().json.body.entry[0].messaging[0].timestamp; // 1748740358256
+const currentDate = new Date(currentTimestamp); // تحويل لتاريخ عادي
+const expiryDate = new Date(currentTimestamp + (24 * 60 * 60 * 1000)); // إضافة 24 ساعة
+
+// تحويل للصيغة المطلوبة للـ MySQL
+const stoppedAt = currentDate.toISOString().slice(0, 19).replace('T', ' ');
+const expiresAt = expiryDate.toISOString().slice(0, 19).replace('T', ' ');
+
+return [{
+  json: {
+    user_id: $input.first().json.body.entry[0].messaging[0].sender.id,
+    stopped_at: stoppedAt,    // مثال: 2025-01-31 15:45:58
+    expires_at: expiresAt     // مثال: 2025-02-01 15:45:58
+  }
+}];

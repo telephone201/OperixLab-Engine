@@ -1,0 +1,28 @@
+
+URL
+https://graph.facebook.com/v21.0/wb_account_id/messages
+
+
+---------------------
+Ø§Ù„Ù‡ÙŠØ¯Ø± Ù‡ØªØ­ØªØ§Ø¬ 
+Authorization
+
+Bearer
+
+Bearer Ù…Ø³Ø§ÙØ© Ø«Ù… Ø§Ù„Ø§ÙƒØ³ÙŠØ³ ØªÙˆÙƒÙ†
+
+
+
+-------------
+Ø§Ù„Ø¨Ø§Ø¯ÙŠ Body
+
+{
+  "messaging_product": "whatsapp",
+  "to": "Ø±Ù‚Ù… Ø§Ù„Ø¹Ù…ÙŠÙ„",
+  "type": "text",
+  "text": {
+    "preview_url": true,
+    "body": {{ JSON.stringify($('AI Agent2').item.json.output) }}
+  }
+}
+ 

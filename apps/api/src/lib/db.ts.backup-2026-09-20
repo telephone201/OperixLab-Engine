@@ -1,0 +1,105 @@
+﻿/**
+ * @file db.ts
+ * @description Database connection utility providing a Prisma-like interface using pg.
+ */
+
+import { Pool, PoolClient } from 'pg';
+import { config } from '../config/config-manager';
+
+const pool = new Pool({
+    connectionString: config.get('databaseUrl'),
+});
+
+/**
+ * A thin wrapper that simulates a Prisma-like API for the existing codebase.
+ * This allows us to maintain the contract used in controllers (e.g., db.leads.findMany)
+ * without introducing a heavy ORM.
+ */
+export const db = {
+    async query(text: string, params?: any[]) {
+        return pool.query(text, params);
+    },
+
+    async transaction<T>(callback: (client: PoolClient) => Promise<T>): Promise<T> {
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+            const result = await callback(client);
+            await client.query('COMMIT');
+            return result;
+        } catch (e) {
+            await client.query('ROLLBACK');
+            throw e;
+        } finally {
+            client.release();
+        }
+    },
+
+    // Dynamic table proxy to support db.tableName.findMany() etc.
+    get table() {
+        return new Proxy({}, {
+            get: (_, prop: string) => {
+                return {
+                    findMany: async (args: any) => {
+                        // Minimal implementation of findMany for the demo/migration context
+                        const { take, orderBy } = args || {};
+                        let sql = `SELECT * FROM ${prop}`;
+                        if (take) sql += ` LIMIT ${take}`;
+                        if (orderBy) {
+                            const [col, dir] = Object.entries(orderBy)[0];
+                            sql += ` ORDER BY ${col} ${dir}`;
+                        }
+                        const res = await pool.query(sql);
+                        return res.rows;
+                    },
+                    findUnique: async (args: any) => {
+                        const where = args.where || {};
+                        const col = Object.keys(where)[0];
+                        const val = Object.values(where)[0];
+                        const res = await pool.query(`SELECT * FROM ${prop} WHERE ${col} = $1`, [val]);
+                        return res.rows[0];
+                    },
+                    findFirst: async (args: any) => {
+                        const res = await pool.query(`SELECT * FROM ${prop} LIMIT 1`);
+                        return res.rows[0];
+                    },
+                    update: async (args: any) => {
+                        // Basic update implementation
+                        const { where, data } = args;
+                        const col = Object.keys(where)[0];
+                        const val = Object.values(where)[0];
+                        const setClause = Object.entries(data).map(([k, v], i) => `${k} = $${i + 2}`).join(', ');
+                        const values = [val, ...Object.values(data)];
+                        const res = await pool.query(`UPDATE ${prop} SET ${setClause} WHERE ${col} = $1`, values);
+                        return { count: res.rowCount };
+                    },
+                    upsert: async (args: any) => {
+                        // Basic upsert implementation for PostgreSQL
+                        const { where, update, create } = args;
+                        const col = Object.keys(where)[0];
+                        const val = Object.values(where)[0];
+
+                        // This is a simplified version. In production, we'd use INSERT ... ON CONFLICT
+                        const existing = await (this as any).findUnique({ where });
+                        if (existing) {
+                            return (this as any).update({ where, data: update });
+                        } else {
+                            const cols = Object.keys(create).join(', ');
+                            const vals = Object.values(create).map((_, i) => `$${i + 1}`).join(', ');
+                            await pool.query(`INSERT INTO ${prop} (${cols}) VALUES (${vals})`, Object.values(create));
+                            return { count: 1 };
+                        }
+                    }
+                };
+            }
+        });
+    }
+};
+
+// Proxy the root db object to the table proxy
+export default new Proxy(db, {
+    get: (target, prop: string) => {
+        if (prop in target) return (target as any)[prop];
+        return (target.table as any)[prop];
+    }
+});

@@ -1,0 +1,609 @@
+{
+  "name": "web hosting chat",
+  "nodes": [
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.sessionId }}",
+        "contextWindowLength": 50
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        -64,
+        192
+      ],
+      "id": "b40fec56-cf23-43c8-8ab4-382a7823bef0",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -192,
+        224
+      ],
+      "id": "b2de29b3-c5a0-425f-868d-4df225bef6aa",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "JcwIFXVK9Lxo9lj2",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "انت شغال مساعد ذكي فى صفحة "
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        -160,
+        -32
+      ],
+      "id": "bf13f13e-de54-41af-ace4-dac0bcbabf0c",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "table": {
+          "__rl": true,
+          "value": "messages",
+          "mode": "list",
+          "cachedResultName": "messages"
+        },
+        "dataMode": "defineBelow",
+        "valuesToSend": {
+          "values": [
+            {
+              "column": "conversation_id",
+              "value": "={{ $('Select rows from a table1').item.json.id }}"
+            },
+            {
+              "column": "sender_type",
+              "value": "user"
+            },
+            {
+              "column": "message_text",
+              "value": "={{ $('When chat message received').item.json.chatInput }}"
+            },
+            {
+              "column": "message_type",
+              "value": "text"
+            },
+            {
+              "column": "message_direction",
+              "value": "incoming"
+            },
+            {
+              "column": "created_at",
+              "value": "={{ $('Code in JavaScript').item.json.now }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        816,
+        -144
+      ],
+      "id": "04a0babd-2549-469c-81a0-16da60938748",
+      "name": "insert message",
+      "credentials": {
+        "mySql": {
+          "id": "q1DG9qKZUkpcsahr",
+          "name": "MySQL account course bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "table": {
+          "__rl": true,
+          "value": "conversations",
+          "mode": "list",
+          "cachedResultName": "conversations"
+        },
+        "dataMode": "defineBelow",
+        "valuesToSend": {
+          "values": [
+            {
+              "column": "phone_number",
+              "value": "={{ $('When chat message received').item.json.sessionId }}"
+            },
+            {
+              "column": "started_at",
+              "value": "={{ $('Code in JavaScript').item.json.now }}"
+            }
+          ]
+        },
+        "options": {
+          "detailedOutput": true
+        }
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        816,
+        48
+      ],
+      "id": "eefd4842-038f-40b9-be15-dfe89edd0712",
+      "name": "Insert rows in conversation",
+      "credentials": {
+        "mySql": {
+          "id": "q1DG9qKZUkpcsahr",
+          "name": "MySQL account course bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "table": {
+          "__rl": true,
+          "value": "messages",
+          "mode": "list",
+          "cachedResultName": "messages"
+        },
+        "dataMode": "defineBelow",
+        "valuesToSend": {
+          "values": [
+            {
+              "column": "conversation_id",
+              "value": "={{ $('Select rows from a table1').item.json.id }}"
+            },
+            {
+              "column": "sender_type",
+              "value": "bot"
+            },
+            {
+              "column": "message_text",
+              "value": "={{ $('AI Agent').item.json.output }}"
+            },
+            {
+              "column": "message_type",
+              "value": "text"
+            },
+            {
+              "column": "message_direction",
+              "value": "outgoing"
+            },
+            {
+              "column": "created_at",
+              "value": "={{ $('Code in JavaScript').item.json.now }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        992,
+        -144
+      ],
+      "id": "82437e61-f60a-4795-8163-f6216f62a67d",
+      "name": "insert message2",
+      "credentials": {
+        "mySql": {
+          "id": "q1DG9qKZUkpcsahr",
+          "name": "MySQL account course bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "table": {
+          "__rl": true,
+          "value": "messages",
+          "mode": "list",
+          "cachedResultName": "messages"
+        },
+        "dataMode": "defineBelow",
+        "valuesToSend": {
+          "values": [
+            {
+              "column": "conversation_id",
+              "value": "={{ $('Insert rows in conversation').item.json.data.insertId }}"
+            },
+            {
+              "column": "sender_type",
+              "value": "bot"
+            },
+            {
+              "column": "message_text",
+              "value": "={{ $('AI Agent').item.json.output }}"
+            },
+            {
+              "column": "message_type",
+              "value": "text"
+            },
+            {
+              "column": "message_direction",
+              "value": "outgoing"
+            },
+            {
+              "column": "created_at",
+              "value": "={{ $('Code in JavaScript').item.json.now }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        1152,
+        48
+      ],
+      "id": "e7fda506-ff2c-4f08-afa2-244d507aefed",
+      "name": "insert message3",
+      "credentials": {
+        "mySql": {
+          "id": "q1DG9qKZUkpcsahr",
+          "name": "MySQL account course bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "table": {
+          "__rl": true,
+          "value": "messages",
+          "mode": "list",
+          "cachedResultName": "messages"
+        },
+        "dataMode": "defineBelow",
+        "valuesToSend": {
+          "values": [
+            {
+              "column": "conversation_id",
+              "value": "={{ $('Insert rows in conversation').item.json.data.insertId }}"
+            },
+            {
+              "column": "sender_type",
+              "value": "user"
+            },
+            {
+              "column": "message_text",
+              "value": "={{ $('When chat message received').item.json.chatInput }}"
+            },
+            {
+              "column": "message_type",
+              "value": "text"
+            },
+            {
+              "column": "message_direction",
+              "value": "incoming"
+            },
+            {
+              "column": "created_at",
+              "value": "={{ $('Code in JavaScript').item.json.now }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        992,
+        48
+      ],
+      "id": "84a5d61f-5f53-44fa-bfc7-0955ded9a825",
+      "name": "insert user message",
+      "credentials": {
+        "mySql": {
+          "id": "q1DG9qKZUkpcsahr",
+          "name": "MySQL account course bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "table": {
+          "__rl": true,
+          "value": "conversations",
+          "mode": "list",
+          "cachedResultName": "conversations"
+        },
+        "limit": 1,
+        "where": {
+          "values": [
+            {
+              "column": "phone_number",
+              "value": "={{ $('When chat message received').item.json.sessionId }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        400,
+        -32
+      ],
+      "id": "1031e33c-874e-4e89-93b1-c8e06944e98e",
+      "name": "Select rows from a table1",
+      "alwaysOutputData": true,
+      "credentials": {
+        "mySql": {
+          "id": "q1DG9qKZUkpcsahr",
+          "name": "MySQL account course bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "89fb22c1-19e2-4476-aaa5-b7ab263dc212",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "6",
+              "operator": {
+                "type": "number",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        576,
+        -32
+      ],
+      "id": "8e9ae461-79c3-43b4-84b8-14b3ccbe617c",
+      "name": "If7"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5914ca90-3a72-431e-ac0d-5e2ccde869c3",
+              "name": "output",
+              "value": "={{ $('AI Agent').item.json.output }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1376,
+        -64
+      ],
+      "id": "f25bc421-5aa4-45ae-b267-400844f07f6c",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = new Date();\nconst Y = d.getFullYear();\nconst M = String(d.getMonth() + 1).padStart(2, '0');\nconst D = String(d.getDate()).padStart(2, '0');\nconst h = String(d.getHours()).padStart(2, '0');\nconst m = String(d.getMinutes()).padStart(2, '0');\nconst s = String(d.getSeconds()).padStart(2, '0');\n// ${h}:${m}:${s}\n\n// وقت بعد يوم \nconst d2 = new Date(d.getTime() + 2 * 60 * 60 * 1000); // ساعتين × 60 دقيقة × 60 ثانية × 1000 ملي ثانية\nconst Y2 = d2.getFullYear();\nconst M2 = String(d2.getMonth() + 1).padStart(2, '0');\nconst D2 = String(d2.getDate()).padStart(2, '0');\nconst h2 = String(d2.getHours()).padStart(2, '0');\nconst m2 = String(d2.getMinutes()).padStart(2, '0');\n\n\nreturn [\n  {\n    json: {\n      now: `${Y2}-${M2}-${D2} ${h2}:${m2}:${s}`\n      \n    },\n  },\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        176,
+        -32
+      ],
+      "id": "3b2cdbf8-ef69-4fd1-ad38-1df946fbfe6f",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "public": true,
+        "mode": "webhook",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -368,
+        -32
+      ],
+      "id": "e32b762c-bed2-42ed-964e-51351f2d0fa8",
+      "name": "When chat message received",
+      "webhookId": "14a2d5e1-f280-42b7-8559-cd316a5ff038"
+    },
+    {
+      "parameters": {
+        "content": "## تم الانشاء بواسطة \nتم الانشاء بواسطة **م. أحمد الصيرفي**  \n\nللتعلّم وتطوير مهاراتك في الأتمتة، زور موقعنا: \n [ahmedelserafy.com](https://ahmedelserafy.com/automation_course)\n\n\n",
+        "height": 176,
+        "width": 288
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        288,
+        -352
+      ],
+      "typeVersion": 1,
+      "id": "92c15949-2e38-491f-ae5e-2145fb08168b",
+      "name": "Sticky Note"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "insert message": {
+      "main": [
+        [
+          {
+            "node": "insert message2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert rows in conversation": {
+      "main": [
+        [
+          {
+            "node": "insert user message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "insert message2": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "insert user message": {
+      "main": [
+        [
+          {
+            "node": "insert message3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select rows from a table1": {
+      "main": [
+        [
+          {
+            "node": "If7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If7": {
+      "main": [
+        [
+          {
+            "node": "insert message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Insert rows in conversation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "insert message3": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Select rows from a table1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Africa/Cairo",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "e5b74e59-74e4-4b4f-bf4f-5f7a4cfb9c56",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "eb58054caf61c2552d4b13cc032edccc043473990c2938118b79640890b4e573"
+  },
+  "id": "86GZKPrsqZH0Af7x",
+  "tags": []
+}

@@ -1,0 +1,1226 @@
+{
+  "name": "Automated Template Delivery System with Stripe, GPT-4o & Gmail",
+  "nodes": [
+    {
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "options": {}
+      },
+      "id": "efc2eba5-5d82-44f0-812c-706e23a06b30",
+      "name": "Azure OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAzureOpenAi",
+      "position": [
+        4448,
+        576
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n\t\"Subject\": \"\",\n\t\"Body\": \"\"\n}"
+      },
+      "id": "9ea2dde1-5ace-4dbb-8e9c-6303f05fee4b",
+      "name": "Structured Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "position": [
+        4608,
+        576
+      ],
+      "typeVersion": 1.3
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "options": {}
+      },
+      "id": "c32e339f-f9f6-4d9a-bce0-dff7d4d9f07f",
+      "name": "Azure OpenAI Chat Model1",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAzureOpenAi",
+      "position": [
+        2624,
+        576
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n   \"row_number\":\"\",\n   \"Name\":\"\",\n   \"Google Drive Link\":\"\",\n   \"Password\":\"\"\n}\n"
+      },
+      "id": "10aa26f0-0725-495f-89bc-2a10da48df23",
+      "name": "Structured Output Parser1",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "position": [
+        2880,
+        576
+      ],
+      "typeVersion": 1.3
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "16RTZT1Hp7CW_kK455DZz1EtGjZ1aDNmOVmIo2jKrlrg",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/16RTZT1Hp7CW_kK455DZz1EtGjZ1aDNmOVmIo2jKrlrg/edit?usp=drivesdk",
+          "cachedResultName": "n8n Automations - Zip Files"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gid=0",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/16RTZT1Hp7CW_kK455DZz1EtGjZ1aDNmOVmIo2jKrlrg/edit#gid=0",
+          "cachedResultName": "Sheet1"
+        },
+        "options": {}
+      },
+      "id": "a4c6fb7f-36b1-4d8d-b6dc-008f806306a9",
+      "name": "Get row(s) in sheet in Google Sheets",
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "position": [
+        2752,
+        576
+      ],
+      "typeVersion": 4.6
+    },
+    {
+      "parameters": {
+        "url": "=https://api.stripe.com/v1/payment_intents/{{ $json[\"payment_intent\"] }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "stripeApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/x-www-form-urlencoded"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9152cb4e-8636-4313-aa52-f551c8a9d42b",
+      "name": "Get Payment Intent (From Charge)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1280,
+        400
+      ],
+      "typeVersion": 4.1
+    },
+    {
+      "parameters": {
+        "url": "=https://api.stripe.com/v1/products/{{ $json[\"payment_details\"][\"order_reference\"] }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "stripeApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/x-www-form-urlencoded"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "32405012-4ca8-496c-89ea-086c3f980e21",
+      "name": "Get Product Details (from Payment Intent)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1728,
+        320
+      ],
+      "typeVersion": 4.1
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "7fe75739-2112-47bb-80b0-e6559db651af",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              },
+              "leftValue": "={{ $json[\"payment_details\"][\"order_reference\"] }}",
+              "rightValue": ""
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "67670bdd-0ca6-404e-9127-d57d3d44f606",
+      "name": "If1",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        1504,
+        320
+      ],
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "jsCode": "// For n8n Code Node\n// This matches automations with charges based on product name\ntry {\n  // Get all input items\n  const items = $input.all();\n  \n  // Initialize arrays\n  let automationsList = [];\n  let chargesList = [];\n  \n  // Separate automations and charges from all items\n  items.forEach(item => {\n    const data = item.json;\n    \n    // Check if it's an automation (has output with Name)\n    if (data.output && data.output.Name) {\n      automationsList.push(data.output);\n    }\n    // Check if it's a charge (has customer_name and payment_intent)\n    else if (data.customer_name && data.payment_intent) {\n      chargesList.push(data);\n    }\n  });\n  \n  // Filter successful charges only\n  const successfulCharges = chargesList.filter(charge => {\n    return charge && charge.status === \"succeeded\";\n  });\n  \n  // Match automations with charges based on product name\n  const matchedResults = [];\n  \n  successfulCharges.forEach(charge => {\n    // Find matching automation by comparing names\n    // Remove [n8n] suffix and trim for comparison\n    const chargeProdName = (charge.product_name || \"\").replace(/\\s*\\[n8n\\]\\s*$/i, \"\").trim();\n    \n    const matchingAutomation = automationsList.find(automation => {\n      const autoName = (automation.Name || \"\").replace(/\\s*\\[n8n\\]\\s*$/i, \"\").trim();\n      return autoName === chargeProdName;\n    });\n    \n    if (matchingAutomation) {\n      matchedResults.push({\n        // Automation Info\n        automationName: matchingAutomation.Name || \"Unknown\",\n        automationRow: matchingAutomation.row_number || \"\",\n        googleDriveLink: matchingAutomation[\"Google Drive Link\"] || \"\",\n        password: matchingAutomation.Password || \"\",\n        \n        // Customer Info\n        customerName: charge.customer_name || \"Unknown\",\n        customerEmail: charge.email || \"\",\n        \n        // Payment Info\n        amount: charge.amount ? (charge.amount / 100).toFixed(2) : \"0.00\",\n        currency: (charge.currency || \"usd\").toUpperCase(),\n        paymentIntent: charge.payment_intent || \"\",\n        orderReference: charge.order_reference || \"\",\n        productName: charge.product_name || \"\",\n        purchaseDate: charge.created ? \n          new Date(charge.created * 1000).toLocaleDateString() : \"\",\n        status: charge.status || \"unknown\",\n        receiptUrl: charge.receipt_url || \"\"\n      });\n    }\n  });\n  \n  // Return results\n  if (matchedResults.length > 0) {\n    return matchedResults;\n  } else {\n    return [{\n      error: \"No matching data found\",\n      automations_found: automationsList.length,\n      charges_found: successfulCharges.length,\n      automation_names: automationsList.map(a => a.Name),\n      charge_product_names: successfulCharges.map(c => c.product_name)\n    }];\n  }\n  \n} catch (error) {\n  return [{\n    error: error.message,\n    stack: error.stack\n  }];\n}"
+      },
+      "id": "fdcc6c45-3d67-4e21-8c3b-dbcafe8ff891",
+      "name": "Customer matching",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        3536,
+        368
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "content": "## Stripe Data Collection\n\n💳 Get many charges (Stripe)\nFetches all charge data from Stripe; later filtered to keep only completed payments.",
+        "height": 192
+      },
+      "id": "5f3a1fc9-950c-430a-adbb-c52c3cf09001",
+      "name": "Sticky Note1",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        736,
+        624
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## Filter – Successful Charges\n\n🔍 Status check = succeeded\nRemoves failed/pending charges so only paid orders continue.",
+        "height": 176
+      },
+      "id": "5490051b-e8df-49df-b7ba-2c08a1f61fd4",
+      "name": "Sticky Note2",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        944,
+        272
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## Send a message (Gmail)\n\n📨 Email dispatch\nSends the AI-generated subject and HTML body to the customer’s email.",
+        "height": 192
+      },
+      "id": "67c268a3-8f66-440a-9f0b-b1aa78dc9b37",
+      "name": "Sticky Note8",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        4768,
+        144
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## AI Agent – Email Composer\n\n🧩 Personalized HTML email\nUses Azure OpenAI (GPT-4o-mini) to craft thank-you emails with access link, password, onboarding tip, and sign-off.",
+        "height": 208
+      },
+      "id": "d54a6b39-c931-4b53-96b4-b34583c9bd77",
+      "name": "Sticky Note9",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        4400,
+        112
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## Loop Over Items of New Purchases\n\n🔁 Batch sender\nIterates through each new purchase record for email generation & delivery.",
+        "height": 208
+      },
+      "id": "d4e83f8c-097e-4ed7-8e71-a5a6a461064d",
+      "name": "Sticky Note10",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        4160,
+        672
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "##  Check Automation Exists\n\n⚡ Final guard\nVerifies automation data is present before generating and sending emails.",
+        "height": 192
+      },
+      "id": "4856afcc-8641-441e-92f1-57116d973120",
+      "name": "Sticky Note11",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        3984,
+        240
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## SQL Combine\n\n🧮 Exclude already-logged customers\nSQL logic filters out rows already present in the purchase sheet.",
+        "height": 208
+      },
+      "id": "33dfa14b-73b4-4318-8d03-9befa25b9aff",
+      "name": "Sticky Note12",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        3808,
+        624
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## Customer Matching \n\n🧠 Product-name matcher\nMatches successful Stripe charges to automation rows (handles “[n8n]” suffix and trims). Outputs final, ready-to-email JSON.",
+        "height": 256
+      },
+      "id": "c319fec4-bf8d-41fc-86e4-07382ff176f3",
+      "name": "Sticky Note13",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        3536,
+        96
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## Get row(s) in sheet – Purchase Sheet Lookup\n\n🧾 De-dup check\nReads existing entries in “Automation Purchase Sheet” to avoid logging duplicates.",
+        "height": 224
+      },
+      "id": "b85be8c6-11f0-4505-b9a7-9a32fa6f65f4",
+      "name": "Sticky Note14",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        3488,
+        736
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "##  Combine Stripe + Sheet Data\n\n🔄 Stripe × Sheet join\nBrings together payment info and automation metadata for a complete record.",
+        "height": 224
+      },
+      "id": "d179d8ba-eef0-44fa-aedf-ccf3b33a9c01",
+      "name": "Sticky Note15",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        3200,
+        640
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## Check Match Found\n\n🧮 Sheet match gate\nOnly proceeds when a valid row is found for the purchased automation.",
+        "height": 192
+      },
+      "id": "c9b30bd0-9bbd-4b47-baca-cac27d5325a5",
+      "name": "Sticky Note16",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2992,
+        144
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## AI Agent  → Google Sheets Lookup\n\n🔍 Automation metadata lookup\nFinds matching automation by product/Name in “n8n Automations – Zip Files” sheet.",
+        "height": 224
+      },
+      "id": "cde55b8d-7bcd-47ba-8dbe-951379b80421",
+      "name": "Sticky Note17",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2624,
+        96
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "##  Check Required Fields\n\n🚦 Field validation\nEnsures order_reference, product_name, customer_name, and email are present before moving on.",
+        "height": 224
+      },
+      "id": "fcae0ff6-e228-4d88-8542-0f5744b565bd",
+      "name": "Sticky Note18",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2320,
+        624
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## Merge Logic Format Data\n\n🧠 Normalize fields\nBuilds clean JSON (customer_name, email, product_name, amount, currency, status, receipt_url, created).",
+        "height": 240
+      },
+      "id": "b1d8bcf2-3dd1-4a4d-8c22-dbfb9134432e",
+      "name": "Sticky Note19",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2112,
+        208
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## Merge Charge + PaymentIntent + Product\n\n🔄 Data merge hub\nCombines charge + payment_intent + product into one unified record per purchase.",
+        "height": 240
+      },
+      "id": "df357cd7-5b94-4e8c-a92d-2d9193ff996a",
+      "name": "Sticky Note20",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1888,
+        672
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## Get Product Details (from Payment Intent)\n\n🧾 Stripe Product fetch\nUses order reference from payment_intent to get product name/description/image.",
+        "height": 224
+      },
+      "id": "301434a7-ad34-4353-8c80-cc20088faa1c",
+      "name": "Sticky Note21",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1632,
+        80
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## Get Payment Intent (from Charge)\n\n🔗 Stripe Payment Intent lookup\nExpands each charge with its payment_intent details for richer context.",
+        "height": 224
+      },
+      "id": "28243790-72e7-4d5b-aca5-874656f8d28f",
+      "name": "Sticky Note23",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1232,
+        592
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## Trigger & Data Fetch\n\n🟢 Schedule Trigger\nTriggers every morning (7 AM IST) to fetch latest successful Stripe purchases.",
+        "height": 208
+      },
+      "id": "4a998670-3a1e-4b28-8455-3dca5114db76",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        368,
+        240
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "resource": "charge",
+        "operation": "getAll",
+        "returnAll": true
+      },
+      "id": "c9c2f539-2480-443b-abaa-51a6702d8002",
+      "name": "Stripe Data Collection",
+      "type": "n8n-nodes-base.stripe",
+      "position": [
+        832,
+        464
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "e593f4e0-b1e2-4e6b-b4d0-9a1a6e6495bd",
+              "operator": {
+                "name": "filter.operator.equals",
+                "type": "string",
+                "operation": "equals"
+              },
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "succeeded"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "07376dc3-6cc0-4d66-9642-a014a71288a7",
+      "name": "Filter – Successful Charges",
+      "type": "n8n-nodes-base.filter",
+      "position": [
+        1040,
+        496
+      ],
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=This is the input:{{ $json.product_name }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=You are an AI assistant with access to a Google Sheets tool. Your task is as follows: • You will receive an input phrase. This phrase represents a name. • Use the Google Sheets tool to search for a row in the spreadsheet where the value in the “Name” column exactly matches the input phrase. • If a matching row is found, return the entire row as a JSON object, including all columns and their values. • If no matching row is found, respond with: “No matching row found for the provided name.” • If there are multiple matches, return all matching rows as a list of JSON objects. • Do not return any extra commentary or explanation—only the result. • If there is an error accessing the spreadsheet, respond with: “Error accessing the spreadsheet.” Return ONLY a single JSON object with this exact structure: { \"row_number\": \"\", \"Name\": \"\", \"Google Drive Link\": \"\", \"Password\": \"\", \"Date\": \"\" } No additional keys such as “response”, “action”, “output”, or text outside the JSON."
+        }
+      },
+      "id": "c72504e0-b292-4a92-9a8f-27c58fe3f525",
+      "name": "AI Agent  → Google Sheets Lookup",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        2688,
+        352
+      ],
+      "retryOnFail": true,
+      "typeVersion": 2.1
+    },
+    {
+      "parameters": {
+        "content": "## Append or update row in sheet  For  Tracking\n\n📊 Audit & reporting\nLogs each processed purchase and email outcome into “Automation Purchase Sheet”.",
+        "height": 224
+      },
+      "id": "0e2b02cc-42da-464c-9d18-4423587bc95a",
+      "name": "Sticky Note3",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        5120,
+        256
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 7
+            }
+          ]
+        }
+      },
+      "id": "7e940abd-2bb0-495a-9f34-85705154e90b",
+      "name": "Schedule Trigger Daily",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [
+        608,
+        464
+      ],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "numberInputs": 3
+      },
+      "id": "b8b682e2-af1a-42cc-b373-cadcb5bf46eb",
+      "name": "Merge Charge + PaymentIntent + Product",
+      "type": "n8n-nodes-base.merge",
+      "position": [
+        1952,
+        448
+      ],
+      "typeVersion": 3.2
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get all combined items\nconst all = $input.all().map(i => i.json);\n\n// Separate by type\nconst charges = all.filter(i => i.object === 'charge');\nconst intents = all.filter(i => i.object === 'payment_intent');\nconst products = all.filter(i => i.object === 'product');\n\n// Merge logic\nconst merged = [];\n\nfor (const charge of charges) {\n  const intent = intents.find(i => i.id === charge.payment_intent);\n  if (!intent) continue;\n\n  const orderRef = intent?.payment_details?.order_reference;\n  const product = products.find(p => p.id === orderRef);\n\n  merged.push({\n    customer_name: charge.billing_details?.name || null,\n    email: charge.billing_details?.email || intent.receipt_email || null,\n    amount: charge.amount / 100,\n    currency: charge.currency,\n    status: charge.status,\n    payment_intent: charge.payment_intent,\n    order_reference: orderRef,\n    product_name: product?.name || null,\n    product_description: product?.description || null,\n    product_image: product?.images?.[0] || null,\n    receipt_url: charge.receipt_url,\n    created: charge.created\n  });\n}\n\nreturn merged.map(item => ({ json: item }));\n"
+      },
+      "id": "63679dc6-60d4-4057-bd67-01d64787284e",
+      "name": "Merge Logic Format Data",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        2176,
+        464
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "f75a52cc-4555-429f-9edb-f363857eb379",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              },
+              "leftValue": "={{ $json.order_reference }}",
+              "rightValue": ""
+            },
+            {
+              "id": "19d2ffe7-b8f7-45db-aa88-ad2aa3124f1c",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              },
+              "leftValue": "={{ $json.product_name }}",
+              "rightValue": ""
+            },
+            {
+              "id": "a57d1ffe-7f55-4dee-add1-f314a6cc7dcd",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              },
+              "leftValue": "={{ $json.customer_name }}",
+              "rightValue": ""
+            },
+            {
+              "id": "f57743ac-2dd9-44bf-911b-0b1f1e63c17a",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              },
+              "leftValue": "={{ $json.email }}",
+              "rightValue": ""
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4a9a5f11-44f9-4d5a-b66c-68689384f15d",
+      "name": "Check Required Fields",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        2400,
+        464
+      ],
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "5d49d25f-c987-41c6-bfcb-1eca70253a85",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              },
+              "leftValue": "={{ $json.output.Name }}",
+              "rightValue": "="
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a5a425d6-8c3c-4a2d-a51d-bcfe75706097",
+      "name": "Check Match Found",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        3088,
+        352
+      ],
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {},
+      "id": "f2983b5e-2896-4cd4-867a-04a328d4f797",
+      "name": "Combine Stripe + Sheet Data",
+      "type": "n8n-nodes-base.merge",
+      "position": [
+        3312,
+        464
+      ],
+      "typeVersion": 3.2
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "142qqLXiISod9EzNvulhTOD1eQNOvRw85MtRHP8xcVD4",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/142qqLXiISod9EzNvulhTOD1eQNOvRw85MtRHP8xcVD4/edit?usp=drivesdk",
+          "cachedResultName": "BDE Team Assignee"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": 1978602406,
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/142qqLXiISod9EzNvulhTOD1eQNOvRw85MtRHP8xcVD4/edit#gid=1978602406",
+          "cachedResultName": "Automation purchase sheet"
+        },
+        "options": {}
+      },
+      "id": "533a5564-3e14-4c3f-9f1f-47b13141b6d9",
+      "name": "Get row(s) in sheet – Purchase Sheet Lookup",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        3536,
+        560
+      ],
+      "executeOnce": true,
+      "typeVersion": 4.7
+    },
+    {
+      "parameters": {
+        "mode": "combineBySql",
+        "query": "SELECT input1.*\nFROM input1\nLEFT JOIN input2\n  ON LOWER(TRIM(input1.customerEmail)) = LOWER(TRIM(input2.email))\n     OR LOWER(TRIM(input1.customerName)) = LOWER(TRIM(input2.name))\nWHERE input2.email IS NULL\n",
+        "options": {}
+      },
+      "id": "8a9d79a9-e004-4fba-b4fa-f12dc5da1d6b",
+      "name": "SQL Combine",
+      "type": "n8n-nodes-base.merge",
+      "position": [
+        3760,
+        464
+      ],
+      "typeVersion": 3.2
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c882466b-ec98-4ab4-be9e-851cf99a81a7",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              },
+              "leftValue": "={{ $json.automationName }}",
+              "rightValue": ""
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "06de9fee-3f8e-4941-ad12-ddf8f862b9ff",
+      "name": "Check Automation Exists",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        3984,
+        464
+      ],
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "92464fd8-4bda-4c18-a04d-543eb5fd3e72",
+      "name": "Loop Over Items of New Purchases",
+      "type": "n8n-nodes-base.splitInBatches",
+      "position": [
+        4208,
+        464
+      ],
+      "typeVersion": 3
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Customer Details: \nName of customer: {{ $json.customerName }}\nEmail of the customer: {{ $json.customerEmail }}\n\nName of the Automation:{{ $json.automationName }}\nGoogle Drive Link: {{ $json.googleDriveLink }}\nPassword: {{ $json.password }} \nPurchase Date:{{ $json.purchaseDate }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=You are an AI email writing assistant specialized in crafting personalized, professional, and heartfelt thank-you emails for customers who have purchased automation templates from Techdome.\n\nYou will receive structured input with the following details:\n- Customer name\n- Customer email\n- Name of the automation purchased\n- Google Drive link to the files\n- Password to access the files\n- Date of purchase\n\nYour goal is to create a beautifully formatted HTML email that:\n1. **Feels human and genuine** — use warm, conversational, and appreciative language.\n2. **Highlights the automation name naturally** — make it feel special, not mechanical.\n3. **Shows gratitude clearly** — thank the customer sincerely for trusting Techdome.\n4. **Includes clear access details**:\n   - Add a visible and styled hyperlink to the Google Drive link.\n   - Display the password prominently but professionally (bold or highlighted).\n   - Add a note to keep it confidential.\n5. **Gives a short onboarding tip** — 1–2 lines about importing or using the automation.\n6. **Encourages further engagement** — invite them to explore other automations or reach out for help.\n7. **Signs off gracefully** from Rahul Joshi (CEO & Co-Founder, Techdome) — include his name and title at the end.\n\n**Tone:** Friendly, confident, and professional — sounding like Rahul personally wrote it.\n\n**Formatting Rules (HTML)**:\n- Use `<p>` for paragraphs, `<b>` for bold, `<a>` for links.\n- Avoid unnecessary line breaks or raw URLs.\n- Keep spacing clean and make it easy to read.\n- Do not use Markdown — only valid HTML.\n\n**Example style:**\n```html\n<p>Dear <b>{{ $json.customerName }}</b>,</p>\n<p>Thank you so much for purchasing the <b>{{ $json.automationName }}</b> automation! We truly appreciate your trust in Techdome.</p>\n<p>You can access your automation files here: <a href=\"{{ $json.googleDriveLink }}\">Access Your Automation Files</a></p>\n<p>Use the password <b>{{ $json.password }} </b> to open the files. Please keep it confidential for your security.</p>\n<p>Once you open the folder, follow the included documentation to import and start using your automation instantly.</p>\n<p>If you need help or wish to explore other automations, feel free to reply to this email — we’d love to assist.</p>\n<p>Warm regards,<br>\n<b>Rahul Joshi</b><br>\nCEO & Co-Founder, Techdome</p>\n"
+        }
+      },
+      "id": "64adf0d3-1460-4848-90ee-81684b24d7ef",
+      "name": "AI Agent – Email Composer",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        4432,
+        352
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Loop Over Items of New Purchases').item.json.customerEmail }}",
+        "subject": "={{ $json.output.Subject }}",
+        "message": "={{ $json.output.Body }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "d5d8b09a-306f-4fe1-9773-182f9d62136e",
+      "name": "Send a message (Gmail)",
+      "type": "n8n-nodes-base.gmail",
+      "position": [
+        4784,
+        352
+      ],
+      "webhookId": "b5df4377-15a0-44ba-a55c-92eac22b7a0b",
+      "typeVersion": 2.1
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "142qqLXiISod9EzNvulhTOD1eQNOvRw85MtRHP8xcVD4",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/142qqLXiISod9EzNvulhTOD1eQNOvRw85MtRHP8xcVD4/edit?usp=drivesdk",
+          "cachedResultName": "BDE Team Assignee"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": 1978602406,
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/142qqLXiISod9EzNvulhTOD1eQNOvRw85MtRHP8xcVD4/edit#gid=1978602406",
+          "cachedResultName": "Automation purchase sheet"
+        },
+        "columns": {
+          "value": {
+            "name": "={{ $('Loop Over Items of New Purchases').item.json.customerName }}",
+            "email": "={{ $('Loop Over Items of New Purchases').item.json.customerEmail }}",
+            "price": "={{ $('Loop Over Items of New Purchases').item.json.amount }}",
+            "status": "={{ $('Loop Over Items of New Purchases').item.json.status }}",
+            "template purchased": "={{ $('Loop Over Items of New Purchases').item.json.automationName }}"
+          },
+          "schema": [
+            {
+              "id": "name",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "name",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "email",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "template purchased",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "template purchased",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "status",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "price",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "price",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            }
+          ],
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "name"
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "1fa862b0-51be-4abb-ac4b-12a6a0ab4000",
+      "name": "Append or update row in sheet  For  Tracking",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        5008,
+        464
+      ],
+      "typeVersion": 4.7
+    },
+    {
+      "parameters": {
+        "content": "## تم التحضير بواسطة \n**م. أحمد الصيرفي**  \n\nللتعلّم وتطوير مهاراتك في الأتمتة، زور موقعنا: \n [ahmedelserafy.com](https://ahmedelserafy.com/automation_course)\n\n\n",
+        "height": 176,
+        "width": 2032,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1904,
+        -208
+      ],
+      "typeVersion": 1,
+      "id": "519f634a-d855-4cb6-a5cf-3191a76df144",
+      "name": "Sticky Note6"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Get Product Details (from Payment Intent)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SQL Combine": {
+      "main": [
+        [
+          {
+            "node": "Check Automation Exists",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Match Found": {
+      "main": [
+        [
+          {
+            "node": "Combine Stripe + Sheet Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Customer matching": {
+      "main": [
+        [
+          {
+            "node": "SQL Combine",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Required Fields": {
+      "main": [
+        [
+          {
+            "node": "AI Agent  → Google Sheets Lookup",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Combine Stripe + Sheet Data",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger Daily": {
+      "main": [
+        [
+          {
+            "node": "Stripe Data Collection",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message (Gmail)": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet  For  Tracking",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stripe Data Collection": {
+      "main": [
+        [
+          {
+            "node": "Filter – Successful Charges",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Azure OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent – Email Composer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Automation Exists": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items of New Purchases",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Logic Format Data": {
+      "main": [
+        [
+          {
+            "node": "Check Required Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Azure OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent  → Google Sheets Lookup",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent – Email Composer",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent  → Google Sheets Lookup",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent – Email Composer": {
+      "main": [
+        [
+          {
+            "node": "Send a message (Gmail)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine Stripe + Sheet Data": {
+      "main": [
+        [
+          {
+            "node": "Customer matching",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get row(s) in sheet – Purchase Sheet Lookup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter – Successful Charges": {
+      "main": [
+        [
+          {
+            "node": "Get Payment Intent (From Charge)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge Charge + PaymentIntent + Product",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Get Payment Intent (From Charge)": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge Charge + PaymentIntent + Product",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items of New Purchases": {
+      "main": [
+        [],
+        [
+          {
+            "node": "AI Agent – Email Composer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent  → Google Sheets Lookup": {
+      "main": [
+        [
+          {
+            "node": "Check Match Found",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet in Google Sheets": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent  → Google Sheets Lookup",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Charge + PaymentIntent + Product": {
+      "main": [
+        [
+          {
+            "node": "Merge Logic Format Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Product Details (from Payment Intent)": {
+      "main": [
+        [
+          {
+            "node": "Merge Charge + PaymentIntent + Product",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Append or update row in sheet  For  Tracking": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items of New Purchases",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet – Purchase Sheet Lookup": {
+      "main": [
+        [
+          {
+            "node": "SQL Combine",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "42b78caa-c094-40d6-94e0-e20bb7541da1",
+  "meta": {
+    "templateId": "10145",
+    "instanceId": "eb58054caf61c2552d4b13cc032edccc043473990c2938118b79640890b4e573"
+  },
+  "id": "6N5bN0bfAPrdVlJN",
+  "tags": [
+    {
+      "updatedAt": "2025-11-28T22:29:34.032Z",
+      "createdAt": "2025-11-28T22:29:34.032Z",
+      "id": "HHSMeirOYyTwabhZ",
+      "name": "pack"
+    }
+  ]
+}

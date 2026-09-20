@@ -1,0 +1,9 @@
+{
+  "recipient": {
+    "id": "{{ $('Webhook').item.json.body.entry[0].messaging[0].sender.id }}"
+  },
+  "messaging_type": "RESPONSE",
+  "message": {
+    "text": {{ JSON.stringify($json.output) }}
+  }
+}

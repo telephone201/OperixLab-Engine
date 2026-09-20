@@ -1,0 +1,15 @@
+// الوقت الحالي حسب الجهاز (عادة بيكون UTC)
+const now = new Date();
+
+// فرق التوقيت لمصر = UTC + 3 ساعات (صيفًا)
+const egyptOffsetMs = 3 * 60 * 60 * 1000;
+const egyptTime = new Date(now.getTime() + egyptOffsetMs);
+
+// تحويل للصيغة MySQL: YYYY-MM-DD HH:MM:SS
+const formatted = egyptTime.toISOString().slice(0, 19).replace('T', ' ');
+
+return [{
+  json: {
+    current_time: formatted
+  }
+}];

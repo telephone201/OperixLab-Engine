@@ -1,0 +1,512 @@
+{
+  "name": "Qualify & Reach Out to B2B Leads with Groq AI, Apollo, Gmail & Sheets",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Contact us",
+        "formDescription": "get back to you",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "What's your Full Name?",
+              "placeholder": "e.g. John Wich",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "What is your email address?",
+              "fieldType": "email",
+              "placeholder": "e.g. johnwich@mail.com",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "What's your phone number?",
+              "fieldType": "number",
+              "placeholder": "e.g. 1234567890",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "What's your Linkedin Profile URL"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d33856c0-ae76-494d-aa57-39ffe8de3852",
+      "name": "On form submission",
+      "type": "n8n-nodes-base.formTrigger",
+      "position": [
+        400,
+        464
+      ],
+      "webhookId": "f92b6ca4-81cc-405c-adec-5111e6983cad",
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apollo.io/api/v1/people/match",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "name",
+              "value": "={{ $json['What\\'s your Full Name?'] }}"
+            },
+            {
+              "name": "email",
+              "value": "={{ $json['What is your email address?'] }}"
+            },
+            {
+              "name": "reveal_phone_number",
+              "value": "={{ $json['What\\'s your phone number?'] }}"
+            },
+            {
+              "name": "linkedin_url",
+              "value": "={{ $json['What\\'s your Linkedin Profile URL'] }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "87e4f3a8-8f35-4320-9ddc-218bd8f1ccd0",
+      "name": "HTTP Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        608,
+        464
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a professional B2B sales assistant.\n\nCompose a short, professional, and polite outreach email to schedule a call with the following lead.\n\nTone: concise and respectful. The goal is to open a conversation and set up a meeting.\n\nUse this format:\n---\nSend a message in Gmail:\nTo: {{ $('HTTP Request').item.json.person.email }}\nSubject: Exploring Collaboration in AI Solutions\n\nHi {{ $('HTTP Request').item.json.person.name }},\n\nI hope this message finds you well.\n\nI’m reaching out from ABC Pvt Ltd—we specialize in tailored IT solutions, including AI and machine learning services. Given your role at {{ $('HTTP Request').item.json.person.employment_history[0].organization_name }}, I’d love to briefly connect and explore potential synergies.\n\nWould you be available for a quick call sometime this week?\n\nBest regards,  \nABC XYZ  \nABC Pvt Ltd\n---\n\nHere is the lead detail:\nName: {{ $('HTTP Request').item.json.person.name }}\nEmail: {{ $('HTTP Request').item.json.person.email }}\nJob Title: {{ $('HTTP Request').item.json.person.title }}\nOrganization: {{ $('HTTP Request').item.json.person.employment_history[0].organization_name }}\n\nInstructions:\nTools - Send a message in Gmail Tools for send mails",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "id": "5aac3e51-fd45-4f7c-99e1-7b81b1a6ea8b",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        1456,
+        448
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('HTTP Request').item.json.person.email }}",
+        "subject": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Subject', ``, 'string') }}",
+        "emailType": "text",
+        "message": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Message', ``, 'string') }}",
+        "options": {}
+      },
+      "id": "02cd5fdd-1baa-4a03-8832-af83476eec98",
+      "name": "Send a message in Gmail",
+      "type": "n8n-nodes-base.gmailTool",
+      "position": [
+        1536,
+        688
+      ],
+      "webhookId": "6e94385c-502e-47a0-94fc-e6e05975a2ba",
+      "typeVersion": 2.1
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "cae69208-18b5-493b-8f14-809e0180a868",
+      "name": "Groq Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "position": [
+        1408,
+        688
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {},
+      "id": "fac878f8-18eb-482c-a889-5d694549af6c",
+      "name": "Structured Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "position": [
+        1648,
+        688
+      ],
+      "typeVersion": 1.3
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "1Z3BuYjWFsGjCjTmpyCUqtjL_gHPZDBriDzfMUudmArA",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Z3BuYjWFsGjCjTmpyCUqtjL_gHPZDBriDzfMUudmArA/edit?usp=drivesdk",
+          "cachedResultName": "N8N Leads"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gid=0",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Z3BuYjWFsGjCjTmpyCUqtjL_gHPZDBriDzfMUudmArA/edit#gid=0",
+          "cachedResultName": "Sheet1"
+        },
+        "columns": {
+          "value": {
+            "Name": "={{ $('On form submission').item.json[\"What's your Full Name?\"] }}",
+            "Email": "={{ $('On form submission').item.json[\"What is your email address?\"] }}",
+            "Phone": "={{ $('On form submission').item.json[\"What's your phone number?\"] }}",
+            "Job Title ": "={{ $('HTTP Request').item.json.person.title }}",
+            "Linkedin URL": "={{ $('On form submission').item.json[\"What's your Linkedin Profile URL\"] }}",
+            "Organization": "={{ $('HTTP Request').item.json.person.employment_history[0].organization_name }}"
+          },
+          "schema": [
+            {
+              "id": "Name",
+              "type": "string",
+              "display": true,
+              "required": false,
+              "displayName": "Name",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Phone",
+              "type": "string",
+              "display": true,
+              "required": false,
+              "displayName": "Phone",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "type": "string",
+              "display": true,
+              "required": false,
+              "displayName": "Email",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Job Title ",
+              "type": "string",
+              "display": true,
+              "required": false,
+              "displayName": "Job Title ",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Organization",
+              "type": "string",
+              "display": true,
+              "required": false,
+              "displayName": "Organization",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Linkedin URL",
+              "type": "string",
+              "display": true,
+              "required": false,
+              "displayName": "Linkedin URL",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Lead Potential",
+              "type": "string",
+              "display": true,
+              "required": false,
+              "displayName": "Lead Potential",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            }
+          ],
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "da7ad0ef-87ae-4da0-bee0-d464c7e33d3c",
+      "name": "Append row in sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        1856,
+        448
+      ],
+      "typeVersion": 4.6
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an expert lead qualifier.\n\nScore the lead from 1 to 10 based on these two criteria:\n\n— INDUSTRY MATCH (5 points max) —\n- 5 points: Industry is AI, Artificial Intelligence, Machine Learning, Data Science\n- 3-4 points: Industry is closely related (e.g., analytics, automation, enterprise AI tools)\n- 0-2 points: Unrelated industry\n\n— JOB TITLE MATCH (5 points max) —\n- 5 points: Decision-makers or influencers in AI (e.g., Head of AI, AI Director, CTO, AI Product Manager)\n- 3-4 points: Mid-level AI professionals (e.g., ML Engineer, Data Scientist)\n- 0-2 points: Not related to AI or junior roles\n\nReturn **only a single digit between 1 and 10** — no explanation, no labels, no extra text. and the data type must be a number\n\nLead details:\nName: {{ $json.person.name }}\nJob Title: {{ $json.person.title }}\nOrganization: {{ $json.person.employment_history[0].organization_name }}\n",
+        "options": {}
+      },
+      "id": "b0c08c59-1116-44ed-914f-2e71e43d3208",
+      "name": "AI Agent1",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        832,
+        464
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "or",
+          "conditions": [
+            {
+              "id": "eb511082-5f34-4027-993b-a787340fc4ea",
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              },
+              "leftValue": "={{Number($json.output)}}",
+              "rightValue": 6
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e4e59a80-4c68-4880-accd-bd3be08cb759",
+      "name": "If",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        1200,
+        464
+      ],
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "7aeac238-77c1-43ec-a189-2b69e72f745c",
+      "name": "Groq Chat Model1",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "position": [
+        912,
+        688
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "path": "17cfab42-90df-4af6-88ff-6ed925f861cc",
+        "options": {}
+      },
+      "id": "fa0db3cb-6bdf-46f4-9135-d2b149ca15a1",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        400,
+        672
+      ],
+      "webhookId": "17cfab42-90df-4af6-88ff-6ed925f861cc",
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "event": "rowAdded",
+        "options": {}
+      },
+      "id": "e74c132d-0270-4585-ace8-0651fa4d9617",
+      "name": "Google Sheets Trigger",
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "position": [
+        368,
+        240
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## تم التحضير بواسطة \n**م. أحمد الصيرفي**  \n\nللتعلّم وتطوير مهاراتك في الأتمتة، زور موقعنا: \n [ahmedelserafy.com](https://ahmedelserafy.com/automation_course)\n\n\n",
+        "height": 176,
+        "width": 288
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1040,
+        256
+      ],
+      "typeVersion": 1,
+      "id": "a00f6b04-2e4b-43d1-86c5-896cb23895d7",
+      "name": "Sticky Note6"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "If": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message in Gmail": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "c097d4f6-0726-431b-8d0d-29a0f3655db9",
+  "meta": {
+    "templateId": "5832",
+    "instanceId": "eb58054caf61c2552d4b13cc032edccc043473990c2938118b79640890b4e573"
+  },
+  "id": "Oiw6cVVw5CvDzn9z",
+  "tags": [
+    {
+      "updatedAt": "2025-11-28T22:29:34.032Z",
+      "createdAt": "2025-11-28T22:29:34.032Z",
+      "id": "HHSMeirOYyTwabhZ",
+      "name": "pack"
+    }
+  ]
+}

@@ -1,0 +1,843 @@
+{
+  "name": "whatsapp",
+  "nodes": [
+    {
+      "parameters": {
+        "multipleMethods": true,
+        "httpMethod": [
+          "POST",
+          "GET"
+        ],
+        "path": "16a27e8e-f58d-a-a7aa04b07",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -700,
+        500
+      ],
+      "id": "223ebe18-cdb7-4a72-4f734cc62837",
+      "name": "Webhook",
+      "webhookId": "16a27e8e-f58d-470f-98da-a7aa04b077d1"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.query['hub.challenge'] }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.3,
+      "position": [
+        -480,
+        760
+      ],
+      "id": "99a65c18-e845-4e96-9fda-0074138cd634",
+      "name": "Respond to Webhook",
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        1560,
+        920
+      ],
+      "id": "00407bf4-5f9a-4273-8891-6d2d2598dd39",
+      "name": "OpenRouter Chat Model1",
+      "credentials": {
+        "openRouterApi": {
+          "id": "becWS3G9UIeLh57Q",
+          "name": "parmgly 8"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.body.entry[0].changes[0].value.messages[0].from }}",
+        "contextWindowLength": 50
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        1680,
+        920
+      ],
+      "id": "f1083899-56b4-4a10-a748-6ef3fc637fcf",
+      "name": "Simple Memory1"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1562XWRkYep1TQhNi-2ZoNXvcpcVd31kZJ44iJz8HDUA",
+          "mode": "list",
+          "cachedResultName": "menu for n8n",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1562XWRkYep1TQhNi-2ZoNXvcpcVd31kZJ44iJz8HDUA/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1562XWRkYep1TQhNi-2ZoNXvcpcVd31kZJ44iJz8HDUA/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.6,
+      "position": [
+        1820,
+        920
+      ],
+      "id": "21a6fe80-1311-4071-b0d0-7cf8b14bd5db",
+      "name": "Google Sheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gVP9UTHfFEz6og1O",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('AI Agent1').item.json.output }}\nظبط الرسالة دي شيل منها اي اكواد وبالاخص\n\\n\n\nعشان هيتم تحويلها الى صوت وارسالها فعايز النص بس\nوردك يكون فقط الرساله يعني متقولش بالطبع ولو عايز حاجه تانيه فقط الرساله\n\nلو فى اقواس شيلها\nولو مثلا فى اصناف بتعرضها افصل بينهم بفاصله\nلو فى ارقام زي مثلا 100\nحولها لنص يبقي مثلا مائة ",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        2520,
+        1020
+      ],
+      "id": "2350aa42-eeb8-49d3-be61-65365d487f58",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Webhook').item.json.body.entry[0].changes[0].value.messages[0].from }}",
+        "contextWindowLength": 50
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        2640,
+        1180
+      ],
+      "id": "e4fd674d-3f8a-4fd9-83c2-05264b9f433d",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        2520,
+        1180
+      ],
+      "id": "3e0e6384-0115-4759-b81c-471968decccc",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "becWS3G9UIeLh57Q",
+          "name": "parmgly 8"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.body.entry[0].changes[0].value.messages[0].text.body }}",
+        "options": {
+          "systemMessage": "أنت تعمل ككاشير ذكي في مطعم، وتتواصل مع العملاء من خلال واتساب.\n\nوظيفتك هي:\n- فهم ما إذا كانت رسالة العميل تحتوي على استفسار عن قائمة الطعام أو الأسعار أو المنتجات.\n- أو إذا كانت رسالة لطلب أوردر جديد.\n- في حالة الاستفسار: تجاوب العميل وتشرح له قائمة الطعام وأسعار المنتجات هتلاقيها فى الشيت الى سايبهولك\n- في حالة الطلب: تستخرج من الرسالة نوع الأصناف والكميات المطلوبة، واسم العميل (لو مذكور)، والعنوان (لو مذكور)، وتراجع لو فيه بيانات ناقصة وتطلبها منه.\n\nالرد على العميل بطريقة ودودة ولطيفة باللهجة المصرية، واسأله عن أي بيانات ناقصة (زي العنوان أو الكمية أو اسم المنتج لو مش واضح).\n\nلو الأوردر مكتمل، وضّح له السعر النهائي واسأله إذا كان حابب يكمل الطلب.\n\n\nدايمًا في نهاية استجابتك، ارجع بالآتي:\n\n1. رسالة نصية موجهة للعميل باللهجة المصرية (مناسبة للرد في الواتساب مباشرة).\n2. بيانات الطلب بصيغة JSON واضحة، في قسم منفصل.\nلو البيانات مش كاملة، ارجع بنفس التنسيق، لكن is_order_complete تكون false، واطلب البيانات الناقصة في رسالة العميل.\nمثال على شكل الرد اللي عايزه منك:\n\n--- الرسالة للعميل ---\nشكراً يا أحمد، تم تسجيل الأوردر بتاعك!\n\nالطلب: بيتزا تشيكن رانش  حجم صغير\nالعنوان: التجمع شارع التسعين  \nالسعر: 150 جنيه\n\nهنجهزه ونوصله لحضرتك قريب جدًا! 💛\n\n--- بيانات الطلب (للنظام) ---\n\n```json\n{\n  \"order\": [\n    {\"item\": \"اسم المنتج\", \"quantity\": عدد}\n  ],\n  \"address\": \"عنوان العميل (إن وُجد)\",\n  \"customer_name\": \"اسم العميل (إن وُجد)\",\n  \"phone\": \"رقم العميل (لو موجود)\",\n  \"is_order_complete\": true أو false\n}\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        1580,
+        660
+      ],
+      "id": "912c3058-346a-41b9-a53a-dcd38d94d3f9",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v19.0/673691855833345/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"01090095960\",\n  \"type\": \"text\",\n  \"text\": {\n    \"body\": \"أهلاً بيك! الرسالة وصلت بنجاح 😎\"\n  }\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -200,
+        340
+      ],
+      "id": "716d1b07-94a0-431a-ab6d-693de1b0eb4b",
+      "name": "send manually",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YuBuu6JD0v58eFmY",
+          "name": "whatsapp bs"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.body.entry[0].changes[0].value.messages[0].text.body }}",
+        "options": {
+          "systemMessage": "أنت تعمل كمساعد ذكي للدكتور.\nالدكتور محمد حسام \nاخصائي الانف والاذن والحنجرة\nمواعيد الدكتور: من يوم الأحد إلى الأربعاء، من الساعة 12 ظهرًا حتى 5 مساءً.  \nالعنوان: القاهرة، مصر الجديدة، عند صيدلية النيل.  \nرقم الهاتف: 0105487\n\nوظيفتك هي:\n- الرد على استفسارات المرضى بشأن المواعيد، العنوان، أو الحجز.\n- في حالة وجود طلب لحجز، اسأل المريض عن اسمه ورقم هاتفه وتاريخ الحضور المطلوب.\n- وضّح للعميل المواعيد المتاحة بوضوح، وراجع لو فيه أي بيانات ناقصة.\n- الرد يكون بطريقة ودودة ولطيفة باللهجة المصرية.\n\nنهاية كل رد تكون بالشكل التالي:"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        1580,
+        1240
+      ],
+      "id": "d2dad348-3e42-43d4-aeb4-6efb01f7ea8c",
+      "name": "AI Agent3"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.entry[0].changes[0].value.messages[0].type }}",
+                    "rightValue": "text",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "f282b9de-f4c7-433b-82c8-7af7f2ba7730"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Text"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "2fb0b49e-4f53-467f-b2d7-d3b0b42f99ba",
+                    "leftValue": "={{ $json.body.entry[0].changes[0].value.messages[0].type }}",
+                    "rightValue": "image",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "image"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "24b54278-aa21-4f9c-8dcc-bdce93955c82",
+                    "leftValue": "={{ $json.body.entry[0].changes[0].value.messages[0].type }}",
+                    "rightValue": "audio",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Audio"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -180,
+        600
+      ],
+      "id": "c7ed72f5-a225-4562-b280-536f61e7bcfc",
+      "name": "Switch1"
+    },
+    {
+      "parameters": {
+        "resource": "media",
+        "operation": "mediaUrlGet",
+        "mediaGetId": "={{ $json.body.entry[0].changes[0].value.messages[0].audio.id }}"
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        240,
+        720
+      ],
+      "id": "7662020a-670f-48d4-8eaf-f03accbdea7b",
+      "name": "WhatsApp Business Cloud",
+      "webhookId": "e4fe1f5a-4c1f-4809-98b6-b5d095fd7ff8",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "fI2Cu84zQrHfIBeY",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        540,
+        720
+      ],
+      "id": "527c61f6-76fe-468a-8326-458065b982fd",
+      "name": "HTTP Request",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YuBuu6JD0v58eFmY",
+          "name": "whatsapp bs"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "speech",
+        "operation": "speechToText",
+        "additionalOptions": {},
+        "requestOptions": {}
+      },
+      "type": "@elevenlabs/n8n-nodes-elevenlabs.elevenLabs",
+      "typeVersion": 1,
+      "position": [
+        840,
+        720
+      ],
+      "id": "a0534bc0-8f14-41df-9c44-142db4592294",
+      "name": "ElevenLabs",
+      "credentials": {
+        "elevenLabsApi": {
+          "id": "iE2SYyYlrQawW1Vy",
+          "name": "ElevenLabs account ze"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2e4fdd6c-de8f-479b-9fb9-968b255f9934",
+              "name": "body.entry[0].changes[0].value.messages[0].text.body",
+              "value": "={{ $json.words[0].text }}",
+              "type": "string"
+            },
+            {
+              "id": "9132966d-ef25-4805-b23d-5e00ba9d7b46",
+              "name": "body.entry[0].changes[0].value.messages[0].from",
+              "value": "={{ $('Webhook').item.json.body.entry[0].changes[0].value.messages[0].from }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1120,
+        720
+      ],
+      "id": "3e219bee-e8e0-4c18-ba76-6bd22850ed95",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.output }}",
+                    "rightValue": " \"is_order_complete\": true",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    },
+                    "id": "3db6c86d-9b44-4205-95e5-5f5427a20bbe"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "order done"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "57e960b5-7a1d-4438-88aa-930349d4179f",
+                    "leftValue": "={{ $json.output }}",
+                    "rightValue": " \"is_order_complete\": true",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notContains"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "not done"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        2040,
+        660
+      ],
+      "id": "1e13f8b6-917c-4008-962f-cd57f177a401",
+      "name": "Switch2"
+    },
+    {
+      "parameters": {
+        "jsCode": "// النص الكامل من ChatGPT\nconst message = $input.first().json.output; // أو من مكان التخزين في n8n\n\n// استخراج الجزء اللي بين ```json و ```\nconst jsonMatch = message.match(/```json\\s*([\\s\\S]*?)```/);\n\nif (jsonMatch && jsonMatch[1]) {\n  const jsonString = jsonMatch[1];\n  const orderData = JSON.parse(jsonString);\n\n  return {\n    json: {\n      customer_name: orderData.customer_name,\n      address: orderData.address,\n      phone: orderData.phone,\n      order: orderData.order,\n      is_order_complete: orderData.is_order_complete\n    }\n  };\n} else {\n  return {\n    json: {\n      error: \"لم يتم العثور على JSON في الرسالة\"\n    }\n  };\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2520,
+        540
+      ],
+      "id": "e559d894-b875-43f3-9fcd-eabe8f68fb5b",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "673691855833345",
+        "recipientPhoneNumber": "={{ $('Webhook').item.json.body.entry[0].changes[0].value.messages[0].from }}",
+        "textBody": "=تم استلام طلبك وجاري التجهيز\n\nطلبك \n{{ $json.order[0].quantity }} {{ $json.order[0].item }} \n\nعنوانك \n{{ $json.address }}\nرقم الهاتف\n{{ $json.phone }}\nتمام كده",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        2880,
+        540
+      ],
+      "id": "f65a0f23-a75e-4de4-bae8-dfe433cd7aaa",
+      "name": "WhatsApp Business Cloud2",
+      "webhookId": "dc854325-7b3a-4754-a321-276b9632869e",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "fI2Cu84zQrHfIBeY",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "673691855833345",
+        "recipientPhoneNumber": "={{ $('Webhook').item.json.body.entry[0].changes[0].value.messages[0].from }}",
+        "textBody": "={{ $json.output }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        2520,
+        740
+      ],
+      "id": "4e02b55f-59e5-427d-a800-5a1f12bafddc",
+      "name": "WhatsApp Business Cloud3",
+      "webhookId": "dc854325-7b3a-4754-a321-276b9632869e",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "fI2Cu84zQrHfIBeY",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "speech",
+        "voice": {
+          "__rl": true,
+          "value": "LXrTqFIgiubkrMkwvOUr",
+          "mode": "list",
+          "cachedResultName": "Masry"
+        },
+        "text": "={{ $json.output }}",
+        "additionalOptions": {},
+        "requestOptions": {}
+      },
+      "type": "@elevenlabs/n8n-nodes-elevenlabs.elevenLabs",
+      "typeVersion": 1,
+      "position": [
+        2880,
+        1020
+      ],
+      "id": "c6df905d-0524-4aec-8f3d-2e4ca8649b85",
+      "name": "ElevenLabs1",
+      "credentials": {
+        "elevenLabsApi": {
+          "id": "iE2SYyYlrQawW1Vy",
+          "name": "ElevenLabs account ze"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "12.mp3",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1c0PHtlClCk7XkEgNunJIyYfQcujiZpFR",
+          "mode": "list",
+          "cachedResultName": "records",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1c0PHtlClCk7XkEgNunJIyYfQcujiZpFR"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        3100,
+        1020
+      ],
+      "id": "fed44049-9ab7-47ed-acb5-57b6ea3feb15",
+      "name": "Google Drive",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "nfpLCBAixZcsHiH6",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "673691855833345",
+        "recipientPhoneNumber": "={{ $('Webhook').item.json.body.entry[0].changes[0].value.messages[0].from }}",
+        "messageType": "audio",
+        "mediaLink": "={{ $json.webContentLink }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        3320,
+        1020
+      ],
+      "id": "9fd4dde7-430e-45ba-9c3e-6076b962397d",
+      "name": "WhatsApp Business Cloud4",
+      "webhookId": "66c40acc-a365-49fd-8715-3df0ed4383fe",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "fI2Cu84zQrHfIBeY",
+          "name": "WhatsApp account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Switch1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory1": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "ElevenLabs1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "Switch2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [],
+        [
+          {
+            "node": "WhatsApp Business Cloud",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp Business Cloud": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "ElevenLabs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ElevenLabs": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch2": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "WhatsApp Business Cloud3",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp Business Cloud2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ElevenLabs1": {
+      "main": [
+        [
+          {
+            "node": "Google Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp Business Cloud4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "e1bdde11-f0f0-4f43-88ad-cf9866842f20",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "36782c444ce5aae41028d69cea014c37360e3d4ecded75a6aaf89c591ae3c1b3"
+  },
+  "id": "9WX7lzTJ2SHMIAbH",
+  "tags": []
+}

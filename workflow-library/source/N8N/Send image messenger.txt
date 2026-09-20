@@ -1,0 +1,16 @@
+const commentId =  $('Webhook').first().json.body.entry[0].changes[0].value.post_id
+//$json.entry[0].changes[0].value.comment_id;
+// ØªÙ‚Ø³ÙŠÙ… Ø§Ù„Ù€ comment_id Ø¹Ù†Ø¯ "_" ÙˆØ£Ø®Ø° Ø§Ù„Ø¬Ø²Ø¡ Ø§Ù„Ø«Ø§Ù†ÙŠ
+const afterUnderscore = commentId.split('_')[1];
+
+
+// Ù‚Ù… Ø¨Ø¥Ù†Ø´Ø§Ø¡ Ù…ØµÙÙˆÙØ© Ù…Ù† Ø§Ù„Ø±Ø¯ÙˆØ¯
+
+
+
+return {
+  json: {
+    commentId: commentId,
+    afterUnderscore: afterUnderscore
+  }
+};

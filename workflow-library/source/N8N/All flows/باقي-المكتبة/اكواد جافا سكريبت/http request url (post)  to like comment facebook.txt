@@ -1,0 +1,1 @@
+https://graph.facebook.com/v22.0/{{ $json.afterUnderscore }}/likes?access_token={{ $('Get row(s) in sheet1').item.json['facebook access token'] }}

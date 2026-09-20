@@ -1,0 +1,686 @@
+{
+  "name": "Create Marketing Reels with Sora2, OpenAI & Auto-Post to Social Media",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 19
+            }
+          ]
+        }
+      },
+      "id": "158e33d0-3d6c-4d07-9148-cc0952478134",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [
+        1120,
+        784
+      ],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "Generate an effective video prompt for a comedy reel promoting Sally's Coffee",
+        "options": {
+          "systemMessage": "=You are a Text-to-Video Prompt Generator Agent that creates ultra-realistic, short 12-second video prompts for OpenAI Sora2.\nEach video must feel like a cinematic short film or viral reel, with humor that feels natural, situational, and modern — not slapstick.\nThe purpose of each video is to promote “Sally’s Coffee”, a local, friendly coffee shop known for unique drinks like its Nutella Cinnamon Latte.\n\n🎯 Your Objective\n\nGenerate one vivid, self-contained text-to-video prompt that:\n\nDescribes the scene, setting, lighting, tone, and camera style\n\nIncludes realistic human dialogue with funny, relatable moments\n\nEnds with a short spoken or written caption promoting Sally’s Coffee\n\nIs short enough for a 12-second reel (tight pacing)\n\nLooks as real as possible (avoid cartoonish or surreal scenes)\n\n⚙️ Rules\n\nOutput only the final text-to-video prompt.\n\nDo not include explanations, annotations, or formatting.\n\nAvoid brand slogans that sound forced — keep humor subtle and human.\n\nAlways integrate the brand naturally in dialogue or visuals.\n\nEnsure video looks like a real camera-recorded scene (handheld, cinematic, or bodycam if relevant).\n\n💡 Example Output\n\nUltra-realistic 12-second short film, police bodycam footage style, daytime suburban street.\nA police officer walks up to a car window, camera shakes slightly.\nOfficer (serious tone): “You know why I pulled you over?”\nDriver (a little confused): \"No officer\"\nOfficer: “You look like you need a cup of Sally’s Nutella Cinnamon Latte. Just head down Lincoln, it’s right on the corner — you can thank me later.”\nBig title /commercial to end off on screen: “You gotta start your day with Sally’s.”"
+        }
+      },
+      "id": "f1dc41ad-c448-4b5e-85ff-35d37de0255c",
+      "name": "Video Prompt Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        1456,
+        784
+      ],
+      "typeVersion": 3
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5",
+          "cachedResultName": "gpt-5"
+        },
+        "options": {
+          "timeout": 6000000
+        }
+      },
+      "id": "3d342bb4-7ca2-4ae4-b790-ef7d100d19a3",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "position": [
+        1424,
+        992
+      ],
+      "typeVersion": 1.2,
+      "credentials": {
+        "openAiApi": {
+          "id": "JcwIFXVK9Lxo9lj2",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $execution.id }}"
+      },
+      "id": "75024a29-704b-40b7-aa7f-358bac3eea52",
+      "name": "Simple Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "position": [
+        1568,
+        992
+      ],
+      "typeVersion": 1.3
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "WllAiOHjO4I5b1IH",
+          "cachedResultUrl": "/projects/IeB6bpnkXkUlj9NH/datatables/WllAiOHjO4I5b1IH",
+          "cachedResultName": "Demo Sally's Coffee"
+        },
+        "columns": {
+          "value": {
+            "Video_Prompt": "={{ $json.output }}"
+          },
+          "schema": [
+            {
+              "id": "Video_Prompt",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "readOnly": false,
+              "required": false,
+              "displayName": "Video_Prompt",
+              "defaultMatch": false
+            }
+          ],
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "Video_Prompt"
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "145c2a6e-92ed-4498-bbf9-5f2fb9ecfb64",
+      "name": "Insert row",
+      "type": "n8n-nodes-base.dataTable",
+      "position": [
+        1904,
+        784
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.wavespeed.ai/api/v3/openai/sora-2/text-to-video",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "duration",
+              "value": "12"
+            },
+            {
+              "name": "prompt",
+              "value": "={{ $json.Video_Prompt }}"
+            },
+            {
+              "name": "size",
+              "value": "720*1280"
+            }
+          ]
+        },
+        "options": {
+          "redirect": {
+            "redirect": {}
+          }
+        }
+      },
+      "id": "a552731a-002b-4177-bb29-f8549c1fcef3",
+      "name": "Sora2 POST Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        2112,
+        784
+      ],
+      "typeVersion": 4.3,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "SzJvaJkEsYnd79U0",
+          "name": "Header Auth account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 30
+      },
+      "id": "bbba0cd9-ec56-48bc-8dd3-b315f5a3f6dd",
+      "name": "Wait 30 Secs",
+      "type": "n8n-nodes-base.wait",
+      "position": [
+        2320,
+        784
+      ],
+      "typeVersion": 1.1,
+      "webhookId": "84d7af55-0dba-4efb-a9da-6de40e86710d"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.wavespeed.ai/api/v3/predictions/{{ $json.data.id }}/result",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "redirect": {
+            "redirect": {}
+          }
+        }
+      },
+      "id": "d0fdfbd2-6d6c-4c82-9824-b7ac60e571b2",
+      "name": "GET Sora2 Result",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        2528,
+        784
+      ],
+      "typeVersion": 4.3,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "SzJvaJkEsYnd79U0",
+          "name": "Header Auth account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "0bf58770-7c0b-42c0-9e9c-05e150e46c7b",
+              "operator": {
+                "name": "filter.operator.equals",
+                "type": "string",
+                "operation": "equals"
+              },
+              "leftValue": "={{ $json.data.status }}",
+              "rightValue": "completed"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "21ec9866-1ecd-41cc-8696-211cfb69404e",
+      "name": "If",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        2736,
+        784
+      ],
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "amount": 30
+      },
+      "id": "12871eb5-c334-4b4a-97a9-a2d20bed1975",
+      "name": "Wait Another 30 Secs",
+      "type": "n8n-nodes-base.wait",
+      "position": [
+        2672,
+        1024
+      ],
+      "typeVersion": 1.1,
+      "webhookId": "9093acaf-a5ff-4b87-9d6c-d7c354013cc3"
+    },
+    {
+      "parameters": {
+        "resource": "media",
+        "mediaUrl": "={{ $json.data.outputs[0] }}"
+      },
+      "id": "10c63d69-d3de-4195-b71e-3d495666f183",
+      "name": "Upload media",
+      "type": "@blotato/n8n-nodes-blotato.blotato",
+      "position": [
+        2976,
+        688
+      ],
+      "typeVersion": 2,
+      "credentials": {
+        "blotatoApi": {
+          "id": "88elW4YZxxLyzdxo",
+          "name": "Blotato account test"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "accountId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "7680",
+          "cachedResultUrl": "https://backend.blotato.com/v2/accounts/7680",
+          "cachedResultName": "automatewithmarc"
+        },
+        "postContentText": "={{ $json.output[0].content[0].text }}",
+        "postContentMediaUrls": "={{ $('Upload media').item.json.url }}",
+        "options": {}
+      },
+      "id": "2dd919f1-ff88-4988-bd2b-5cf5228d93b2",
+      "name": "Create post",
+      "type": "@blotato/n8n-nodes-blotato.blotato",
+      "position": [
+        3536,
+        688
+      ],
+      "typeVersion": 2,
+      "credentials": {
+        "blotatoApi": {
+          "id": "88elW4YZxxLyzdxo",
+          "name": "Blotato account test"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4",
+          "cachedResultName": "GPT-4"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "Generate an Instagram/Tik Tok Caption for Sally's Coffee"
+            },
+            {
+              "role": "system",
+              "content": "You're an Instagram Caption Writer Agent. Your job is to create effective Instagram or Tik Tok captions for Sally's Coffee, a local neighborhood brand. Include relevant hastags."
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "bbbb41cd-1305-442d-bb67-da6ea9c93915",
+      "name": "Caption Generator",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "position": [
+        3152,
+        688
+      ],
+      "typeVersion": 2,
+      "credentials": {
+        "openAiApi": {
+          "id": "JcwIFXVK9Lxo9lj2",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "Schdeule Trigger",
+        "height": 896,
+        "width": 368,
+        "color": 2
+      },
+      "id": "209468ed-cc8b-436a-bdef-f9edaad4b1e4",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        960,
+        544
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "Video Generation",
+        "height": 896,
+        "width": 496,
+        "color": 4
+      },
+      "id": "b5dc7759-ff94-4598-90d6-42261b5c4bb8",
+      "name": "Sticky Note1",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1344,
+        544
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "Logging",
+        "height": 896,
+        "width": 208
+      },
+      "id": "4df214af-e42d-410e-b065-abe8b1058fb2",
+      "name": "Sticky Note2",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1856,
+        544
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "POST and GET from Sora2",
+        "height": 896,
+        "width": 816,
+        "color": 5
+      },
+      "id": "f82cb2d3-0813-4db1-bad1-99164784956b",
+      "name": "Sticky Note3",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2080,
+        544
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "Upload to Bloatato (Instagram & Tik Tok)",
+        "height": 896,
+        "width": 816,
+        "color": 3
+      },
+      "id": "82ca2f23-0049-4138-ae7a-5d5e0b3e54b3",
+      "name": "Sticky Note4",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2912,
+        544
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "Funny Marketing Re\nBefore you start\nAdd or configure your OpenAI API credentials in n8n.\nAdd or configure your Wavespeed/Sora2 credentials and base URL.\nSet up Blotato, connect your social accounts, and add your Blotato API credentials.\n(Optional) Update the Data Table ID to your own table for logging prompts.\nReview all AI prompts in the nodes to align with your brand voice and content policies.\n",
+        "height": 800,
+        "width": 944
+      },
+      "id": "1e9cc0ec-cd70-4fb0-acab-5d51219fc9b5",
+      "name": "Sticky Note5",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -32,
+        608
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "resource": "video",
+        "operation": "upload",
+        "title": "=AI ASMR : {{ $json.output[0].content[0].text }}",
+        "regionCode": "US",
+        "options": {
+          "description": "=AI-Generated Video Idea: {{ $json.output[0].content[0].text }}\n\nThis video was created automatically using our automated workflow #asmrai #asmr #n8n",
+          "notifySubscribers": true,
+          "privacyStatus": "public",
+          "tags": "=asmr, viral, asmrai, n8n, automation"
+        }
+      },
+      "id": "69f20dcd-ec8f-44d7-8a84-27180d0bee56",
+      "name": "Upload to YouTube",
+      "type": "n8n-nodes-base.youTube",
+      "position": [
+        3504,
+        928
+      ],
+      "typeVersion": 1,
+      "credentials": {
+        "youTubeOAuth2Api": {
+          "id": "3I0XC9FaOTo3JaNL",
+          "name": "YouTube account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpRequestMethod": "POST",
+        "graphApiVersion": "v22.0",
+        "node": "me",
+        "edge": "videos",
+        "sendBinaryData": true,
+        "binaryPropertyName": "data",
+        "options": {
+          "queryParameters": {
+            "parameter": [
+              {
+                "name": "description",
+                "value": "={{ $json.output[0].content[0].text }}"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.facebookGraphApi",
+      "typeVersion": 1,
+      "position": [
+        3504,
+        1104
+      ],
+      "id": "783b70f4-ce87-434f-827a-8a7086666ce0",
+      "name": "Facebook Graph Publish video",
+      "credentials": {
+        "facebookGraphApi": {
+          "id": "20pi5blOBDLRUwfz",
+          "name": "Facebook Graph account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.data.outputs[0] }}",
+        "options": {
+          "response": {
+            "response": {}
+          }
+        }
+      },
+      "id": "515399c0-fa11-41aa-bf35-5623fe21d5fb",
+      "name": "Download Final Video",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        3312,
+        960
+      ],
+      "typeVersion": 4.2
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Upload media",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait Another 30 Secs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert row": {
+      "main": [
+        [
+          {
+            "node": "Sora2 POST Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload media": {
+      "main": [
+        [
+          {
+            "node": "Caption Generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 30 Secs": {
+      "main": [
+        [
+          {
+            "node": "GET Sora2 Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Video Prompt Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET Sora2 Result": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Video Prompt Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Caption Generator": {
+      "main": [
+        [
+          {
+            "node": "Download Final Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Video Prompt Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sora2 POST Request": {
+      "main": [
+        [
+          {
+            "node": "Wait 30 Secs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Video Prompt Agent": {
+      "main": [
+        [
+          {
+            "node": "Insert row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Another 30 Secs": {
+      "main": [
+        [
+          {
+            "node": "GET Sora2 Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Final Video": {
+      "main": [
+        [
+          {
+            "node": "Upload to YouTube",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Facebook Graph Publish video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "a835b9f5-a431-453f-94a7-c1f3ff8938af",
+  "meta": {
+    "templateId": "10786",
+    "templateCredsSetupCompleted": true,
+    "instanceId": "eb58054caf61c2552d4b13cc032edccc043473990c2938118b79640890b4e573"
+  },
+  "id": "BAuFXkDTdtRY77FR",
+  "tags": []
+}

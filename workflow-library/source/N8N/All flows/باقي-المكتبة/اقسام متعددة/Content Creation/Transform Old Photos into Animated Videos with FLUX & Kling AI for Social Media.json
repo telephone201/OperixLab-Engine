@@ -1,0 +1,659 @@
+{
+  "name": "Transform Old Photos into Animated Videos with FLUX & Kling AI for Social Media",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "animate-photo-form",
+        "formTitle": "Colorize and Animate Old Photos",
+        "formDescription": "Upload an old photo to colorize and animate it with AI",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Upload Old Photo",
+              "fieldType": "file",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Custom Animation Description (Optional)",
+              "fieldType": "textarea",
+              "placeholder": "Describe how you'd like the photo to be animated (e.g., 'make the person smile and blink')"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b9ae8c3f-21f4-4aaf-9352-824d2abcf430",
+      "name": "Photo Upload Form",
+      "type": "n8n-nodes-base.formTrigger",
+      "position": [
+        368,
+        240
+      ],
+      "webhookId": "animate-photo-form",
+      "typeVersion": 2.1
+    },
+    {
+      "parameters": {
+        "content": "# Colorize and Animate Old Photos with AI\n\nThis workflow allows users to **upload old photos** and automatically:\n1. **Colorize and enhance** them using FLUX Kontext\n2. **Animate** them using Kling Video AI\n3. **Save** the final video to Google Drive\n\nSimply upload your old photo through the form and get back a colorized, animated video!",
+        "height": 280,
+        "width": 740,
+        "color": 3
+      },
+      "id": "6bb93365-9c3d-4c18-a1cc-328d45b70b2f",
+      "name": "Workflow Description",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        400,
+        -624
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://queue.fal.run/fal-ai/flux-pro/kontext",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"prompt\": \"Colorize this old black and white or sepia photograph. Make it look natural and vibrant with realistic colors. Remove any noise, scratches, or artifacts. Enhance the image quality and make it crystal clear. Keep all the original details and people exactly as they are, just add beautiful, realistic colors and improve the overall quality\",\n  \"image_url\": \"{{ $json.data.url }}\",\n  \"num_images\": 1\n}",
+        "options": {}
+      },
+      "id": "fb20fbac-63ea-41ef-8f6a-1aacf3e92245",
+      "name": "Colorize Image",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        912,
+        240
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {},
+      "id": "76d9b93e-9823-47cb-8d66-d158fd8b2b37",
+      "name": "Wait for Colorization",
+      "type": "n8n-nodes-base.wait",
+      "position": [
+        1136,
+        240
+      ],
+      "webhookId": "wait-colorize-webhook",
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "url": "=https://queue.fal.run/fal-ai/flux-pro/requests/{{ $('Colorize Image').item.json.request_id }}/status",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "ca65341f-ad21-4707-831f-c873ef770cc6",
+      "name": "Check Colorization Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1360,
+        240
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "colorize-completed",
+              "operator": {
+                "name": "filter.operator.equals",
+                "type": "string",
+                "operation": "equals"
+              },
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "COMPLETED"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "7d556144-538a-462d-a153-1971efcef011",
+      "name": "Colorization Completed?",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        1568,
+        240
+      ],
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "url": "=https://queue.fal.run/fal-ai/flux-pro/requests/{{ $('Colorize Image').item.json.request_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d1f4426a-c830-4402-91b4-389338f81c39",
+      "name": "Get Colorized Image",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1792,
+        240
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://queue.fal.run/fal-ai/kling-video/v2.1/standard/image-to-video",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"prompt\": \"{{ $('Photo Upload Form').item.json['Custom Animation Description (Optional)'] ? $('Photo Upload Form').item.json['Custom Animation Description (Optional)'] : 'Animate this colorized vintage photograph. If there are multiple people, make them interact naturally - perhaps talking, smiling, or making subtle gestures. If there\\'s only one person, animate them with natural movements like breathing, blinking, slight head movements, or gentle smiling. Keep the animation subtle and realistic, maintaining the vintage charm. The movement should feel natural and bring the photo to life. Do not move the camera' }}\",\n  \"image_url\": \"{{ $('Get Colorized Image').item.json.images[0].url }}\",\n  \"duration\": 5,\n  \"quality\": \"standard\"\n}",
+        "options": {}
+      },
+      "id": "0397aef0-a837-4cfe-8029-d1c495bf6689",
+      "name": "Animate Image",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        2016,
+        240
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "amount": 60
+      },
+      "id": "3406b890-4fe5-42f9-a52e-f67abab2720c",
+      "name": "Wait for Animation",
+      "type": "n8n-nodes-base.wait",
+      "position": [
+        2240,
+        240
+      ],
+      "webhookId": "wait-animation-webhook",
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "url": "=https://queue.fal.run/fal-ai/kling-video/requests/{{ $('Animate Image').item.json.request_id }}/status",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "58103cde-9884-41d4-886a-99ba7bd0072a",
+      "name": "Check Animation Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        2448,
+        240
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "animation-completed",
+              "operator": {
+                "name": "filter.operator.equals",
+                "type": "string",
+                "operation": "equals"
+              },
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "COMPLETED"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e42474db-7881-4a0a-8ea0-d04e139c4740",
+      "name": "Animation Completed?",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        2672,
+        240
+      ],
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "url": "=https://queue.fal.run/fal-ai/kling-video/requests/{{ $('Animate Image').item.json.request_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "6db3f757-5748-4be6-917c-ddcd86621f2b",
+      "name": "Get Animated Video",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        2896,
+        240
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Get Animated Video').item.json.video.url }}",
+        "options": {}
+      },
+      "id": "48d00cac-27d7-4b3b-aed2-f53bea846ecb",
+      "name": "Download Video",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        3120,
+        240
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "name": "=animated-photo-{{ $now.format('yyyyMMdd-HHmmss') }}.mp4",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive",
+          "cachedResultUrl": "https://drive.google.com/drive/my-drive",
+          "cachedResultName": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "root",
+          "cachedResultUrl": "https://drive.google.com/drive",
+          "cachedResultName": "/ (Root folder)"
+        },
+        "options": {}
+      },
+      "id": "37a98a23-46f0-41a6-89df-f3f542abdc16",
+      "name": "Upload to Google Drive",
+      "type": "n8n-nodes-base.googleDrive",
+      "position": [
+        3328,
+        240
+      ],
+      "typeVersion": 3
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "success-flag",
+              "name": "success",
+              "type": "boolean",
+              "value": true
+            },
+            {
+              "id": "message",
+              "name": "message",
+              "type": "string",
+              "value": "Your old photo has been successfully colorized and animated!"
+            },
+            {
+              "id": "colorized-image",
+              "name": "colorized_image_url",
+              "type": "string",
+              "value": "={{ $('Get Colorized Image').item.json.images[0].url }}"
+            },
+            {
+              "id": "animated-video",
+              "name": "animated_video_url",
+              "type": "string",
+              "value": "={{ $('Get Animated Video').item.json.video.url }}"
+            },
+            {
+              "id": "google-drive",
+              "name": "google_drive_url",
+              "type": "string",
+              "value": "={{ $('Upload to Google Drive').item.json.webViewLink }}"
+            },
+            {
+              "id": "processing-time",
+              "name": "processing_time",
+              "type": "string",
+              "value": "={{ $now.format('yyyy-MM-dd HH:mm:ss') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "7d0232ed-e8cd-421f-a9c6-70e3eb26b4cd",
+      "name": "Final Results",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        3568,
+        240
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "content": "## How to Use:\n\n1. **Click 'Execute workflow'** to start the process\n2. **Upload your old photo** in the form that appears\n3. The photo will be **colorized and enhanced** using FLUX Kontext\n4. Then **animated** using Kling Video AI\n5. Finally **saved to Google Drive**\n\n**Required:** Image file (JPG, PNG)\n**Optional:** Custom animation description",
+        "height": 200,
+        "width": 740
+      },
+      "id": "2d3c6a3a-6ef2-47cd-8823-46c45361cb5f",
+      "name": "Usage Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        400,
+        -304
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## Setup Required:\n1. **api.imgbb.com**: Get api token (it's free)\n2. **FAL.AI API Key**: Get from fal.ai and set in HTTP Request credentials\n3. **Google Drive**: Connect your Google Drive account\n4. **Test the workflow**: Click 'Test workflow' to start\n\n**API Endpoints Used:**\n- Upload image: api.imgbb.com\n- FLUX Kontext: Image enhancement and colorization\n- Kling Video: Image to video animation",
+        "height": 260,
+        "width": 740
+      },
+      "id": "8b09bed7-a5f1-4e4c-8b08-0cb9807cf6fa",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        400,
+        -64
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.imgbb.com/1/upload",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "image",
+              "inputDataFieldName": "=Upload_Old_Photo"
+            },
+            {
+              "name": "key",
+              "value": "generate_token_and_add"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4be63f77-8fca-46a3-84b9-4b5b30055a96",
+      "name": "Upload Image to imgbb",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        672,
+        240
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {},
+      "id": "5fa469e9-cd6e-448f-843f-b82553216476",
+      "name": "Upload Post",
+      "type": "n8n-nodes-upload-post.uploadPost",
+      "position": [
+        3776,
+        240
+      ],
+      "typeVersion": 1,
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "content": "## تم التحضير بواسطة \n**م. أحمد الصيرفي**  \n\nللتعلّم وتطوير مهاراتك في الأتمتة، زور موقعنا: \n [ahmedelserafy.com](https://ahmedelserafy.com/automation_course)\n\n\n",
+        "width": 2624,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1232,
+        -16
+      ],
+      "typeVersion": 1,
+      "id": "03926aba-5d86-4a40-9b5d-202a2359532d",
+      "name": "Sticky Note6"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Animate Image": {
+      "main": [
+        [
+          {
+            "node": "Wait for Animation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Final Results": {
+      "main": [
+        [
+          {
+            "node": "Upload Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Colorize Image": {
+      "main": [
+        [
+          {
+            "node": "Wait for Colorization",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Video": {
+      "main": [
+        [
+          {
+            "node": "Upload to Google Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Photo Upload Form": {
+      "main": [
+        [
+          {
+            "node": "Upload Image to imgbb",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Animated Video": {
+      "main": [
+        [
+          {
+            "node": "Download Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for Animation": {
+      "main": [
+        [
+          {
+            "node": "Check Animation Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Colorized Image": {
+      "main": [
+        [
+          {
+            "node": "Animate Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Animation Completed?": {
+      "main": [
+        [
+          {
+            "node": "Get Animated Video",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait for Animation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Image to imgbb": {
+      "main": [
+        [
+          {
+            "node": "Colorize Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for Colorization": {
+      "main": [
+        [
+          {
+            "node": "Check Colorization Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Animation Status": {
+      "main": [
+        [
+          {
+            "node": "Animation Completed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload to Google Drive": {
+      "main": [
+        [
+          {
+            "node": "Final Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Colorization Completed?": {
+      "main": [
+        [
+          {
+            "node": "Get Colorized Image",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait for Colorization",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Colorization Status": {
+      "main": [
+        [
+          {
+            "node": "Colorization Completed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "e1b84b56-c230-46b6-b018-c5324f03ae20",
+  "meta": {
+    "templateId": "5755",
+    "instanceId": "eb58054caf61c2552d4b13cc032edccc043473990c2938118b79640890b4e573"
+  },
+  "id": "RiBi6I2cnlgbTfp4",
+  "tags": [
+    {
+      "updatedAt": "2025-11-28T22:29:34.032Z",
+      "createdAt": "2025-11-28T22:29:34.032Z",
+      "id": "HHSMeirOYyTwabhZ",
+      "name": "pack"
+    }
+  ]
+}

@@ -1,0 +1,294 @@
+{
+  "name": "Automated Fiverr UGC Market Research: Track Gigs with Google Sheets",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "id": "639d8c5d-9b2c-4dda-a496-7098c298b5a5",
+      "name": "Daily Fiverr Scrape Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [
+        448,
+        1280
+      ],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "url": "https://www.fiverr.com/search/gigs",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "ugc"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+            },
+            {
+              "name": "Accept",
+              "value": "text/html"
+            },
+            {
+              "name": "Accept-Language",
+              "value": "en-US,en;q=0.9"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "60977b7f-c8ec-4ec9-9d2a-e2d6c58149e6",
+      "name": "Fetch Fiverr Search Results",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        672,
+        1280
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "operation": "extractHtmlContent",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "price",
+              "cssSelector": "div.basic-gig-card a._Z7OVIW span.text-bold > span"
+            },
+            {
+              "key": "title",
+              "cssSelector": "div.basic-gig-card p.f2YMuU6"
+            },
+            {
+              "key": "Selller",
+              "cssSelector": "div.basic-gig-card a._1lc1p3l2 span.vp9lqtk"
+            },
+            {
+              "key": "Gig URL",
+              "cssSelector": "div.basic-gig-card > a.media"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b3cc4270-c7a3-4fcc-88b3-795c6c7b418d",
+      "name": "Extract Data from HTML",
+      "type": "n8n-nodes-base.html",
+      "position": [
+        1040,
+        1280
+      ],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "1mSpImM6r33QkQiYAZEoyvqo6Jce8pR4iyCZgUXqkQfk",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1mSpImM6r33QkQiYAZEoyvqo6Jce8pR4iyCZgUXqkQfk/edit?usp=drivesdk",
+          "cachedResultName": "Fiverr UGC Scraper"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gid=0",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1mSpImM6r33QkQiYAZEoyvqo6Jce8pR4iyCZgUXqkQfk/edit#gid=0",
+          "cachedResultName": "Sheet1"
+        },
+        "columns": {
+          "value": {
+            "Price": "={{ $json.price }}",
+            "Title": "={{ $json.title }}",
+            "Gig URL": "={{ $json[\"Gig URL\"] }}",
+            "Seller Name": "={{ $json.Selller }}"
+          },
+          "schema": [
+            {
+              "id": "Price",
+              "type": "string",
+              "display": true,
+              "required": false,
+              "displayName": "Price",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Title",
+              "type": "string",
+              "display": true,
+              "required": false,
+              "displayName": "Title",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Seller Name",
+              "type": "string",
+              "display": true,
+              "required": false,
+              "displayName": "Seller Name",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Gig URL",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "Gig URL",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            }
+          ],
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "b5e115fe-3f5e-4ead-b09d-35af6c002204",
+      "name": "Append Gig Data to Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        1248,
+        1280
+      ],
+      "typeVersion": 4.5
+    },
+    {
+      "parameters": {
+        "content": "## ⚙️ Section 1: **Trigger & Data Fetching**\n\nThis section is responsible for **automatically starting the workflow** and **retrieving Fiverr gig listings** for UGC content creators.\n\n---\n\n### ⏰ 1. `Daily Fiverr Scrape Trigger`\n\n> **🧠 Purpose:** Starts the entire workflow on a scheduled basis.\n\n📌 **Details:**\n\n* 🔁 Runs automatically at specified intervals (daily, hourly, etc.)\n* 🔌 Acts as the starting point of your automation pipeline\n* 🧩 Useful for keeping your dataset fresh without manual intervention\n\n🔧 **Example configuration:**\n\n* `Frequency:` Every 24 hours\n* `Time:` 09:00 AM UTC\n\n---\n\n### 🌐 2. `Fetch Fiverr Search Results`\n\n> **🧠 Purpose:** Makes an HTTP GET request to Fiverr to fetch search results for UGC content creators.\n\n📌 **Details:**\n\n* 🌍 **Endpoint:** `https://www.fiverr.com/search/gigs?query=UGC%20content%20creator`\n* 🧾 **Method:** `GET`\n* 📦 **Returns:** Raw HTML content of the search result page\n* 🔐 Supports headers (e.g., user-agent) if needed to bypass scraping blocks\n\n🧰 **Pro tips:**\n\n* Consider rotating user agents or using proxies for better reliability\n* Use query parameters to refine your search (e.g., country, category)\n\n---\n\n",
+        "height": 1260,
+        "width": 520,
+        "color": 5
+      },
+      "id": "3834eabc-6865-4fbb-941e-4e76e84d461f",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        368,
+        240
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## 🧠 Section 2: **HTML Parsing & Data Logging**\n\nThis section focuses on **extracting useful data** from the raw HTML and then **storing it securely** in Google Sheets for future reference.\n\n---\n\n### 🧱 3. `Extract Gig Data from HTML`\n\n> **🧠 Purpose:** Parses the fetched HTML and extracts key gig details.\n\n📌 **Extracted Fields:**\n\n* 💵 **Price** – Starting price of the gig\n* 🧑‍🎨 **Seller** – Name of the gig creator\n* 📝 **Title** – Gig headline\n* 🔗 **Gig URL** – Direct link to the gig\n\n🔍 **How it works:**\n\n* Uses **CSS selectors** or **XPath** to find the right HTML nodes\n* Grabs the values and passes them as structured data to the next node\n\n⚠️ **Note:** You may need to update selectors if Fiverr changes its HTML structure.\n\n---\n\n### 📊 4. `Append Gig Data to Sheet`\n\n> **🧠 Purpose:** Stores the extracted gig data in a connected Google Sheet.\n\n📌 **Details:**\n\n* 📁 Appends each gig as a new row\n* 🧾 Keeps a log of all scrapes for historical analysis\n* 🔄 Works with dynamic ranges – no manual sheet setup needed\n\n🔐 **Sheet Features:**\n\n* 🧹 You can apply filters or conditional formatting\n* 🗂 Consider using a timestamp column for easier tracking\n\n---\n\n## ✅ Summary\n\nYour workflow is a **powerful automation** that:\n\n* 🔄 Runs automatically on schedule\n* 🌐 Fetches Fiverr UGC gigs\n* 🧱 Parses and extracts valuable info\n* 📊 Logs everything in an easy-to-analyze Google Sheet\n\nLet me know if you'd like help adding:\n\n* 📌 Deduplication logic\n* 🔔 Email/Slack alerts when new gigs are found\n* 🧼 Data cleanup/formatting in Sheets\n\n",
+        "height": 1720,
+        "width": 520,
+        "color": 3
+      },
+      "id": "09a950f8-54a9-409c-aed6-e3fd908a7f14",
+      "name": "Sticky Note1",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        960,
+        -224
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## ⚙️ Section 1: **Trigger & Data Fetching**\n\nThis section is responsible for **automatically starting the workflow** and **retrieving Fiverr gig listings** for UGC content creators.\n\n---\n\n### ⏰ 1. `Daily Fiverr Scrape Trigger`\n\n> **🧠 Purpose:** Starts the entire workflow on a scheduled basis.\n\n📌 **Details:**\n\n* 🔁 Runs automatically at specified intervals (daily, hourly, etc.)\n* 🔌 Acts as the starting point of your automation pipeline\n* 🧩 Useful for keeping your dataset fresh without manual intervention\n\n🔧 **Example configuration:**\n\n* `Frequency:` Every 24 hours\n* `Time:` 09:00 AM UTC\n\n---\n\n### 🌐 2. `Fetch Fiverr Search Results`\n\n> **🧠 Purpose:** Makes an HTTP GET request to Fiverr to fetch search results for UGC content creators.\n\n📌 **Details:**\n\n* 🌍 **Endpoint:** `https://www.fiverr.com/search/gigs?query=UGC%20content%20creator`\n* 🧾 **Method:** `GET`\n* 📦 **Returns:** Raw HTML content of the search result page\n* 🔐 Supports headers (e.g., user-agent) if needed to bypass scraping blocks\n\n🧰 **Pro tips:**\n\n* Consider rotating user agents or using proxies for better reliability\n* Use query parameters to refine your search (e.g., country, category)\n\n---\n\n## 🧠 Section 2: **HTML Parsing & Data Logging**\n\nThis section focuses on **extracting useful data** from the raw HTML and then **storing it securely** in Google Sheets for future reference.\n\n---\n\n### 🧱 3. `Extract Gig Data from HTML`\n\n> **🧠 Purpose:** Parses the fetched HTML and extracts key gig details.\n\n📌 **Extracted Fields:**\n\n* 💵 **Price** – Starting price of the gig\n* 🧑‍🎨 **Seller** – Name of the gig creator\n* 📝 **Title** – Gig headline\n* 🔗 **Gig URL** – Direct link to the gig\n\n🔍 **How it works:**\n\n* Uses **CSS selectors** or **XPath** to find the right HTML nodes\n* Grabs the values and passes them as structured data to the next node\n\n⚠️ **Note:** You may need to update selectors if Fiverr changes its HTML structure.\n\n---\n\n### 📊 4. `Append Gig Data to Sheet`\n\n> **🧠 Purpose:** Stores the extracted gig data in a connected Google Sheet.\n\n📌 **Details:**\n\n* 📁 Appends each gig as a new row\n* 🧾 Keeps a log of all scrapes for historical analysis\n* 🔄 Works with dynamic ranges – no manual sheet setup needed\n\n🔐 **Sheet Features:**\n\n* 🧹 You can apply filters or conditional formatting\n* 🗂 Consider using a timestamp column for easier tracking\n\n---\n\n## ✅ Summary\n\nYour workflow is a **powerful automation** that:\n\n* 🔄 Runs automatically on schedule\n* 🌐 Fetches Fiverr UGC gigs\n* 🧱 Parses and extracts valuable info\n* 📊 Logs everything in an easy-to-analyze Google Sheet\n\nLet me know if you'd like help adding:\n\n* 📌 Deduplication logic\n* 🔔 Email/Slack alerts when new gigs are found\n* 🧼 Data cleanup/formatting in Sheets\n\nReady to upgrade it further? 😎\n",
+        "height": 2378,
+        "width": 1289,
+        "color": 4
+      },
+      "id": "bd479abb-b26e-4b8c-a1f8-14fde7041059",
+      "name": "Sticky Note4",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1328,
+        608
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## تم التحضير بواسطة \n**م. أحمد الصيرفي**  \n\nللتعلّم وتطوير مهاراتك في الأتمتة، زور موقعنا: \n [ahmedelserafy.com](https://ahmedelserafy.com/automation_course)\n\n\n",
+        "width": 1296,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1328,
+        416
+      ],
+      "typeVersion": 1,
+      "id": "17ce2950-54bb-4b62-8574-17c780e69775",
+      "name": "Sticky Note6"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Extract Data from HTML": {
+      "main": [
+        [
+          {
+            "node": "Append Gig Data to Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Daily Fiverr Scrape Trigger": {
+      "main": [
+        [
+          {
+            "node": "Fetch Fiverr Search Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Fiverr Search Results": {
+      "main": [
+        [
+          {
+            "node": "Extract Data from HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "683cff90-1428-472e-ad8f-d1d9dba37e1a",
+  "meta": {
+    "templateId": "4583",
+    "instanceId": "eb58054caf61c2552d4b13cc032edccc043473990c2938118b79640890b4e573"
+  },
+  "id": "e4SVQJlnF9EYOnmm",
+  "tags": [
+    {
+      "updatedAt": "2025-11-28T22:29:34.032Z",
+      "createdAt": "2025-11-28T22:29:34.032Z",
+      "id": "HHSMeirOYyTwabhZ",
+      "name": "pack"
+    }
+  ]
+}

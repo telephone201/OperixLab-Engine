@@ -1,0 +1,26 @@
+// النص الكامل من ChatGPT
+const message = $input.first().json.output; // أو من مكان التخزين في n8n
+
+// استخراج الجزء اللي بين ```json و ```
+const jsonMatch = message.match(/```json\s*([\s\S]*?)```/);
+
+if (jsonMatch && jsonMatch[1]) {
+  const jsonString = jsonMatch[1];
+  const orderData = JSON.parse(jsonString);
+
+  return {
+    json: {
+      customer_name: orderData.customer_name,
+      address: orderData.address,
+      phone: orderData.phone,
+      order: orderData.order,
+      is_order_complete: orderData.is_order_complete
+    }
+  };
+} else {
+  return {
+    json: {
+      error: "لم يتم العثور على JSON في الرسالة"
+    }
+  };
+}

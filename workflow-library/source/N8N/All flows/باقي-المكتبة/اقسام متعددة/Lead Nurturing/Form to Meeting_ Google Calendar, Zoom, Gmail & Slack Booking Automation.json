@@ -1,0 +1,607 @@
+{
+  "name": "Form to Meeting: Google Calendar, Zoom, Gmail & Slack Booking Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "google-forms-booking",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "3dd27b86-6e03-4595-a9fa-2fe3d1210611",
+      "name": "Google Forms Webhook1",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        448,
+        848
+      ],
+      "webhookId": "0c79affb-61ad-4802-8580-66c5856d66cf",
+      "typeVersion": 2.1
+    },
+    {
+      "parameters": {},
+      "id": "957b6711-281f-4599-9962-84ebf221691a",
+      "name": "Merge Form Data1",
+      "type": "n8n-nodes-base.merge",
+      "position": [
+        768,
+        864
+      ],
+      "typeVersion": 3.2
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "id-1",
+              "name": "calendarId",
+              "type": "string",
+              "value": "c_91f92ee12632d48cc78642add679d75aa8aecb09abea89eadbc97cb17d2de336@group.calendar.google.com"
+            },
+            {
+              "id": "id-2",
+              "name": "slackChannel",
+              "type": "string",
+              "value": "C09GN4NCTAP"
+            },
+            {
+              "id": "id-3",
+              "name": "teammateEmail",
+              "type": "string",
+              "value": "ojima@g-jete.com"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "3b63fe73-a5e7-4f3e-bf61-e7bd0a9aa63c",
+      "name": "Workflow Configuration1",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        1120,
+        864
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "id-1",
+              "name": "customerName",
+              "type": "string",
+              "value": "={{ $json.body.name }}"
+            },
+            {
+              "id": "id-2",
+              "name": "customerEmail",
+              "type": "string",
+              "value": "={{ $json.body.email }}"
+            },
+            {
+              "id": "id-3",
+              "name": "bookingDate",
+              "type": "string",
+              "value": "={{ $json.body.date }}"
+            },
+            {
+              "id": "id-4",
+              "name": "bookingTime",
+              "type": "string",
+              "value": "={{ $json.body.time }}"
+            },
+            {
+              "id": "34865dea-9db2-4f35-b91b-322572680869",
+              "name": "bookingStartISO",
+              "type": "string",
+              "value": "={{ new Date($json.body.date + 'T' + $json.body.time + ':00+09:00').toISOString() }}"
+            },
+            {
+              "id": "941d5f18-54fd-41ad-8f46-c9f9f13fb32f",
+              "name": "bookingEndISO",
+              "type": "string",
+              "value": "={{ new Date(new Date($json.body.date + 'T' + $json.body.time + ':00+09:00').getTime() + 60*60*1000).toISOString() }}"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "66b2895b-8260-4e40-b4ec-39b100b89f77",
+      "name": "Extract Booking Details1",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        1440,
+        864
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Workflow Configuration1').first().json.calendarId }}"
+        },
+        "timeMin": "={{ $json.bookingStartISO }}",
+        "timeMax": "={{ $json.bookingEndISO }}",
+        "options": {}
+      },
+      "id": "6591a8f7-2400-4de8-9fbe-b35271faf1f8",
+      "name": "Check Calendar Availability1",
+      "type": "n8n-nodes-base.googleCalendar",
+      "position": [
+        1744,
+        864
+      ],
+      "typeVersion": 1.3,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "14e9293a-f96c-45f1-b216-2c8aaf2fb3e2",
+              "operator": {
+                "type": "object",
+                "operation": "empty",
+                "singleValue": true
+              },
+              "leftValue": "={{ $json }}",
+              "rightValue": ""
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d80641b0-9da6-491c-922f-d278c0f030c3",
+      "name": "Is Time Slot Available?1",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        2096,
+        864
+      ],
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Workflow Configuration1').first().json.calendarId }}"
+        },
+        "start": "={{ $('Extract Booking Details1').first().json.bookingStartISO }}",
+        "end": "={{ $('Extract Booking Details1').first().json.bookingEndISO }}",
+        "additionalFields": {
+          "attendees": [
+            "={{ $('Extract Booking Details1').first().json.customerEmail }}"
+          ],
+          "description": "=Customer: {{ $('Extract Booking Details1').first().json.customerName }} ({{ $('Extract Booking Details1').first().json.customerEmail }})",
+          "summary": "=Booking with {{ $('Extract Booking Details1').first().json.customerName }}"
+        }
+      },
+      "id": "76a27cb5-7196-4564-a89a-85d5d0a41d52",
+      "name": "Create Calendar Event1",
+      "type": "n8n-nodes-base.googleCalendar",
+      "position": [
+        2416,
+        848
+      ],
+      "typeVersion": 1.3
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "topic": "=Booking with {{ $('Extract Booking Details1').first().json.customerName }}",
+        "additionalFields": {
+          "duration": 60,
+          "startTime": "={{ $('Extract Booking Details1').first().json.bookingStartISO }}",
+          "timeZone": "UTC"
+        }
+      },
+      "id": "9f4ca36f-8f02-43ee-8630-222958201959",
+      "name": "Create Zoom Meeting1",
+      "type": "n8n-nodes-base.zoom",
+      "position": [
+        2688,
+        848
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Extract Booking Details1').first().json.customerEmail }}",
+        "subject": "=Booking Confirmed: {{ new Date($('Extract Booking Details1').first().json.bookingStartISO).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) }}",
+        "message": "=Hi {{ $('Extract Booking Details1').first().json.customerName }},\n\nYour booking has been confirmed!\n\nDate & Time: {{ new Date($('Extract Booking Details1').first().json.bookingStartISO).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) }}\n\nZoom Meeting Link: {{ $json.join_url }}\n\nLooking forward to meeting you!\n\nBest regards",
+        "options": {}
+      },
+      "id": "a31d67fa-38b4-4276-a0ad-56d1069f95dd",
+      "name": "Send Confirmation Email1",
+      "type": "n8n-nodes-base.gmail",
+      "position": [
+        2992,
+        848
+      ],
+      "webhookId": "f28b9459-360b-4cad-9f2e-0d69654e795b",
+      "typeVersion": 2.1
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Workflow Configuration1').first().json.slackChannel }}"
+        },
+        "text": "=🎉 New booking confirmed!\n\n*Customer:* {{ $('Extract Booking Details1').first().json.customerName }} ({{ $('Extract Booking Details1').first().json.customerEmail }})\n*Date & Time:* {{ new Date($('Extract Booking Details1').first().json.bookingStartISO).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) }}\n*Zoom Link:* {{ $json.join_url }}",
+        "otherOptions": {}
+      },
+      "id": "b456c4f9-dcca-48a4-b750-f39e95df493f",
+      "name": "Notify Teammate on Slack1",
+      "type": "n8n-nodes-base.slack",
+      "position": [
+        3312,
+        848
+      ],
+      "webhookId": "866a3241-98d2-4db1-b791-c8c8f83b99b9",
+      "typeVersion": 2.3
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Extract Booking Details1').first().json.customerEmail }}",
+        "subject": "Time Slot Unavailable",
+        "message": "=Hi {{ $('Extract Booking Details1').first().json.customerName }},\n\nThank you for your booking request. Unfortunately, the requested time slot on {{ new Date($('Extract Booking Details1').first().json.bookingStartISO).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) }} is not available.\n\nPlease submit a new booking request with an alternative time.",
+        "options": {}
+      },
+      "id": "78d4ae92-b136-4bbe-ae52-a73a60c47a6c",
+      "name": "Send Unavailable Email1",
+      "type": "n8n-nodes-base.gmail",
+      "position": [
+        2416,
+        1152
+      ],
+      "webhookId": "98dd0319-284e-4b12-a655-a57577571800",
+      "typeVersion": 2.1
+    },
+    {
+      "parameters": {
+        "content": "Title: Automated Booking → Calendar + Zoom + Email + Slack\nWhat this workflow does\n\nCaptures booking submissions from a form and parses date/time.\n\nChecks Google Calendar for conflicts.\n\nIf free: creates a Calendar event → creates a Zoom meeting → emails the guest → notifies your team on Slack.\n\nIf busy: emails the guest to pick another time.\n\nFlow\nWebhook → Merge → Config → Extract details → Check availability → IF (free/busy) →\n[Free] Create Calendar Event → Create Zoom → Email confirmation → Slack notify\n[Busy] Email unavailability\n\nNotes\n\nKeep all user-editable variables in the Set nodes for easy maintenance.\n\nDate handling assumes Asia/Tokyo input and converts to ISO for API calls.\n\nNo hardcoded credentials inside HTTP nodes; store secrets via Credentials.",
+        "height": 528,
+        "width": 768,
+        "color": "white"
+      },
+      "id": "9f8af7ba-09f1-46bb-9bc6-bb2d0b26d744",
+      "name": "Sticky: Google Forms Webhook1",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        368,
+        240
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "Purpose: Entry point for bookings. Receives a POST payload from your form (name, email, date, time).\nOutput: Raw form fields under body.* used downstream.",
+        "height": 176,
+        "width": 256,
+        "color": "white"
+      },
+      "id": "5eb1dc05-5c0f-44a0-9000-d4abdd74a981",
+      "name": "Sticky: Merge Form Data1",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        352,
+        1024
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "Purpose: Normalizes/forwards webhook data to keep a single item moving through the flow.\nTip: Use this as a “buffer” if you ever add parallel inputs later.",
+        "height": 176,
+        "width": 272,
+        "color": "white"
+      },
+      "id": "967bcc58-fc07-4e4c-8b17-5f2a99f9287f",
+      "name": "Sticky: Workflow Configuration1",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        672,
+        1024
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "Purpose: Central place for editable constants (e.g., calendarId, slackChannel, teammateEmail).\nWhy: Makes the template plug-and-play—update values here instead of hunting through nodes.",
+        "height": 176,
+        "width": 288,
+        "color": "white"
+      },
+      "id": "663ecdf9-6f9d-481c-abe6-e7d8b3c34021",
+      "name": "Sticky: Extract Booking Details1",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1008,
+        1024
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "Purpose: Maps form fields to clean variables: customerName, customerEmail, bookingDate, bookingTime.\nAlso: Builds bookingStartISO and bookingEndISO (60-min duration) using the submitted local time (JST) → ISO strings.",
+        "height": 176,
+        "width": 272,
+        "color": "white"
+      },
+      "id": "c12bee38-9494-43b7-9961-2e4971a92316",
+      "name": "Sticky: Check Calendar Availability1",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1360,
+        1024
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "Purpose: Queries the target calendar for events overlapping bookingStartISO–bookingEndISO.\nBehavior: Returns an empty list when the slot is free; non-empty when it’s taken.",
+        "height": 176,
+        "width": 256,
+        "color": "white"
+      },
+      "id": "b58f33ab-ad60-4a98-9354-3ed1a1aeab72",
+      "name": "Sticky: Is Time Slot Available?1",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1696,
+        1024
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "Purpose: Branches on availability.\nTrue (empty result): Slot is free → proceed to create the event.\nFalse (has events): Slot is busy → send “unavailable” email.",
+        "height": 176,
+        "width": 256,
+        "color": "white"
+      },
+      "id": "b0b7376c-f552-4ce9-bd31-33919ba04618",
+      "name": "Sticky: Create Calendar Event1",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2016,
+        1024
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "Purpose: Books the time on Google Calendar with the guest as an attendee.\nFields: Summary includes guest name; Description includes name + email for quick context.",
+        "width": 272,
+        "color": "white"
+      },
+      "id": "bb03b52c-ddc4-4896-9016-6d01ab6b68ec",
+      "name": "Sticky: Create Zoom Meeting1",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2272,
+        656
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "Purpose: Creates a Zoom meeting for the confirmed slot.\nTiming: Uses the booking start time and a 60-minute duration.\nOutput: Provides join_url used by Email/Slack steps.",
+        "color": "white"
+      },
+      "id": "73736740-501f-4814-9722-e8576e2dd21f",
+      "name": "Sticky: Send Confirmation Email1",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2608,
+        656
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "Purpose: Sends a confirmation to the guest with local (Japan) date/time and the Zoom link.\nSubject/Body: Human-readable datetime via toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }).",
+        "width": 256,
+        "color": "white"
+      },
+      "id": "6e9c22c3-0b31-47f9-ab96-4476e501175d",
+      "name": "Sticky: Notify Teammate on Slack1",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2912,
+        656
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "Purpose: Notifies the guest when the requested slot is already taken and asks them to rebook another time.",
+        "width": 256,
+        "color": "white"
+      },
+      "id": "b9aa000c-63a2-44b1-800a-c041a1582f64",
+      "name": "Sticky: Send Unavailable Email1",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2336,
+        1312
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "Purpose: Posts a concise booking summary to your specified Slack channel.\nIncludes: Guest name/email, localized date/time, and Zoom join_url."
+      },
+      "id": "3904238d-39eb-40f0-879f-3f17e1afd303",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        3232,
+        656
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## تم التحضير بواسطة \n**م. أحمد الصيرفي**  \n\nللتعلّم وتطوير مهاراتك في الأتمتة، زور موقعنا: \n [ahmedelserafy.com](https://ahmedelserafy.com/automation_course)\n\n\n",
+        "height": 352,
+        "width": 896,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1344,
+        480
+      ],
+      "typeVersion": 1,
+      "id": "cf1a7deb-ce5b-4fc6-9ba5-417cb8394ca2",
+      "name": "Sticky Note6"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Merge Form Data1": {
+      "main": [
+        [
+          {
+            "node": "Workflow Configuration1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Zoom Meeting1": {
+      "main": [
+        [
+          {
+            "node": "Send Confirmation Email1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Forms Webhook1": {
+      "main": [
+        [
+          {
+            "node": "Merge Form Data1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Calendar Event1": {
+      "main": [
+        [
+          {
+            "node": "Create Zoom Meeting1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Workflow Configuration1": {
+      "main": [
+        [
+          {
+            "node": "Extract Booking Details1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Booking Details1": {
+      "main": [
+        [
+          {
+            "node": "Check Calendar Availability1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Time Slot Available?1": {
+      "main": [
+        [
+          {
+            "node": "Create Calendar Event1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Unavailable Email1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Confirmation Email1": {
+      "main": [
+        [
+          {
+            "node": "Notify Teammate on Slack1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Calendar Availability1": {
+      "main": [
+        [
+          {
+            "node": "Is Time Slot Available?1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "6f28d42d-fbbd-4d59-a090-6e7971b910b9",
+  "meta": {
+    "templateId": "10104",
+    "instanceId": "eb58054caf61c2552d4b13cc032edccc043473990c2938118b79640890b4e573"
+  },
+  "id": "2LzdPNJLWxH0di8f",
+  "tags": [
+    {
+      "updatedAt": "2025-11-28T22:29:34.032Z",
+      "createdAt": "2025-11-28T22:29:34.032Z",
+      "id": "HHSMeirOYyTwabhZ",
+      "name": "pack"
+    }
+  ]
+}

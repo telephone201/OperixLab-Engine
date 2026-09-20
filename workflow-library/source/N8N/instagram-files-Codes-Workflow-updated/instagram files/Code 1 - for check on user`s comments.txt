@@ -1,0 +1,38 @@
+// الحصول على كومنت العميل من الـ Webhook
+const msg = $('Webhook').first().json.body.entry[0].changes[0].value.text
+
+// الحصول على الكلمات المفتاحية من المدخلات
+const checkfrom = $input.first().json.comment;
+// متغير لحفظ النتيجة النهائية
+let isMatch = false;
+
+// التحقق مما إذا كان `checkfrom` فارغاً أو يحتوي على 'any'
+if (!checkfrom || checkfrom.trim() === '' || checkfrom.toLowerCase().includes('any')) {
+  isMatch = true;
+} else {
+  // تحويل الكومنت والكلمات المفتاحية إلى حروف صغيرة
+  const lowerCaseMsg = msg.toLowerCase();
+  const lowerCaseCheckfrom = checkfrom.toLowerCase();
+
+  // تقسيم الكلمات المفتاحية بناءً على الفاصلة
+  const keywords = lowerCaseCheckfrom.split(',');
+
+  // تكرار على كل كلمة مفتاحية
+  for (const keyword of keywords) {
+    // إزالة الفراغات البيضاء حول الكلمة المفتاحية
+    const trimmedKeyword = keyword.trim();
+    // التحقق إذا كان الكومنت يحتوي على الكلمة المفتاحية
+    if (trimmedKeyword !== '' && lowerCaseMsg.includes(trimmedKeyword)) {
+      isMatch = true;
+      // الخروج من الحلقة بمجرد العثور على تطابق واحد
+      break;
+    }
+  }
+}
+
+// إرجاع النتيجة
+return {
+  json: {
+    status: isMatch,
+  }
+};

@@ -1,0 +1,727 @@
+{
+  "name": "Generate Videos from Text or Images with Sora 2 AI - No Watermark",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "🎬 AI Video Generator - Sora 2",
+        "formDescription": "Create stunning AI-generated videos from text descriptions or animate your images with AI. Powered by OpenAI's Sora 2 - No watermarks, professional quality output. Generate videos in landscape or portrait, standard or HD quality.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Video Description (Prompt)",
+              "fieldType": "textarea",
+              "placeholder": "Example: A serene mountain landscape at sunset with clouds moving slowly across the sky, golden hour lighting, cinematic camera movement, 4K quality, professional color grading",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Aspect Ratio",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "landscape"
+                  },
+                  {
+                    "option": "portrait"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Video Quality",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "standard"
+                  },
+                  {
+                    "option": "hd"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Upload Starting Image (Optional)",
+              "fieldType": "file",
+              "multipleFiles": false,
+              "acceptFileTypes": ".jpg, .jpeg, .png, .webp"
+            }
+          ]
+        },
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "b9d07b90-8a2a-4694-9840-5f2eec29622f",
+      "name": "On form submission",
+      "type": "n8n-nodes-base.formTrigger",
+      "position": [
+        976,
+        848
+      ],
+      "webhookId": "08557317-0b58-4222-89d9-d5cdefc47629",
+      "typeVersion": 2.3,
+      "notes": "Form trigger: Users submit video requests via web form"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": "",
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "3225407b-e55a-4d2b-b37c-320cb3bfcb8b",
+                    "operator": {
+                      "type": "object",
+                      "operation": "notExists",
+                      "singleValue": true
+                    },
+                    "leftValue": "={{ $binary.Upload_Starting_Image__Optional_ }}",
+                    "rightValue": ""
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "No Image - Text to Video"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": "",
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "0adfd49c-0e9f-4afc-ae0c-98186957bc56",
+                    "operator": {
+                      "type": "object",
+                      "operation": "exists",
+                      "singleValue": true
+                    },
+                    "leftValue": "={{ $binary.Upload_Starting_Image__Optional_ }}",
+                    "rightValue": ""
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "Has Image - Upload First"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "934a8f9b-7453-4330-a1b3-767740796e50",
+      "name": "Check: Has Image?",
+      "type": "n8n-nodes-base.switch",
+      "position": [
+        1568,
+        848
+      ],
+      "typeVersion": 3.2,
+      "notes": "Routes workflow based on whether user uploaded an image"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.imgbb.com/1/upload",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "key",
+              "value": "YOUR_ImgBB_API_KEY"
+            },
+            {
+              "name": "expiration",
+              "value": "0"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "image",
+              "inputDataFieldName": "Upload_Starting_Image__Optional_"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "16d896e9-8a31-4a37-93f3-473abffe1cce",
+      "name": "Upload to ImgBB",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1808,
+        1408
+      ],
+      "typeVersion": 4.2,
+      "notes": "Uploads user image to ImgBB for hosting (required for Sora API)"
+    },
+    {
+      "parameters": {
+        "url": "={{ JSON.parse($json.data.resultJson).resultUrls[0] }}",
+        "options": {}
+      },
+      "id": "6f28634f-ab74-4672-98b9-1fc1a9fb79a4",
+      "name": "Download Video (Text)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        3056,
+        368
+      ],
+      "typeVersion": 4.2,
+      "notes": "Downloads the generated video from text-to-video path"
+    },
+    {
+      "parameters": {
+        "url": "={{ JSON.parse($json.data.resultJson).resultUrls[0] }}",
+        "options": {}
+      },
+      "id": "d95cdf5b-169b-4639-8d3e-87d14a80c7b9",
+      "name": "Download Video (Image)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        3072,
+        1392
+      ],
+      "typeVersion": 4.2,
+      "notes": "Downloads the generated video from image-to-video path"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.kie.ai/api/v1/jobs/recordInfo?taskId={{ $json.data.taskId }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "b9280f6d-b5ad-4abc-8fee-3c9c12914a29",
+      "name": "Check Status (Text)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        2528,
+        384
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "amount": 30
+      },
+      "id": "17299f12-9888-4ca7-9951-0f2de1d44a1f",
+      "name": "Wait (Text)",
+      "type": "n8n-nodes-base.wait",
+      "position": [
+        2304,
+        384
+      ],
+      "webhookId": "text-wait-webhook-id",
+      "typeVersion": 1.1,
+      "notes": "Wait 30 seconds for video generation to complete"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "0bcf8858-f1a8-45fe-a858-cbbe6c81385d",
+              "operator": {
+                "name": "filter.operator.equals",
+                "type": "string",
+                "operation": "equals"
+              },
+              "leftValue": "={{ $json.data.state }}",
+              "rightValue": "success"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6c24bb65-9d0b-4d3b-824a-77f8f2836ca9",
+      "name": "Is Ready? (Text)",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        2736,
+        384
+      ],
+      "typeVersion": 2.2,
+      "notes": "Checks if video generation is complete, loops back to wait if not ready"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.kie.ai/api/v1/jobs/createTask",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"sora-2-text-to-video\",\n  \"input\": {\n    \"prompt\": \"{{ $json['Video Description (Prompt)'] }}\",\n    \"aspect_ratio\": \"{{ $json['Aspect Ratio'] }}\",\n    \"quality\": \"{{ $json['Video Quality'] }}\"\n  }\n}",
+        "options": {}
+      },
+      "id": "ea9b3e2e-2d80-4468-bcc2-a823b5242a15",
+      "name": "TEXT TO VIDEO",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1888,
+        384
+      ],
+      "typeVersion": 4.2,
+      "notes": "Sends text prompt to Sora 2 API for video generation"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.kie.ai/api/v1/jobs/recordInfo?taskId={{ $json.data.taskId }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "4052e25f-b77d-4fd2-badd-10b032fc7688",
+      "name": "Check Status (Image)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        2592,
+        1408
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "amount": 30
+      },
+      "id": "b5da9b07-0eb6-469e-9a9b-a40a476ee563",
+      "name": "Wait (Image)",
+      "type": "n8n-nodes-base.wait",
+      "position": [
+        2368,
+        1408
+      ],
+      "webhookId": "image-wait-webhook-id",
+      "typeVersion": 1.1,
+      "notes": "Wait 30 seconds for image-to-video generation to complete"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "0bcf8858-f1a8-45fe-a858-cbbe6c81385d",
+              "operator": {
+                "name": "filter.operator.equals",
+                "type": "string",
+                "operation": "equals"
+              },
+              "leftValue": "={{ $json.data.state }}",
+              "rightValue": "success"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "7967ee62-47b9-48ab-8172-582fad8d55a0",
+      "name": "Is Ready? (Image)",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        2800,
+        1408
+      ],
+      "typeVersion": 2.2,
+      "notes": "Checks if image-to-video is complete, loops back to wait if not ready"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.kie.ai/api/v1/jobs/createTask",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"sora-2-image-to-video\",\n  \"input\": {\n    \"prompt\": \"{{ $('Check: Has Image?').item.json['Video Description (Prompt)'] }}\",\n    \"image_urls\": [\n      \"{{ $json.data.url }}\"\n    ],\n    \"aspect_ratio\": \"{{ $('Check: Has Image?').item.json['Aspect Ratio'] }}\",\n    \"quality\": \"{{ $('Check: Has Image?').item.json['Video Quality'] }}\"\n  }\n}",
+        "options": {}
+      },
+      "id": "6e9e77ad-02cb-486d-9428-b6522731cf78",
+      "name": "IMAGE TO VIDEO",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        2096,
+        1408
+      ],
+      "typeVersion": 4.2,
+      "notes": "Sends image URL + prompt to Sora 2 API for image-to-video generation"
+    },
+    {
+      "parameters": {
+        "content": "# 🎬 Sora 2 Video Generator - Setup Instructions\n\n***Generate professional AI videos without watermarks in minutes!***\n\n### 🎯 What You Can Do:\n✨ **Text-to-Video** - Type a description, get a video\n✨ **Image-to-Video** - Upload an image, bring it to life\n✨ **No Watermarks** - Clean, professional output\n✨ **HD Quality** - Standard or high-definition options\n\n### 📖 How to Use This Template:\n\n**Step 1:** Read the **Setup Instructions** \n**Step 2:** Configure your API credentials (takes 5 minutes)\n**Step 3:** Fill the form and watch the magic happen!\n\n### 📋 Setup Required:\n\n**1️⃣ Get Kie.AI API Key (Required)**\n   - Sign up at: https://kie.ai\n   - Navigate to Dashboard → API Keys\n   - Copy your API key\n\n**2️⃣ Configure n8n Credentials**\n   - Go to: Credentials → New Credential\n   - Select: HTTP Header Auth\n   - Name: `Kie Ai(Veo and more)`\n   - Header Name: `Authorization`\n   - Header Value: `Bearer YOUR_TOKEN_HERE`\n   - Save the credential\n\n**3️⃣ ImgBB API Setup (For Image-to-Video)**\n   - Get free key: https://api.imgbb.com/\n   - Open \"Upload to ImgBB\" node\n   - Replace the API key parameter (YOUR_ImgBB_API_KEY)\n   - Note: Free tier has rate limits\n\n**4️⃣ Telegram Bot (Optional - for notifications)**\n   - Create bot with @BotFather\n   - Get your Chat ID from @get_id_bot\n   - Update chat ID in Telegram nodes (YOUR_CHAT_ID)\n   - Or remove Telegram nodes if not needed\n\n### 🚀 Quick Start:\n1. Complete steps 1-3 above\n2. Activate the workflow\n3. Click \"Test URL\" in Form Trigger node\n4. Fill the form and submit\n5. Wait 30-60 seconds for video generation\n\n### 💡 Tips:\n- HD quality takes longer than standard\n- Use detailed prompts for better results\n- Landscape works best for most content\n\n---",
+        "height": 1368,
+        "width": 484,
+        "color": 4
+      },
+      "id": "406e2a92-58d7-4672-a320-82637952211e",
+      "name": "📖 Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        368,
+        240
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## �📝 TEXT-TO-VIDEO PATH\n\n**This section handles video generation from text descriptions only.**\n\n### 🔄 Flow:\n1️⃣ **TEXT TO VIDEO** node sends your prompt to Sora 2 API\n2️⃣ **Wait (Text)** pauses for 30 seconds\n3️⃣ **Check Status (Text)** queries if video is ready\n4️⃣ **Is Ready? (Text)** checks the response:\n   - ✅ If ready → Goes to Download\n   - ⏳ If not ready → Loops back to Wait\n5️⃣ **Download Video (Text)** fetches the final video\n6️⃣ **Send Text to Video** delivers via Telegram (optional)\n\n### 💡 Key Points:\n- Generation takes 30-120 seconds depending on quality\n- Polling happens automatically every 30 seconds\n- No image upload needed for this path\n- Output is watermark-free MP4 file\n\n### 📝 Example Prompts:\n*\"A majestic eagle soaring over mountains at sunset, cinematic 4K\"*\n*\"Time-lapse of flowers blooming, close-up, vibrant colors\"*",
+        "height": 600,
+        "width": 444,
+        "color": 5
+      },
+      "id": "73aee6d6-ce0d-4adb-b0a3-9db9696f7b32",
+      "name": "💬 Text-to-Video Path",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1088,
+        256
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## 🖼️ IMAGE-TO-VIDEO PATH\n\n**This section handles animating uploaded images.**\n\n### 🔄 Flow:\n1️⃣ **Upload to ImgBB** hosts the image and gets a URL\n2️⃣ **IMAGE TO VIDEO** sends image URL + prompt to Sora 2\n3️⃣ **Wait (Image)** pauses for 30 seconds\n4️⃣ **Check Status (Image)** queries if video is ready\n5️⃣ **Is Ready? (Image)** checks the response:\n   - ✅ If ready → Goes to Download\n   - ⏳ If not ready → Loops back to Wait\n6️⃣ **Download Video (Image)** fetches the final video\n7️⃣ **Send Image to Video** delivers via Telegram (optional)\n\n### ⚠️ Important:\n- ImgBB API key must be configured (replace YOUR_ImgBB_API_KEY)\n- Accepts JPG, PNG, WebP formats\n- Image influences the video generation\n- Same watermark-free output\n\n### 💡 Tips:\n- Use high-quality images for best results\n- Describe the motion you want in your prompt\n- Portrait photos work great for this feature",
+        "height": 624,
+        "width": 428,
+        "color": 6
+      },
+      "id": "7891cc94-231a-48f8-a4c3-ffe4b7e00b05",
+      "name": "🎨 Image-to-Video Path",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1104,
+        1008
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## 🔄 WORKFLOW ROUTER\n\n**This Switch node determines which path to take**\n\n### 🚦 Decision Logic:\nChecks if user uploaded an image:\n- **NO IMAGE** → Routes to TEXT TO VIDEO (upper path)\n- **HAS IMAGE** → Routes to Upload to ImgBB (lower path)\n\nThe workflow automatically detects binary data from the form's file upload field.\n\n### 🎯 How It Works:\nThe Switch node checks for the presence of binary data named `Upload_Starting_Image__Optional_`\n\n**If binary exists** = User uploaded a file → Take lower path\n**If binary doesn't exist** = Text-only request → Take upper path\n\n💡 *Think of this as a traffic controller directing your request to the right generation method.*",
+        "height": 772,
+        "width": 380,
+        "color": 3
+      },
+      "id": "0fb99a43-113e-4a41-9e90-9c82e6ea36d6",
+      "name": "🚦 Router Logic",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1808,
+        608
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## 📤 OUTPUT & DELIVERY\n\n**Final step: Get your video**\n\n### 📱 Telegram Delivery (Optional):\n**Setup:**\n1. Replace `YOUR_CHAT_ID` with your actual Telegram Chat ID\n2. Get it from @get_id_bot on Telegram\n3. Create Telegram credential in n8n\n4. Videos are sent as file attachments\n5. Caption indicates which path was used (text or image)\n\n### 🔧 Alternative Delivery Options:\n\n**📧 Email Delivery**\n**☁️ Cloud Storage**\n**🔗 Webhook Response**\n\n\n**🗑️ Don't Need Telegram?**\n- Simply delete both Telegram nodes\n- Connect Download nodes to your preferred output",
+        "height": 768,
+        "width": 532,
+        "color": 7
+      },
+      "id": "803cd5aa-ec81-4c60-b74f-22517131ce32",
+      "name": "📬 Delivery Options",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        3056,
+        608
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## ⚙️ POLLING MECHANISM\n\n**Why the Wait → Check → Loop pattern?**\n\nSora 2 video generation isn't instant:\n- ⏱️ Standard quality: 30-60 seconds\n- 🎬 HD quality: 60-120 seconds\n\n### 🔄 How it works:\n\n1️⃣ **Wait Node** (30 seconds)\n   - Prevents immediate re-checking\n   - Avoids API spam and rate limits\n   - Gives video time to generate\n\n2️⃣ **Check Status Node**\n   - Calls Kie.AI API\n   - Fetches current job status\n   - Returns state information\n\n3️⃣ **Is Ready? Node** (If condition)\n   - Examines the `state` field from response\n   - If `state == \"success\"` → Video is ready!\n   - If `state == anything else` → Loop back to Wait\n\n### ✅ Benefits:\n- ✨ Automatic retry until completion\n- 🤖 No manual intervention needed\n- 🚦 API-friendly (respects rate limits)\n- 📦 Reliable delivery\n- ⏰ Handles varying generation times\n\n\n*This polling continues until your video is successfully generated!*",
+        "height": 768,
+        "width": 608,
+        "color": 4
+      },
+      "id": "e76db2ef-b37c-43d1-9058-58da2ff8bd6f",
+      "name": "⏱️ Polling Explained",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2288,
+        608
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "# 💡 BEST PRACTICES & TIPS\n\n### 📝 Writing Great Prompts:\n\n**Be Specific:**\n❌ Bad: \"A cat\"\n✅ Good: \"A fluffy orange cat playing with yarn, slow motion, warm lighting\"\n\n**Include Details:**\n- Camera movement (pan, zoom, tilt)\n- Lighting (golden hour, studio, natural)\n- Style (cinematic, documentary, artistic)\n- Technical specs (4K, professional grading)\n\n**Example Prompts:**\n🎬 *\"Aerial drone shot of ocean waves crashing on beach at sunset, cinematic 4K\"*\n🎨 *\"Time-lapse of paint mixing on canvas, vibrant colors, macro close-up\"*\n🌟 *\"Northern lights dancing over snowy mountains, long exposure, wide shot\"*\n\n### 🎯 Quality Optimization:\n\n**Standard Quality:**\n- ⚡ Faster generation (30-60s)\n- 💰 Lower cost\n- ✅ Good for testing prompts\n- ✅ Perfect for social media\n\n**HD Quality:**\n- 🎬 Better output (60-120s)\n- 💎 Higher cost\n- ✅ Professional use\n- ✅ Best for final deliverables\n\n### 🖼️ Image-to-Video Tips:\n\n**Best Images:**\n- High resolution (min 1080p)\n- Clear subject focus\n- Good lighting\n- Interesting composition\n\n**Describe Motion:**\n- \"Camera slowly zooms in\"\n- \"Subject turns to face camera\"\n- \"Wind gently moving hair\"\n- \"Background slightly blurred\"\n",
+        "height": 1296,
+        "width": 636,
+        "color": 5
+      },
+      "id": "8bcd406e-7e7c-441c-b75d-7be38cc4e36c",
+      "name": "💡 Best Practices",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        3648,
+        272
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "operation": "sendVideo",
+        "chatId": "=YOUR_CHAT_ID",
+        "binaryData": true,
+        "additionalFields": {
+          "caption": "Here's your text to video ",
+          "parse_mode": "MarkdownV2"
+        }
+      },
+      "id": "2d5af1c1-d784-4a06-97a8-34548f365164",
+      "name": "Send  Text to Video",
+      "type": "n8n-nodes-base.telegram",
+      "position": [
+        3392,
+        368
+      ],
+      "webhookId": "de3fbdfe-5245-426b-8545-3f5cc56081ff",
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "operation": "sendVideo",
+        "chatId": "=YOUR_CHAT_ID",
+        "binaryData": true,
+        "additionalFields": {
+          "caption": "Here's your image to video ",
+          "parse_mode": "MarkdownV2"
+        }
+      },
+      "id": "52608b31-843b-441b-9402-c5e45b4e8c07",
+      "name": "Send Image to Video",
+      "type": "n8n-nodes-base.telegram",
+      "position": [
+        3408,
+        1392
+      ],
+      "webhookId": "de3fbdfe-5245-426b-8545-3f5cc56081ff",
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "content": "## تم التحضير بواسطة \n**م. أحمد الصيرفي**  \n\nللتعلّم وتطوير مهاراتك في الأتمتة، زور موقعنا: \n [ahmedelserafy.com](https://ahmedelserafy.com/automation_course)\n\n\n",
+        "width": 2480,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1808,
+        -16
+      ],
+      "typeVersion": 1,
+      "id": "46bc3dec-5b11-417c-adfd-d325f253e3de",
+      "name": "Sticky Note6"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Wait (Text)": {
+      "main": [
+        [
+          {
+            "node": "Check Status (Text)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait (Image)": {
+      "main": [
+        [
+          {
+            "node": "Check Status (Image)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TEXT TO VIDEO": {
+      "main": [
+        [
+          {
+            "node": "Wait (Text)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IMAGE TO VIDEO": {
+      "main": [
+        [
+          {
+            "node": "Wait (Image)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload to ImgBB": {
+      "main": [
+        [
+          {
+            "node": "IMAGE TO VIDEO",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Ready? (Text)": {
+      "main": [
+        [
+          {
+            "node": "Download Video (Text)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait (Text)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check: Has Image?": {
+      "main": [
+        [
+          {
+            "node": "TEXT TO VIDEO",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Upload to ImgBB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Ready? (Image)": {
+      "main": [
+        [
+          {
+            "node": "Download Video (Image)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait (Image)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Check: Has Image?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Status (Text)": {
+      "main": [
+        [
+          {
+            "node": "Is Ready? (Text)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Status (Image)": {
+      "main": [
+        [
+          {
+            "node": "Is Ready? (Image)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Video (Text)": {
+      "main": [
+        [
+          {
+            "node": "Send  Text to Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Video (Image)": {
+      "main": [
+        [
+          {
+            "node": "Send Image to Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "fd07815b-ce9a-4799-a3de-3f1d9c667c69",
+  "meta": {
+    "templateId": "9810",
+    "instanceId": "eb58054caf61c2552d4b13cc032edccc043473990c2938118b79640890b4e573"
+  },
+  "id": "gIbSM0XjdrsVsXjf",
+  "tags": []
+}

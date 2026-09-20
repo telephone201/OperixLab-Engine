@@ -1,0 +1,32 @@
+Extract the following order information from the Arabic message, which may contain multiple products:
+
+Return it in this JSON format:
+
+{
+  "items": [
+    { "product": "...", "quantity": "..." },
+    { "product": "...", "quantity": "..." }
+  ],
+  "address": "...",
+  "phone": "..."
+}
+
+If any field is missing, return it as an empty string or empty array.
+
+Message:
+{{ $('Webhook').item.json.body.entry[0].messaging[0].message.text }}
+
+
+
+
+
+لو العميل حب يعمل اوردر
+دي صيغة الطلب
+الرجاء كتابة البيانات التالية لإكمال الطلب:
+
+اوردر جديد
+New order
+المنتج: اكتب اسم المنتج
+الكمية: الكمية للمنتج ده
+العنوان: عنوانك
+الهاتف: رقم هاتفك

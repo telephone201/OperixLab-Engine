@@ -1,0 +1,21 @@
+// الوقت القادم من واتساب (بالثواني)
+const msgTime = Number($('Webhook wb').item.json.body.entry[0].changes[0].value.messages[0].timestamp);
+
+// الوقت الحالي بالثواني
+const now = Math.floor(Date.now() / 1000);
+
+// نضيف دقيقتين (120 ثانية)
+const msgTimePlus2Min = msgTime + 120;
+
+// نتحقق من الفرق
+const isOld = msgTimePlus2Min < now;
+
+// نرجّع النتيجة مع التفاصيل
+return [{
+  result: isOld,
+  msgTime: msgTime,
+  msgTimePlus2Min: msgTimePlus2Min,
+  now: now
+}];
+
+//لو رجع ترو يبقي الرساله قديمه متردش عليها

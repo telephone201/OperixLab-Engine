@@ -1,0 +1,13 @@
+url 
+////////////
+
+https://graph.instagram.com/v22.0/{{ $('Webhook').item.json.body.entry[0].changes[0].value.id }}/replies?access_token={{ $('Get row(s) in sheet').item.json['ig access token'] }}
+
+///////////
+
+send body
+Name : message 
+Value : {{ $json.Comment }}
+
+///////////////
+

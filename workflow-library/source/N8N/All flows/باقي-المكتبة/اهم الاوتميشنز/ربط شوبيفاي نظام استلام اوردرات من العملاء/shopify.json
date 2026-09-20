@@ -1,0 +1,300 @@
+{
+  "name": "shopify",
+  "nodes": [
+    {
+      "parameters": {
+        "public": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        112,
+        176
+      ],
+      "id": "2dcc318f-accb-476d-a913-dbddffe19230",
+      "name": "When chat message received",
+      "webhookId": "caaedf18-2815-4d59-a497-de2159867614"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "انت مساعد ذكي وخدمة عملاء فى متجر ملابس وظيفتك الرد على استفسارات العملاء على المنتجات التي نقدمها \nولمعرفة المنتجات استخدم اداة \nGet many products in Shopify\nعشان تجيب المنتجات\nممنوع ارسال ال Stock للعميل فهذا ليس من المفترض ان يعرف هذا الامر \nفقط يعرف اذا متاح او لا \n\nلو العميل هيطلب اوردر هتحتاج البيانات الاتيه\nاسم العميل \nالعنوان ( محافظة و مدينة و شارع )\nايميل العميل \nورقم الهاتف\nوالمنتجات بكمياتها \n\nوعشان تتم الاوردر هتبعت للتول \nHTTP Request To create shopify order\n هتبعت الكود بالشكل ده بعد تغييره\n\n\n{\n  \"order\": {\n    \"email\": \"customer@example.com\",\n    \"send_receipt\": true,\n    \"send_fulfillment_receipt\": false,\n    \"send_invoice\": true,\n    \"financial_status\": \"pending\",\n    \"currency\": \"EGP\",\n    \"line_items\": [\n      {\n        \"variant_id\": 47176511783099,\n        \"quantity\": 2\n      },\n      {\n        \"variant_id\": 47176511815867,\n        \"quantity\": 1\n      }\n    ],\n    \"shipping_address\": {\n      \"first_name\": \"Ahmed\",\n      \"last_name\": \"Elserafy\",\n      \"address1\": \"123 Nile Street\",\n      \"city\": \"Cairo\",\n      \"province\": \"Cairo\",\n      \"country\": \"Egypt\",\n      \"zip\": \"11511\",\n      \"phone\": \"+201234567890\"\n    },\n    \"billing_address\": {\n      \"first_name\": \"Ahmed\",\n      \"last_name\": \"Elserafy\",\n      \"address1\": \"123 Nile Street\",\n      \"city\": \"Cairo\",\n      \"province\": \"Cairo\",\n      \"country\": \"Egypt\",\n      \"zip\": \"11511\",\n      \"phone\": \"+201234567890\"\n    },\n    \"note\": \"\"\n  }\n}\n\n\nفى خانة ال Governorate لازم تكون بالانجليزية ومطابقة للاتي\nهتشوف هو من اي محافظة وتحط اسمها بالانجليزي كما هو موضح فى ال Array\nفى خانة province\ngovernorates = [\n  \"6th of October\",\n  \"Al Sharqia\",\n  \"Alexandria\",\n  \"Aswan\",\n  \"Asyut\",\n  \"Beheira\",\n  \"Beni Suef\",\n  \"Cairo\",\n  \"Dakahlia\",\n  \"Damietta\",\n  \"Faiyum\",\n  \"Gharbia\",\n  \"Giza\",\n  \"Helwan\",\n  \"Ismailia\",\n  \"Kafr el-Sheikh\",\n  \"Luxor\",\n  \"Matrouh\",\n  \"Minya\",\n  \"Monufia\",\n  \"New Valley\",\n  \"North Sinai\",\n  \"Port Said\",\n  \"Qalyubia\",\n  \"Qena\",\n  \"Red Sea\",\n  \"Sohag\",\n  \"South Sinai\",\n  \"Suez\"\n];\nوهتبعت الكود ده عشان تستخدمه فى JSON BODY فى الريكوست\nواذا فشل الانشاء حاول اكثر من مره قبل الرد على العميل\n\n------------\nفى النهاية ارسل للعميل \nOrder ID \norder name \nوانا هنا عايزك تبعت الا order id عشان لو سألك عن الاوردر بتاعه هتحتاجه وانت بتحبث عنه\nوباقى التفاصيل \nمثال للوردر id\nid:6429713760443\nمثال لل order name \nOrder Name: #1015\n\n\"response\": \n[\n{\n\"order\": \n{\n\"id\": \n6429718216891,}\n\nده id الى عايزك تبعته للعميل  وهو الرقم الطويل\nوكملن تيعت ال name للاوردر وهو الرقم المختصر\nيعني فى النهايه هتبعت الرقمين\n\n-----------\n\nاذا اراد الاستفسار عن الاوردر الخاص به \nستحتاج منه رقم الاوردر و رقم الهاتف\nستستخدم رقم الاوردر للاستعلام عن بيانات الاوردر\nوتتأكد ان رقم الهاتف مطابق لبيانات الاوردر حتي لا يصل الى بيانات اوردرات غير تابعه له \nوستستخدم Get an order in Shopify\n\n\n\n\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        384,
+        176
+      ],
+      "id": "366ded01-3f0e-4e80-9992-98af6f7df42f",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        192,
+        400
+      ],
+      "id": "aba870b2-5d08-4eac-8636-c62ce9a8b9d8",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "8Rc4S8y7BzAN030g",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "accessToken",
+        "resource": "product",
+        "operation": "getAll",
+        "returnAll": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Return_All', ``, 'boolean') }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.shopifyTool",
+      "typeVersion": 1,
+      "position": [
+        576,
+        400
+      ],
+      "id": "96992370-5137-438a-a60d-f5d244f7506b",
+      "name": "Get many products in Shopify",
+      "credentials": {
+        "shopifyAccessTokenApi": {
+          "id": "8ZY9JOV2TA9LHWHV",
+          "name": "Shopify Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.sessionId }}",
+        "contextWindowLength": 20
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        400,
+        400
+      ],
+      "id": "357d4eb2-4c8f-4643-bb46-fdaaea53b2ed",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "toolDescription": "HTTP Request To create shopify order",
+        "method": "POST",
+        "url": "https://yourstoreSubDomain.myshopify.com/admin/api/2025-10/orders.json",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Shopify-Access-Token",
+              "value": "your access token"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('JSON', ``, 'json') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "position": [
+        768,
+        384
+      ],
+      "id": "0ff9c3d5-a866-4cab-bc32-9f7b8a438b7a",
+      "name": "HTTP Request To create shopify order"
+    },
+    {
+      "parameters": {
+        "authentication": "accessToken",
+        "operation": "get",
+        "orderId": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Order_ID', ``, 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.shopifyTool",
+      "typeVersion": 1,
+      "position": [
+        944,
+        384
+      ],
+      "id": "78350863-8fc3-4711-85c7-d3085788f925",
+      "name": "Get an order in Shopify",
+      "credentials": {
+        "shopifyAccessTokenApi": {
+          "id": "8ZY9JOV2TA9LHWHV",
+          "name": "Shopify Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        144,
+        -96
+      ],
+      "id": "3b72d7d1-87b5-4d0d-8198-30f35c94b7cb",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://yourstoreSubDomain.myshopify.com/admin/api/2025-10/orders.json",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Shopify-Access-Token",
+              "value": "your access token"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"order\": {\n    \"email\": \"customer@example.com\",\n    \"send_receipt\": true,\n    \"send_fulfillment_receipt\": false,\n    \"send_invoice\": true,\n    \"financial_status\": \"pending\",\n    \"currency\": \"EGP\",\n    \"line_items\": [\n      {\n        \"variant_id\": 47176511783099,\n        \"quantity\": 1\n      },\n      {\n        \"variant_id\": 47176511815867,\n        \"quantity\": 1\n      }\n    ],\n    \"shipping_address\": {\n      \"first_name\": \"Ahmed\",\n      \"last_name\": \"Elserafy\",\n      \"address1\": \"123 Nile Street\",\n      \"city\": \"Cairo\",\n      \"province\": \"Cairo\",\n      \"country\": \"Egypt\",\n      \"zip\": \"11511\",\n      \"phone\": \"+201234567890\"\n    },\n    \"billing_address\": {\n      \"first_name\": \"Ahmed\",\n      \"last_name\": \"Elserafy\",\n      \"address1\": \"123 Nile Street\",\n      \"city\": \"Cairo\",\n      \"province\": \"Cairo\",\n      \"country\": \"Egypt\",\n      \"zip\": \"11511\",\n      \"phone\": \"+201234567890\"\n    },\n    \"note\": \"\"\n    \n  }\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        416,
+        -96
+      ],
+      "id": "06e96bd9-a7ee-4aee-9701-cd0899ee5405",
+      "name": "HTTP Request to create order"
+    },
+    {
+      "parameters": {
+        "content": "## تم الانشاء بواسطة \nتم الانشاء بواسطة **م. أحمد الصيرفي**  \n\nللتعلّم وتطوير مهاراتك في الأتمتة، زور موقعنا: \n [ahmedelserafy.com](https://ahmedelserafy.com/automation_course)\n\nهنا عاملك نظام انك تعمل اوردرات و تعرف العميل على المنتجات \nكل الي عليك ربط متجرك فقط\n\nوعندك ال http request كتيست لو عايز تعمل اوردر سايبهالك برضو\n",
+        "height": 288,
+        "width": 416
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        800,
+        -80
+      ],
+      "typeVersion": 1,
+      "id": "344e0ddd-f6c8-4c14-ae55-e72e9550761e",
+      "name": "Sticky Note"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many products in Shopify": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request To create shopify order": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get an order in Shopify": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request to create order",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "d444db77-18cf-475b-a7db-54273dc6cf69",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "36782c444ce5aae41028d69cea014c37360e3d4ecded75a6aaf89c591ae3c1b3"
+  },
+  "id": "Y3mfm9fwd2civ0iO",
+  "tags": []
+}
