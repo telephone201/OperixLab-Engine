@@ -1,3 +1,4 @@
+import { Requirement } from './requirement-types';
 /**
  * @file phase-7-verification-tests.ts
  * @description Verification suite for Phase 7: Requirements Extraction & Solution Specification.
@@ -83,7 +84,22 @@ export class Phase7VerificationSuite {
     }
 
     private async testPriorityLogic() {
-        const req = { type: 'FUNCTIONAL' as any };
+        const req: Requirement = {
+            id: 'req_test_priority',
+            analysisId: 'analysis_test_priority',
+            type: 'FUNCTIONAL',
+            title: 'Test requirement',
+            description: 'Test requirement for deterministic priority classification.',
+            priority: 'UNKNOWN',
+            certainty: 'CONFIRMED',
+            confidence: 1,
+            status: 'CANDIDATE',
+            humanActionRequired: false,
+            automationBoundary: 'AUTOMATABLE',
+            reasoning: 'Verification test requirement.',
+            version: 1,
+            evidence: []
+        };
         const resMust = this.classifier.classify(req, 'CRITICAL', 'STRONG');
         if (resMust.priority !== 'MUST') throw new Error(`Expected MUST, got ${resMust.priority}`);
 

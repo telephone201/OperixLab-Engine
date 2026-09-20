@@ -36,7 +36,6 @@ export class Phase11Step4Verify {
                 proposalId: propId,
                 eventType: EngagementEventType.PROPOSAL_OPENED,
                 channel: EngagementChannel.PROPOSAL_PORTAL,
-                userId: userId // Using userId as requestedBy if needed
             });
 
             if (event && event.eventType === EngagementEventType.PROPOSAL_OPENED) {
@@ -120,4 +119,3 @@ export class Phase11Step4Verify {
 }
 
 export const phase11Step4Verify = new Phase11Step4Verify();
-

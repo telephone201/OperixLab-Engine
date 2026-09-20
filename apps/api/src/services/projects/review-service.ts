@@ -95,7 +95,7 @@ export class ReviewService {
 
         await db.review_items.createMany({ data: items });
 
-        return items.map(i => this.mapToDomain(i));
+        return items.map(i => this.mapToDomainItem(i));
     }
 
     /**
@@ -163,13 +163,13 @@ export class ReviewService {
         decision: AcceptanceDecision;
         reason: string;
     }): Promise<AcceptanceRecord> {
-        const session = await db.review_sessions.findUnique({ where: { id: sessionId } });
+        const session = await db.review_sessions.findUnique({ where: { id: params.sessionId } });
         if (!session) throw new Error('REVIEW_SESSION_NOT_FOUND');
 
         // 1. Check for blocking findings
         const blockingFindings = await db.review_findings.count({
             where: {
-                review_session_id: sessionId,
+                review_session_id: params.sessionId,
                 status: { not: FindingStatus.RESOLVED },
                 severity: { in: ['HIGH', 'CRITICAL'] }
             }
@@ -183,13 +183,13 @@ export class ReviewService {
         const acceptanceId = `acc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
         // Calculate review hash (conceptual)
-        const reviewItems = await db.review_items.findMany({ where: { review_session_id: sessionId } });
+        const reviewItems = await db.review_items.findMany({ where: { review_session_id: params.sessionId } });
         const reviewHash = crypto.createHash('sha256').update(JSON.stringify(reviewItems)).digest('hex');
 
         const acceptance = await db.acceptance_records.create({
             data: {
                 id: acceptanceId,
-                review_session_id: sessionId,
+                review_session_id: params.sessionId,
                 project_id: session.project_id,
                 scope_baseline_id: session.scope_baseline_id,
                 delivery_plan_version_id: session.delivery_plan_version_id,
@@ -223,9 +223,27 @@ export class ReviewService {
             details: { decision: params.decision, reason: params.reason }
         });
 
-        return this.mapToDomain(acceptance);
+        return this.mapToDomainAcceptance(acceptance);
     }
 
+    private mapToDomainItem(item: any): ReviewItem {
+        return {
+            reviewItemId: item.id,
+            reviewSessionId: item.review_session_id,
+            scopeItemId: item.scope_item_id,
+            deliveryTaskId: item.delivery_task_id,
+            milestoneId: item.milestone_id,
+            title: item.title,
+            description: item.description,
+            expectedOutcome: item.expected_outcome,
+            status: item.status as ReviewItemStatus,
+            evidenceRequired: item.evidence_required,
+            evidenceReference: item.evidence_reference,
+            reviewerComment: item.reviewer_comment,
+            createdAt: item.created_at,
+            updatedAt: item.updated_at
+        };
+    }
     private mapToDomain(session: any): ReviewSession {
         return {
             reviewSessionId: session.id,
@@ -263,4 +281,3 @@ export class ReviewService {
 }
 
 export const reviewService = new ReviewService();
-

@@ -81,6 +81,7 @@ export interface ProposalGenerationInput {
     solutionVersionId: string;
     requirementsVersionId: string;
     painVersionId: string;
+    qualificationVersionId: string;
     pricingRecommendationId: string;
     offerOptionId: string;
     demoId?: string;
@@ -89,6 +90,7 @@ export interface ProposalGenerationInput {
 }
 
 export interface ProposalGenerationResult {
+    proposalId: string;
     proposalVersionId: string;
     status: ProposalStatus;
     content: ProposalContent;

@@ -4,7 +4,7 @@
  */
 
 import { db } from '../../lib/db';
-import { ProjectStatus, Project, ProjectStateTransition } from './types';
+import { ProjectStatus, Project, ProjectStateTransition, PaymentStatus } from './types';
 import { auditLogger } from '../../core/logging/audit-logger';
 
 export class ProjectService {
@@ -70,7 +70,7 @@ export class ProjectService {
         };
 
         // Note: Database uses 'READY_TO_START' as initial. Mapping to PENDING for logic.
-        const effectiveFrom = from === 'READY_TO_START' ? ProjectStatus.PENDING : from;
+        const effectiveFrom = (from as string) === 'READY_TO_START' ? ProjectStatus.PENDING : from;
 
         if (!allowed[effectiveFrom] || !allowed[effectiveFrom].includes(to)) {
             throw new Error(`INVALID_PROJECT_TRANSITION: Cannot move from ${effectiveFrom} to ${to}`);
@@ -99,4 +99,3 @@ export class ProjectService {
 }
 
 export const projectService = new ProjectService();
-

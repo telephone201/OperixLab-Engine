@@ -63,6 +63,22 @@ export class CommercialGovernanceService {
     }
 
     /**
+     * Checks if a proposal has been approved.
+     */
+    async verifyApproval(proposalId: string): Promise<{ approved: boolean }> {
+        const proposal = await db.proposals.findUnique({
+            where: { id: proposalId }
+        });
+
+        if (!proposal) {
+            return { approved: false };
+        }
+
+        return {
+            approved: proposal.status === ProposalStatus.APPROVED
+        };
+    }
+    /**
      * Checks if the commercial package is ready for the next phase.
      */
     async checkCommercialReadiness(commercialPackageId: string): Promise<any> {
@@ -71,4 +87,3 @@ export class CommercialGovernanceService {
 }
 
 export const commercialGovernanceService = new CommercialGovernanceService();
-

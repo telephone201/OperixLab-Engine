@@ -9,7 +9,7 @@ export interface PaymentProvider {
     /**
      * Returns the payment destinations configured for this provider.
      */
-    async getPaymentDestinations(): Promise<{
+    getPaymentDestinations(): Promise<{
         identifier: string;
         url: string;
         instructions?: string;
@@ -18,5 +18,5 @@ export interface PaymentProvider {
     /**
      * Returns the expected amount for a specific payment purpose based on the agreement.
      */
-    async calculateExpectedAmount(agreementId: string, purpose: string): Promise<number>;
+    calculateExpectedAmount(agreementId: string, purpose: string): Promise<number>;
 }

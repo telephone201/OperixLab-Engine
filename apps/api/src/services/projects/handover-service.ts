@@ -106,7 +106,7 @@ export class HandoverService {
 
         await db.handover_items.createMany({ data: items });
 
-        return items.map(i => this.mapToDomain(i));
+        return items.map(i => this.mapToDomainItem(i));
     }
 
     /**
@@ -205,7 +205,7 @@ export class HandoverService {
             }
         });
 
-        return this.mapToDomain(readiness);
+        return this.mapToDomainReadiness(readiness);
     }
 
     /**
@@ -297,4 +297,3 @@ export class HandoverService {
 }
 
 export const handoverService = new HandoverService();
-

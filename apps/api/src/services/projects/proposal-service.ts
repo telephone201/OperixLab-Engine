@@ -35,39 +35,57 @@ export class ProposalService {
         return await db.$transaction(async (tx) => {
             const proposalId = `prop_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-            const proposal = await tx.proposals.create({
-                data: {
-                    id: proposalId,
-                    commercial_package_id: params.commercialPackageId,
-                    status: ProposalStatus.GENERATED,
-                    version: 1,
-                    created_by: 'system', // In real impl, use userId
-                    created_at: new Date()
-                }
-            });
+            const proposalResult = await tx.query(
+                `INSERT INTO "proposals"
+                ("id", "commercial_package_id", "status", "version", "created_by", "created_at")
+                VALUES ($1, $2, $3, $4, $5, $6)
+                RETURNING *`,
+                [
+                    proposalId,
+                    params.commercialPackageId,
+                    ProposalStatus.GENERATED,
+                    1,
+                    'system',
+                    new Date()
+                ]
+            );
+
+            const proposal = proposalResult.rows[0];
 
             const contentString = JSON.stringify(content);
             const contentHash = crypto.createHash('sha256').update(contentString).digest('hex');
 
-            const version = await tx.proposal_versions.create({
-                data: {
-                    id: `pv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                    proposal_id: proposalId,
-                    version_number: 1,
-                    commercial_package_id: params.commercialPackageId,
-                    pricing_recommendation_id: params.pricingRecommendationId,
-                    offer_option_id: params.offerOptionId,
-                    solution_version_id: params.solutionVersionId,
-                    requirements_version_id: params.requirementsVersionId,
-                    pain_analysis_version_id: params.painVersionId,
-                    qualification_version_id: params.qualificationVersionId,
-                    content: content,
-                    content_hash: contentHash,
-                    status: ProposalStatus.GENERATED,
-                    created_by: 'system',
-                    created_at: new Date()
-                }
-            });
+            const proposalVersionId = `pv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+            const versionResult = await tx.query(
+                `INSERT INTO "proposal_versions"
+                ("id", "proposal_id", "version_number", "commercial_package_id",
+                 "pricing_recommendation_id", "offer_option_id", "solution_version_id",
+                 "requirements_version_id", "pain_analysis_version_id",
+                 "qualification_version_id", "content", "content_hash",
+                 "status", "created_by", "created_at")
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+                RETURNING *`,
+                [
+                    proposalVersionId,
+                    proposalId,
+                    1,
+                    params.commercialPackageId,
+                    params.pricingRecommendationId,
+                    params.offerOptionId,
+                    params.solutionVersionId,
+                    params.requirementsVersionId,
+                    params.painVersionId,
+                    params.qualificationVersionId,
+                    content,
+                    contentHash,
+                    ProposalStatus.GENERATED,
+                    'system',
+                    new Date()
+                ]
+            );
+
+            const version = versionResult.rows[0];
 
             await auditLogger.log({
                 action: 'PROPOSAL_GENERATED',
@@ -77,6 +95,7 @@ export class ProposalService {
             });
 
             return {
+                proposalId,
                 proposalVersionId: version.id,
                 status: ProposalStatus.GENERATED,
                 content: content
@@ -126,4 +145,3 @@ export class ProposalService {
 }
 
 export const proposalService = new ProposalService();
-

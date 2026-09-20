@@ -5,6 +5,7 @@
 
 import { proposalService } from './proposal-service';
 import { ProposalStatus } from './proposal-types';
+import { BillingCycle } from './commercial-types';
 import { commercialFoundationService } from './commercial-foundation-service';
 import { db } from '../../lib/db';
 
@@ -42,7 +43,7 @@ export class Phase11Step2Verify {
                 setupFee: 5000,
                 recurringFee: 1000,
                 userId,
-                billingCycle: 'MONTHLY',
+                billingCycle: BillingCycle.MONTHLY,
                 includedScope: ['req_1'],
                 optionalScope: ['req_2'],
                 outOfScope: ['req_3']
@@ -56,6 +57,7 @@ export class Phase11Step2Verify {
                 solutionVersionId: solVerId,
                 requirementsVersionId: 'req_ver_123',
                 painVersionId: 'pain_ver_123',
+                qualificationVersionId: 'qual_ver_123',
                 pricingRecommendationId: pricing.pricingId,
                 offerOptionId: offer.offerId,
                 terms: 'Standard terms',
@@ -92,6 +94,7 @@ export class Phase11Step2Verify {
                 solutionVersionId: solVerId,
                 requirementsVersionId: 'req_ver_123',
                 painVersionId: 'pain_ver_123',
+                qualificationVersionId: 'qual_ver_123',
                 pricingRecommendationId: pricing.pricingId,
                 offerOptionId: offer.offerId,
                 terms: 'Include secret: API_KEY_12345',
@@ -131,4 +134,3 @@ export class Phase11Step2Verify {
 }
 
 export const phase11Step2Verify = new Phase11Step2Verify();
-

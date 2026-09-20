@@ -113,7 +113,7 @@ export class CommercialFoundationService {
             details: { commercialPackageId: params.commercialPackageId }
         });
 
-        return this.mapToDomain(pricing);
+        return this.mapToDomainPricing(pricing);
     }
 
     /**
@@ -161,7 +161,7 @@ export class CommercialFoundationService {
             details: { commercialPackageId: params.commercialPackageId }
         });
 
-        return this.mapToDomain(offer);
+        return this.mapToDomainOffer(offer);
     }
 
     async getCommercialPackage(id: string): Promise<CommercialPackage> {

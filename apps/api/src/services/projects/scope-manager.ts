@@ -59,36 +59,54 @@ export class ScopeManager {
             details: { projectId: params.projectId }
         });
 
-        return this.mapToDomain(confirmation);
+        return this.mapConfirmationToDomain(confirmation);
     }
 
     /**
      * Snapshots requirements into the confirmation.
      */
-    async snapshotRequirements(confirmationId: string, userId: string, items: {
-        requirementId: string,
-        classification: ScopeClassification,
-        priority: string,
-        reason?: string
-    }[]): Promise<void> {
-        const confirmation = await db.requirements_confirmations.findUnique({ where: { id: confirmationId } });
-        if (!confirmation) throw new Error('CONFIRMATION_NOT_FOUND');
+    async snapshotRequirements(
+        confirmationId: string,
+        userId: string,
+        items: {
+            requirementId: string;
+            classification: ScopeClassification;
+            priority: string;
+            reason?: string;
+        }[]
+    ): Promise<void> {
+        const confirmation = await db.requirements_confirmations.findUnique({
+            where: { id: confirmationId }
+        });
 
-        // Use a transaction to clear and rebuild snapshot items
-        await db.$transaction([
-            db.requirements_confirmation_items.deleteMany({ where: { confirmation_id: confirmationId } }),
-            db.requirements_confirmation_items.createMany({
-                data: items.map(item => ({
-                    id: `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                    confirmation_id: confirmationId,
-                    requirement_id: item.requirementId,
-                    classification: item.classification,
-                    priority: item.priority,
-                    reason: item.reason,
-                    created_at: new Date()
-                }))
-            })
-        ]);
+        if (!confirmation) {
+            throw new Error('CONFIRMATION_NOT_FOUND');
+        }
+
+        // The custom db transaction API accepts a callback, not an array.
+        await db.$transaction(async (tx) => {
+            await tx.query(
+                'DELETE FROM "requirements_confirmation_items" WHERE "confirmation_id" = $1',
+                [confirmationId]
+            );
+
+            for (const item of items) {
+                await tx.query(
+                    `INSERT INTO "requirements_confirmation_items"
+                    ("id", "confirmation_id", "requirement_id", "classification", "priority", "reason", "created_at")
+                    VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+                    [
+                        `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                        confirmationId,
+                        item.requirementId,
+                        item.classification,
+                        item.priority,
+                        item.reason ?? null,
+                        new Date()
+                    ]
+                );
+            }
+        });
 
         await auditLogger.log({
             action: 'REQUIREMENTS_SNAPSHOT_CREATED',
@@ -102,8 +120,13 @@ export class ScopeManager {
      * Confirms the scope baseline.
      */
     async confirmScope(confirmationId: string, userId: string): Promise<ScopeBaseline> {
-        const confirmation = await db.requirements_confirmations.findUnique({ where: { id: confirmationId } });
-        if (!confirmation) throw new Error('CONFIRMATION_NOT_FOUND');
+        const confirmation = await db.requirements_confirmations.findUnique({
+            where: { id: confirmationId }
+        });
+
+        if (!confirmation) {
+            throw new Error('CONFIRMATION_NOT_FOUND');
+        }
 
         // 1. Validation
         await this.validateConfirmation(confirmationId);
@@ -111,10 +134,14 @@ export class ScopeManager {
         // 2. Create Immutable Scope Baseline
         const baselineId = `base_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-        const items = await db.requirements_confirmation_items.findMany({ where: { confirmation_id: confirmationId } });
+        const items = await db.requirements_confirmation_items.findMany({
+            where: { confirmation_id: confirmationId }
+        });
 
         // Generate Hash for the baseline
-        const contentString = JSON.stringify(items.sort((a, b) => a.requirement_id.localeCompare(b.requirement_id)));
+        const contentString = JSON.stringify(
+            items.sort((a, b) => a.requirement_id.localeCompare(b.requirement_id))
+        );
         const contentHash = crypto.createHash('sha256').update(contentString).digest('hex');
 
         const baseline = await db.scope_baselines.create({
@@ -129,7 +156,8 @@ export class ScopeManager {
                 created_by: userId,
                 confirmed_by: userId,
                 confirmed_at: new Date(),
-                content_hash: contentHash
+                content_hash: contentHash,
+                created_at: new Date()
             }
         });
 
@@ -148,7 +176,11 @@ export class ScopeManager {
         // 4. Update Confirmation Status
         await db.requirements_confirmations.update({
             where: { id: confirmationId },
-            data: { status: ConfirmationStatus.CONFIRMED, confirmed_by: userId, confirmed_at: new Date() }
+            data: {
+                status: ConfirmationStatus.CONFIRMED,
+                confirmed_by: userId,
+                confirmed_at: new Date()
+            }
         });
 
         await auditLogger.log({
@@ -158,21 +190,47 @@ export class ScopeManager {
             details: { hash: contentHash }
         });
 
-        return this.mapToDomain(baseline);
+        return this.mapBaselineToDomain(baseline);
     }
 
     private async validateConfirmation(confirmationId: string) {
-        const items = await db.requirements_confirmation_items.findMany({ where: { confirmation_id: confirmationId } });
+        const items = await db.requirements_confirmation_items.findMany({
+            where: { confirmation_id: confirmationId }
+        });
 
-        if (items.length === 0) throw new Error('CONFIRMATION_BLOCKED: No requirements captured in snapshot.');
+        if (items.length === 0) {
+            throw new Error('CONFIRMATION_BLOCKED: No requirements captured in snapshot.');
+        }
 
-        const unresolved = items.filter(i => i.classification === ScopeClassification.UNRESOLVED);
+        const unresolved = items.filter(
+            i => i.classification === ScopeClassification.UNRESOLVED
+        );
+
         if (unresolved.length > 0) {
-            throw new Error(`CONFIRMATION_BLOCKED: ${unresolved.length} unresolved requirements must be clarified.`);
+            throw new Error(
+                `CONFIRMATION_BLOCKED: ${unresolved.length} unresolved requirements must be clarified.`
+            );
         }
     }
 
-    private mapToDomain(baseline: any): ScopeBaseline {
+    private mapConfirmationToDomain(confirmation: any): RequirementsConfirmation {
+        return {
+            confirmationId: confirmation.id,
+            projectId: confirmation.project_id,
+            solutionArchitectureId: confirmation.solution_architecture_id,
+            solutionVersionId: confirmation.solution_version_id,
+            requirementsVersionId: confirmation.requirements_version_id,
+            deliveryPlanVersionId: confirmation.delivery_plan_version_id,
+            confirmationVersion: confirmation.confirmation_version,
+            status: confirmation.status as ConfirmationStatus,
+            confirmedBy: confirmation.confirmed_by,
+            confirmedAt: confirmation.confirmed_at,
+            createdAt: confirmation.created_at,
+            updatedAt: confirmation.updated_at
+        };
+    }
+
+    private mapBaselineToDomain(baseline: any): ScopeBaseline {
         return {
             scopeBaselineId: baseline.id,
             projectId: baseline.project_id,
@@ -182,6 +240,7 @@ export class ScopeManager {
             version: baseline.version,
             status: baseline.status as ScopeBaselineStatus,
             createdBy: baseline.created_by,
+            createdAt: baseline.created_at,
             confirmedBy: baseline.confirmed_by,
             confirmedAt: baseline.confirmed_at,
             supersededAt: baseline.superseded_at,
@@ -230,10 +289,14 @@ export class ScopeManager {
             details: { classification: params.classification }
         });
 
-        return this.mapToDomain(cr);
+        return this.mapChangeRequestToDomain(cr);
     }
 
-    async performImpactAnalysis(crId: string, analystId: string, analysis: ImpactAnalysis): Promise<void> {
+    async performImpactAnalysis(
+        crId: string,
+        analystId: string,
+        analysis: ImpactAnalysis
+    ): Promise<void> {
         await db.change_request_impact_analysis.create({
             data: {
                 id: `ana_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -274,15 +337,28 @@ export class ScopeManager {
         });
     }
 
-    async approveChangeRequest(crId: string, userId: string, reason: string): Promise<void> {
-        const cr = await db.change_requests.findUnique({ where: { id: crId } });
-        if (!cr) throw new Error('CHANGE_REQUEST_NOT_FOUND');
-        if (cr.status !== ChangeRequestStatus.SUBMITTED && cr.status !== ChangeRequestStatus.IMPACT_ANALYZED) {
+    async approveChangeRequest(
+        crId: string,
+        userId: string,
+        reason: string
+    ): Promise<void> {
+        const cr = await db.change_requests.findUnique({
+            where: { id: crId }
+        });
+
+        if (!cr) {
+            throw new Error('CHANGE_REQUEST_NOT_FOUND');
+        }
+
+        if (
+            cr.status !== ChangeRequestStatus.SUBMITTED &&
+            cr.status !== ChangeRequestStatus.IMPACT_ANALYZED
+        ) {
             throw new Error('INVALID_CR_STATUS_FOR_APPROVAL');
         }
 
         // Governance: Use HumanApprovalService for formal sign-off
-        const appId = await humanApprovalService.requestApproval({
+        await humanApprovalService.requestApproval({
             entityId: crId,
             entityType: 'ChangeRequest',
             approvalType: 'CHANGE_REQUEST' as any,
@@ -308,7 +384,7 @@ export class ScopeManager {
         });
     }
 
-    private mapToDomain(cr: any): ChangeRequest {
+    private mapChangeRequestToDomain(cr: any): ChangeRequest {
         return {
             changeRequestId: cr.id,
             projectId: cr.project_id,
@@ -337,4 +413,3 @@ export class ScopeManager {
 }
 
 export const scopeManager = new ScopeManager();
-

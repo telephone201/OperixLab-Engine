@@ -11,7 +11,10 @@ export interface ResearchGap {
 }
 
 export class ResearchGapAnalyzer {
-    private criticalFields = [
+    private criticalFields: Array<{
+        name: string;
+        priority: 'LOW' | 'MEDIUM' | 'HIGH';
+    }> = [
         { name: 'decision_maker', priority: 'HIGH' },
         { name: 'business_model', priority: 'HIGH' },
         { name: 'crm_system', priority: 'MEDIUM' },

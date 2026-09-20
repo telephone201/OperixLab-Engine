@@ -77,7 +77,7 @@ export class RequirementsAnalysisService {
             qualificationVersionId: 'q_1',
             painAnalysisVersionId: painAnalysis.id,
             analysisVersion: 1,
-            status: 'DRAFT',
+            status: 'VALIDATED',
             overallCompleteness: 0.8,
             overallConfidence: 0.7,
             requirements: validatedRequirements,
@@ -108,4 +108,3 @@ export class RequirementsAnalysisService {
         }];
     }
 }
-

@@ -4,7 +4,7 @@
  */
 
 import { commercialFoundationService } from './commercial-foundation-service';
-import { CommercialPackageStatus, PricingStatus, OfferStatus } from './commercial-types';
+import { CommercialPackageStatus, PricingStatus, OfferStatus, BillingCycle } from './commercial-types';
 import { db } from '../../lib/db';
 
 export class Phase11Step1Verify {
@@ -59,7 +59,7 @@ export class Phase11Step1Verify {
                 setupFee: 2000,
                 recurringFee: 500,
                 userId,
-                billingCycle: 'MONTHLY',
+                billingCycle: BillingCycle.MONTHLY,
                 includedScope: ['req_1', 'req_2'],
                 optionalScope: ['req_3'],
                 outOfScope: ['req_4']
@@ -95,4 +95,3 @@ export class Phase11Step1Verify {
 }
 
 export const phase11Step1Verify = new Phase11Step1Verify();
-
