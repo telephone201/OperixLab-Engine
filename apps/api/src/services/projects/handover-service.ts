@@ -129,8 +129,11 @@ export class HandoverService {
             );
 
             if (result.rowCount !== 1) {
-                const item = await db.handover_items.findUnique({ where: { id: itemId } });
-                if (!item) {
+                const itemResult = await client.query(
+                    'SELECT id FROM handover_items WHERE id = $1',
+                    [itemId]
+                );
+                if (itemResult.rowCount !== 1) {
                     throw new Error('HANDOVER_ITEM_NOT_FOUND');
                 }
                 throw new Error('HANDOVER_ITEM_CONFLICT: Item has already been completed or changed.');
