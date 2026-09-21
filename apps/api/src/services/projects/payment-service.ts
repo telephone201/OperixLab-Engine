@@ -32,7 +32,7 @@ export class PaymentService {
                 expected_amount: params.expectedAmount,
                 currency: params.currency,
                 purpose: params.purpose,
-                status: 'PENDING',
+                status: PaymentStatus.REQUIRED,
                 created_at: new Date(),
                 updated_at: new Date()
             }
