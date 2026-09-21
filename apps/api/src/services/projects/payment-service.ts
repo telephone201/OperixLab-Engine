@@ -4,7 +4,7 @@
  */
 
 import { db } from '../../lib/db';
-import { Payment, PaymentPurpose, PaymentReadinessStatus } from './payment-types';
+import { Payment, PaymentPurpose } from './payment-types';
 import { PaymentStatus } from './types';
 import { manualInstaPayProvider } from './manual-instapay-provider';
 import { auditLogger } from '../../core/logging/audit-logger';
@@ -73,8 +73,8 @@ export class PaymentService {
             }
         });
 
-        // Note: status remains PENDING or moves to PENDING_VERIFICATION if that were a status
-        // We keep it as PENDING until Human Verification happens.
+        // Note: submission does not change the payment status.
+        // The payment remains REQUIRED until Human Verification changes it to VERIFIED or PARTIAL.
 
         await auditLogger.log({
             action: 'PAYMENT_SUBMITTED',
