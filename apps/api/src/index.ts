@@ -12,7 +12,7 @@ import { ConfigurationManager } from './config/config-manager';
 const app = express();
 const config = new ConfigurationManager();
 
-const PORT = config.get('PORT') || 3000;
+const PORT = config.get('port') || 3000;
 
 // 1. Middleware
 app.use(cors()); // Enable CORS for frontend access
@@ -44,5 +44,5 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 
 app.listen(PORT, () => {
     console.log(`🚀 Operix API running on http://localhost:${PORT}`);
-    console.log(`Environment: ${config.get('NODE_ENV')}`);
+    console.log(`Environment: ${config.get('nodeEnv')}`);
 });

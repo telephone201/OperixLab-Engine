@@ -3,12 +3,12 @@
  * @description Orchestrates the pain analysis pipeline from evidence to structured intelligence.
  */
 
-import { Pain, PainAnalysis, PainType, EvidenceLevel, PainStatus } from './pain-types';
-import { PainPromptGenerator } from './pain-prompt-generator';
+import { Pain, PainAnalysis, PainType, EvidenceLevel, PainStatus, PainPriority } from './pain-types';
+import { PainAnalysisPromptGenerator } from './pain-prompt-generator';
 import { auditLogger } from '../../core/logging/audit-logger';
 
 export class PainAnalysisService {
-    private promptGenerator = new PainPromptGenerator();
+    private promptGenerator = new PainAnalysisPromptGenerator();
 
     /**
      * Initiates a new pain analysis for a lead.

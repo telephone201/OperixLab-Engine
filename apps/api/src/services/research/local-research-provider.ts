@@ -3,9 +3,9 @@
  * @description Performs safe, lightweight website research to extract identity and tech signals.
  */
 
-import { ResearchProvider, ResearchData, ResearchRequest, ProviderResult } from '../../providers/provider-interfaces';
+import { IResearchProvider, ResearchData, ResearchRequest, ProviderResult } from '../../providers/provider-interfaces';
 
-export class LocalResearchProvider implements ResearchProvider {
+export class LocalResearchProvider implements IResearchProvider {
     name = 'LocalResearchProvider';
 
     async research(request: ResearchRequest): Promise<ProviderResult<ResearchData>> {
@@ -37,4 +37,3 @@ export class LocalResearchProvider implements ResearchProvider {
 }
 
 export const localResearchProvider = new LocalResearchProvider();
-

@@ -62,7 +62,7 @@ export class CommercialApprovalGate {
     /**
      * Verifies if a specific artifact (Pricing or Proposal) is authorized for use.
      */
-    async isArtifactAuthorized(entityId: string, type: 'PRICING' | 'PROPOSAL'): { authorized: boolean, reason?: string } {
+    async isArtifactAuthorized(entityId: string, type: 'PRICING' | 'PROPOSAL'): Promise<{ authorized: boolean; reason?: string }> {
         const approvalType = type === 'PRICING' ? ApprovalType.PRICING : ApprovalType.PROPOSAL;
 
         return await approvalGate.isAuthorized(entityId, approvalType, {});

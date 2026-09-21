@@ -6,10 +6,7 @@
 
 import { Request, Response } from 'express';
 import { db } from '../lib/db';
-import {
-    commercialFoundationService,
-    CommercialPackageStatus
-} from '../services/projects/commercial-foundation-service';
+import { commercialFoundationService } from '../services/projects/commercial-foundation-service';
 import { proposalService } from '../services/projects/proposal-service';
 import { commercialGovernanceService } from '../services/projects/commercial-governance-service';
 import { commercialStalenessService } from '../services/projects/commercial-staleness-service';
@@ -22,29 +19,34 @@ export class CommercialController {
     async getCommercialPipeline(req: Request, res: Response) {
         try {
             const packages = await db.commercial_packages.findMany({
-                include: {
-                    lead: true,
-                    company: true
-                },
                 orderBy: { created_at: 'desc' }
             });
 
-            return res.json({
-                data: packages.map(pkg => ({
-                    commercialPackageId: pkg.id,
-                    leadId: pkg.lead_id,
-                    companyName: pkg.company?.name || 'Unknown Company',
-                    status: pkg.status,
-                    updatedAt: pkg.updated_at
-                }))
-            });
+            const data = await Promise.all(
+                packages.map(async (pkg) => {
+                    const company = pkg.company_id
+                        ? await db.companies.findUnique({
+                            where: { id: pkg.company_id }
+                        })
+                        : null;
+
+                    return {
+                        commercialPackageId: pkg.id,
+                        leadId: pkg.lead_id,
+                        companyName: company?.name || 'Unknown Company',
+                        status: pkg.status,
+                        updatedAt: pkg.updated_at
+                    };
+                })
+            );
+
+            return res.json({ data });
         } catch (error: any) {
             return res.status(500).json({
                 error: { code: 'INTERNAL_ERROR', message: error.message }
             });
         }
     }
-
     /**
      * GET /api/commercial/leads/:leadId
      * Fetches the full commercial context for a lead.

@@ -17,7 +17,7 @@ export class AcquisitionController {
             // The service currently has import methods but not a generic 'list' method.
             // We retrieve from the db.leads table directly via the db client.
             const leads = await db.leads.findMany({
-                take: 100, // Safe default pagination
+                take: 100,
                 orderBy: { created_at: 'desc' }
             });
 
@@ -36,12 +36,9 @@ export class AcquisitionController {
     async getLeadById(req: Request, res: Response) {
         try {
             const { id } = req.params;
+
             const lead = await db.leads.findUnique({
-                where: { id },
-                include: {
-                    company: true,
-                    contact: true
-                }
+                where: { id }
             });
 
             if (!lead) {
@@ -50,7 +47,24 @@ export class AcquisitionController {
                 });
             }
 
-            return res.json({ data: lead });
+            const companyId = (lead as any).company_id;
+            const contactId = (lead as any).contact_id;
+
+            const company = companyId
+                ? await db.companies.findUnique({ where: { id: companyId } })
+                : null;
+
+            const contact = contactId
+                ? await db.contacts.findUnique({ where: { id: contactId } })
+                : null;
+
+            return res.json({
+                data: {
+                    ...lead,
+                    company,
+                    contact
+                }
+            });
         } catch (error: any) {
             return res.status(500).json({
                 error: { code: 'INTERNAL_ERROR', message: error.message }

@@ -1,3 +1,4 @@
+import path from 'path';
 /**
  * @file n8n-parser.ts
  * @description Deterministic parser for n8n workflow JSONs.
@@ -36,7 +37,6 @@ export class N8NParser {
         'n8n-nodes-base.httpRequest': 'HTTP Request',
         'n8n-nodes-base.cron': 'Cron/Schedule',
         'n8n-nodes-base.openai': 'OpenAI',
-        'n8n-nodes-base.httpRequest': 'API/Webhook',
         'n8n-nodes-base.postgres': 'PostgreSQL',
         'n8n-nodes-base.mysql': 'MySQL',
         'n8n-nodes-base.mongoDb': 'MongoDB',

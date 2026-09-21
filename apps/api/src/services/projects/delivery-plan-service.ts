@@ -42,7 +42,7 @@ export class DeliveryPlanService {
         // 3. Generate Components via Planner
         // For a real impl, we'd fetch the OriginType from the version service
         const originType = 'REUSED' as any; // Simplified for Step 3; in full we fetch this
-        const components = deliveryPlanner.generatePlanComponents({ ...params, originType: originType as any }, originType);
+        const components = deliveryPlanner.generatePlanComponents(params, originType);
 
         // 4. Persistence (Simplified for this step, assuming tables exist)
         const planId = `plan_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -55,7 +55,7 @@ export class DeliveryPlanService {
                 solutionVersionId: params.solutionVersionId,
                 workflowVersionId: params.workflowVersionId,
                 planVersion: 1,
-                status: 'ACTIVE',
+                status: DeliveryPlanStatus.ACTIVE,
                 planningRulesVersion: deliveryPlanner.getRulesVersion(),
                 createdBy: params.userId,
                 createdAt: new Date(),
@@ -83,7 +83,7 @@ export class DeliveryPlanService {
             solutionVersionId: params.solutionVersionId,
             workflowVersionId: params.workflowVersionId,
             planVersion: 1,
-            status: 'ACTIVE',
+            status: DeliveryPlanStatus.ACTIVE,
             planningRulesVersion: deliveryPlanner.getRulesVersion(),
             createdAt: new Date(),
             updatedAt: new Date(),

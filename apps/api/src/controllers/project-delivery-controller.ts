@@ -20,9 +20,6 @@ export class ProjectDeliveryController {
     async getProjects(req: Request, res: Response) {
         try {
             const projects = await db.projects.findMany({
-                include: {
-                    // Lead/Company relations if they exist in schema
-                },
                 orderBy: { created_at: 'desc' }
             });
 
@@ -49,7 +46,7 @@ export class ProjectDeliveryController {
      */
     async getProjectDetail(req: Request, res: Response) {
         try {
-            const { projectId } = req.params;
+            const projectId = String(req.params.projectId);
             const project = await projectService.getProject(projectId);
 
             // Gather aggregated delivery data
@@ -84,7 +81,7 @@ export class ProjectDeliveryController {
      */
     async getDeliveryPlan(req: Request, res: Response) {
         try {
-            const { projectId } = req.params;
+            const projectId = String(req.params.projectId);
             const plan = await db.delivery_plans.findFirst({ where: { project_id: projectId, status: 'ACTIVE' } });
 
             if (!plan) {
@@ -123,7 +120,7 @@ export class ProjectDeliveryController {
      */
     async getScope(req: Request, res: Response) {
         try {
-            const { projectId } = req.params;
+            const projectId = String(req.params.projectId);
             const baseline = await db.scope_baselines.findFirst({
                 where: { project_id: projectId },
                 orderBy: { version: 'desc' }
@@ -164,7 +161,7 @@ export class ProjectDeliveryController {
      */
     async getReviewSession(req: Request, res: Response) {
         try {
-            const { projectId } = req.params;
+            const projectId = String(req.params.projectId);
             const session = await db.review_sessions.findFirst({
                 where: { project_id: projectId },
                 orderBy: { review_version: 'desc' }
@@ -201,7 +198,7 @@ export class ProjectDeliveryController {
      */
     async getHandover(req: Request, res: Response) {
         try {
-            const { projectId } = req.params;
+            const projectId = String(req.params.projectId);
             const handover = await db.handovers.findFirst({
                 where: { project_id: projectId },
                 orderBy: { handover_version: 'desc' }
@@ -237,7 +234,17 @@ export class ProjectDeliveryController {
     async transitionProject(req: Request, res: Response) {
         try {
             const { projectId, toState, reason, actorId } = req.body;
-            await projectService.transitionState({ projectId, toState, reason, actorId });
+
+            const project = await projectService.getProject(String(projectId));
+
+            await projectService.transitionState({
+                projectId: String(projectId),
+                fromState: project.status,
+                toState,
+                reason,
+                actorId
+            });
+
             return res.json({ data: { status: 'TRANSITIONED', newState: toState } });
         } catch (error: any) {
             return res.status(400).json({

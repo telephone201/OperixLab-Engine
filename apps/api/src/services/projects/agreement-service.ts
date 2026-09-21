@@ -34,8 +34,8 @@ export class AgreementService {
         createdBy: string;
     }): Promise<CommercialAgreement> {
         // 1. Agreement Approval Gate: Ensure source is approved and not stale
-        const gateCheck = await commercialApprovalGate.checkApproval(params.proposalVersionId);
-        if (!gateCheck.approved) {
+        const gateCheck = await commercialApprovalGate.isArtifactAuthorized(params.proposalVersionId, 'PROPOSAL');
+        if (!gateCheck.authorized) {
             throw new Error(`AGREEMENT_BLOCKED: Proposal ${params.proposalVersionId} is not approved or is stale.`);
         }
 

@@ -55,7 +55,7 @@ async function run() {
                     [file, "checksum_placeholder"]
                 );
                 await testPool.query("COMMIT");
-            } catch (e) {
+            } catch (e: any) {
                 await testPool.query("ROLLBACK");
                 console.error(`[FAIL] Migration ${file} failed: ${e.message}`);
                 process.exit(1);
@@ -74,7 +74,7 @@ async function run() {
         }
 
         await testPool.end();
-    } catch (e) {
+    } catch (e: any) {
         console.error(`[FATAL] ${e.message}`);
         process.exit(1);
     } finally {

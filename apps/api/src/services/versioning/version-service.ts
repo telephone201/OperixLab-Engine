@@ -6,7 +6,7 @@
 import { db } from '../../lib/db';
 import { artifactService } from './artifact-service';
 import { hashService } from './hash-service';
-import { auditLogger } from '../core\logging\audit-logger';
+import { auditLogger } from '../../core/logging/audit-logger';
 
 export enum VersionStatus {
     DRAFT = 'DRAFT',
@@ -169,5 +169,3 @@ export class WorkflowVersionService {
 }
 
 export const workflowVersionService = new WorkflowVersionService();
-
-

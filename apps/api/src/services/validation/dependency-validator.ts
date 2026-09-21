@@ -22,7 +22,8 @@ export class DependencyValidator {
             // e.g., { "credentials": { "crmApi": { "id": "..." } } }
             if (params.credentials) {
                 for (const [credName, credValue] of Object.entries(params.credentials)) {
-                    if (!credValue || typeof credValue !== 'object' || !credValue.id) {
+                    const credential = credValue as { id?: unknown } | null;
+                    if (!credential || typeof credential !== 'object' || !credential.id) {
                         findings.push(this.createFinding(
                             'DEP-001',
                             FindingSeverity.HIGH,

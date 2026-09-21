@@ -93,7 +93,7 @@ export class WorkflowCandidateSearch {
                 const tools = Array.isArray(req.integration_requirements)
                     ? req.integration_requirements
                     : (req.integration_requirements as string).split(',');
-                tools.forEach(t => integrations.add(t.trim()));
+                tools.forEach((t: string) => integrations.add(t.trim()));
             }
         });
         return Array.from(integrations);

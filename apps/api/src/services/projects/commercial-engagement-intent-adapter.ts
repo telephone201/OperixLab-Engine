@@ -4,10 +4,12 @@
  */
 
 import { engagementService } from './engagement-service';
-import { intentManager } from '../qualification/intent-manager';
-import { IntentEvent } from '../qualification/intent-types';
+import { IntentManager } from '../qualification/intent-manager';
+import { IntentEvent, IntentStateValue } from '../qualification/intent-types';
 import { EngagementEventType } from './engagement-types';
 import { auditLogger } from '../../core/logging/audit-logger';
+
+const intentManager = new IntentManager();
 
 export class CommercialEngagementIntentAdapter {
     /**
@@ -23,7 +25,7 @@ export class CommercialEngagementIntentAdapter {
         // In a real impl, we'd fetch the actual IntentState from the DB
         const currentIntentState = {
             leadId: event.leadId,
-            state: 'LOW_INTENT', // Default mock
+            state: 'LOW_INTENT' as IntentStateValue, // Default mock
             score: 20,
             confidence: 0.5,
             lastUpdated: new Date()

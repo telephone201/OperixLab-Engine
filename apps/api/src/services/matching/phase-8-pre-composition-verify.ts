@@ -8,6 +8,8 @@ import { HardGateEvaluator, GateStatus } from './hard-gate-evaluator';
 import { WorkflowMatchRanker } from './workflow-match-ranker';
 import { StrategyDecisionEngine, SolutionStrategy } from './strategy-decision-engine';
 
+declare const jest: any;
+
 export class Phase8PreCompositionSuite {
     private gateEvaluator = new HardGateEvaluator();
     private ranker = new WorkflowMatchRanker();
@@ -84,7 +86,7 @@ export class Phase8PreCompositionSuite {
 
     private async testLicenseNotEligible() {
         const candidates = [{ id: 'c1', workflow_id: 'wf1', name: 'BadLicense', quality_score: 90 }];
-        const requirements = [];
+        const requirements: any[] = [];
 
         const evalSpy = jest.spyOn(this.gateEvaluator, 'evaluate').mockResolvedValue({
             isEligible: false,
@@ -100,7 +102,7 @@ export class Phase8PreCompositionSuite {
 
     private async testSecurityBlocker() {
         const candidates = [{ id: 'c1', workflow_id: 'wf1', name: 'Unsafe', quality_score: 90 }];
-        const requirements = [];
+        const requirements: any[] = [];
 
         const evalSpy = jest.spyOn(this.gateEvaluator, 'evaluate').mockResolvedValue({
             isEligible: false,
@@ -133,7 +135,7 @@ export class Phase8PreCompositionSuite {
     }
 
     private async testNoCompositionBuild() {
-        const candidates = []; // No candidates
+        const candidates: any[] = []; // No candidates
         const requirements = [{ id: 'r1', priority: 'MUST', covered: false }];
 
         const decision = await this.strategyEngine.determineStrategy('lead1', candidates, requirements);

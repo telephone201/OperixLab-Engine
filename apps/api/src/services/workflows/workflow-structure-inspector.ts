@@ -43,7 +43,7 @@ export class WorkflowStructureInspector {
         // 1. Extract Nodes
         // n8n workflows typically store nodes as an object where keys are node IDs
         const nodesData = workflowJson.nodes || {};
-        for (const [id, nodeData] of Object.entries(nodesData)) {
+        for (const [id, nodeData] of Object.entries(nodesData as Record<string, Record<string, any>>)) {
             const node: WorkflowNode = {
                 id,
                 type: nodeData.type || 'unknown',

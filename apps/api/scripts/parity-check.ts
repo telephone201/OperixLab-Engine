@@ -23,7 +23,7 @@ async function getSchemaSnapshot(schema: string) {
     const columnsRes = await db.query(columnsQuery, [schema]);
 
     const snapshot: Record<string, any> = {};
-    columnsRes.rows.forEach(col => {
+    columnsRes.rows.forEach((col: any) => {
         if (!snapshot[col.table_name]) snapshot[col.table_name] = [];
         snapshot[col.table_name].push({
             name: col.column_name,
@@ -53,8 +53,8 @@ async function run() {
         const path = require('path');
         const migrationsDir = path.resolve('D:/OperixLabs Engine/apps/api/migrations');
         const files = fs.readdirSync(migrationsDir)
-            .filter(f => f.endsWith('.sql'))
-            .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+            .filter((f: string) => f.endsWith('.sql'))
+            .sort((a: string, b: string) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
 
         for (const file of files) {
             const content = fs.readFileSync(path.join(migrationsDir, file), 'utf8');
@@ -92,7 +92,7 @@ async function run() {
                 columnMismatches++;
             } else {
                 for (const col of opCols) {
-                    const testCol = testCols.find(tc => tc.name === col.name);
+                    const testCol = testCols.find((tc: any) => tc.name === col.name);
                     if (!testCol || testCol.type !== col.type || testCol.nullable !== col.nullable) {
                         console.error(`[FAIL] Table ${table} column ${col.name} mismatch: Operational=${JSON.stringify(col)}, Test=${JSON.stringify(testCol)}`);
                         columnMismatches++;

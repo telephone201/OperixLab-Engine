@@ -8,9 +8,9 @@ import { humanApprovalService } from './approval-service';
 import { knownGoodVersionManager } from './known-good-manager';
 import { deploymentLifecycleManager } from './deployment-lifecycle-manager';
 import { DeploymentEnvironment, DeploymentStatus } from '../deployment/types';
-import { ApprovalType, ApprovalDecision } from './types';
+import { ApprovalType, ApprovalDecision, GovernanceState } from './types';
 import { db } from '../../lib/db';
-import { workflowVersionService } from '../versioning/version-service';
+import { workflowVersionService, OriginType } from '../versioning/version-service';
 import crypto from 'crypto';
 
 export class Phase9Step5Verify {
@@ -54,7 +54,7 @@ export class Phase9Step5Verify {
         const { versionId } = await workflowVersionService.createVersion({
             solutionId: 'sol_test_gov',
             content,
-            originType: 'REUSED'
+            originType: OriginType.REUSED
         });
 
         await db.workflow_validations.create({
@@ -202,8 +202,8 @@ export class Phase9Step5Verify {
         try {
             await deploymentLifecycleManager.transition({
                 deploymentId: depId,
-                fromState: 'GOVERNANCE_PENDING',
-                newState: 'DEPLOYMENT_APPROVAL_PENDING',
+                fromState: GovernanceState.GOVERNANCE_PENDING,
+                newState: GovernanceState.DEPLOYMENT_APPROVAL_PENDING,
                 actor: 'sys',
                 reason: 'init'
             });
@@ -211,8 +211,8 @@ export class Phase9Step5Verify {
             // Test Invalid Transition
             await deploymentLifecycleManager.transition({
                 deploymentId: depId,
-                fromState: 'DEPLOYMENT_APPROVAL_PENDING',
-                newState: 'ACTIVE',
+                fromState: GovernanceState.DEPLOYMENT_APPROVAL_PENDING,
+                newState: GovernanceState.ACTIVE,
                 actor: 'sys',
                 reason: 'cheat'
             });

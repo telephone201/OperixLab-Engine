@@ -7,8 +7,8 @@ import { customizationEngine } from './customization-engine';
 import { compositionImpl } from './composition-impl';
 import { workflowStructureInspector } from './workflow-structure-inspector';
 import { jsonPathResolver } from './json-path-resolver';
-import { transformationEngine, TransformationType } from './transformation-engine';
-import { workflowVersionService } from '../versioning/version-service';
+import { transformationEngine, TransformationType, TransformationPlan } from './transformation-engine';
+import { workflowVersionService, OriginType } from '../versioning/version-service';
 import { artifactService } from '../versioning/artifact-service';
 import { db } from '../../lib/db';
 
@@ -51,7 +51,7 @@ export class Phase9Step2Verify {
     }
 
     private async testTransformationDeterminism() {
-        const plan = {
+        const plan: TransformationPlan = {
             planId: 'test_plan',
             sourceArtifactId: 'art_1',
             operations: [{
@@ -135,4 +135,3 @@ export class Phase9Step2Verify {
 }
 
 export const phase9Step2Verify = new Phase9Step2Verify();
-

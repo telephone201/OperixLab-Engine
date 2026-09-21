@@ -44,7 +44,7 @@ export class OperationalValidator {
 
         // 3. Error Handling Check
         const hasErrorHandling = this.detectErrorHandling(workflowJson);
-        if (!hasErrorHnadling) {
+        if (!hasErrorHandling) {
             findings.push(this.createFinding(
                 'OPS-003',
                 FindingSeverity.LOW,

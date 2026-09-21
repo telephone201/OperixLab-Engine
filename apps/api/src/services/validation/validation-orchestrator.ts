@@ -44,7 +44,7 @@ export class ValidationOrchestrator {
 
         const validationId = `val_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         const allFindings: ValidationFinding[] = [];
-        const layerResults: Record<ValidationLayer, ValidationLayerResult> = {};
+        const layerResults = {} as Record<ValidationLayer, ValidationLayerResult>;
 
         // 2. Execute Layers in Order
         try {

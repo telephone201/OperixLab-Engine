@@ -3,7 +3,7 @@
  * @description Manages causal relationships between business pains.
  */
 
-import { PainRelationship } from './pain-types';
+import { PainRelationship, RelationshipType } from './pain-types';
 
 export class PainRelationshipManager {
     /**

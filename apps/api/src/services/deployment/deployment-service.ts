@@ -146,7 +146,11 @@ export class DeploymentService {
             });
 
             // 7. Verify Deployment
-            const verification = await deploymentVerifier.verify(deploymentId, targetN8nId, manifest.artifactHash);
+            const verification = await deploymentVerifier.verify(
+        deploymentId,
+        targetN8nId!,
+        artifactContent
+    );
             await db.deployment_verifications.create({
                 data: {
                     id: verification.verificationId,
@@ -182,7 +186,7 @@ export class DeploymentService {
             if (activationRequested && finalStatus === DeploymentStatus.VERIFIED) {
                 const activationCheck = await activationGate.canActivate(deploymentId, true);
                 if (activationCheck.canActivate) {
-                    await n8nProvider.activateWorkflow(targetN8nId);
+                    await n8nProvider.activateWorkflow(targetN8nId!);
                     await db.workflow_deployments.update({
                         where: { id: deploymentId },
                         data: { status: DeploymentStatus.ACTIVE }

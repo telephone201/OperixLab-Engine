@@ -25,7 +25,7 @@ export interface AppConfig {
     appSecret: string;
 }
 
-class ConfigurationManager {
+export class ConfigurationManager {
     private config: AppConfig;
 
     constructor() {

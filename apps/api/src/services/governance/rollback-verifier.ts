@@ -8,6 +8,7 @@ import { RollbackOperation } from './types';
 import { n8nProvider } from '../deployment/providers/n8n-provider';
 import { deploymentVerifier } from '../deployment/deployment-verifier';
 import { DeploymentEnvironment } from '../deployment/types';
+import { artifactService } from '../versioning/artifact-service';
 
 export class RollbackVerifier {
     /**
@@ -36,11 +37,36 @@ export class RollbackVerifier {
             }
 
             // 3. Content Hash Verification
-            // We reuse the deploymentVerifier's logic for normalized comparison
+            // The deployment verifier compares the deployed workflow
+            // against the canonical representation of the target artifact.
+            const targetVersion = await db.workflow_versions.findUnique({
+                where: { id: params.targetVersionId }
+            });
+
+            if (!targetVersion) {
+                return {
+                    verified: false,
+                    status: 'FAILED',
+                    reason: 'Target workflow version not found'
+                };
+            }
+
+            if (targetVersion.content_hash !== params.targetArtifactHash) {
+                return {
+                    verified: false,
+                    status: 'FAILED',
+                    reason: 'Target artifact hash does not match target version'
+                };
+            }
+
+            const targetArtifactContent = await artifactService.getArtifactContent(
+                targetVersion.artifact_id
+            );
+
             const verification = await deploymentVerifier.verify(
                 params.rollbackId,
                 params.n8nWorkflowId,
-                params.targetArtifactHash
+                targetArtifactContent
             );
 
             if (verification.status !== 'VERIFIED') {

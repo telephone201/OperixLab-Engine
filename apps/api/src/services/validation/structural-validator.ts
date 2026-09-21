@@ -3,7 +3,7 @@
  * @description Layer 1: Verifies the internal structural coherence of the workflow artifact.
  */
 
-import { WorkflowStructureInspector, WorkflowStructure } from '../workflows/workflow-structure-inspector';
+import { WorkflowStructureInspector, WorkflowStructure, workflowStructureInspector } from '../workflows/workflow-structure-inspector';
 import { ValidationFinding, ValidationLayer, FindingSeverity, FindingStatus } from './validation-types';
 
 export class StructuralValidator {

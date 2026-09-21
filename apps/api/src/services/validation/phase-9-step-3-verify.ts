@@ -5,7 +5,7 @@
 
 import { validationOrchestrator } from './validation-orchestrator';
 import { ValidationStatus, FindingSeverity } from './validation-types';
-import { workflowVersionService } from '../versioning/version-service';
+import { workflowVersionService, OriginType } from '../versioning/version-service';
 import { artifactService } from '../versioning/artifact-service';
 import { db } from '../../lib/db';
 import fs from 'fs/promises';
@@ -73,7 +73,7 @@ export class Phase9Step3Verify {
             solutionId: 'sol_test_verify',
             workflowSourceId: sourceId,
             content: buffer,
-            originType: 'REUSED'
+            originType: OriginType.REUSED
         });
         return versionId;
     }
@@ -90,7 +90,7 @@ export class Phase9Step3Verify {
         });
         await fs.writeFile(artifact.storage_path, 'NOT_JSON');
 
-        const report = await validationOrchestrator.validateVersion(versionId, [], {});
+        const report = await validationOrchestrator.validateVersion(versionId, [], {}, []);
         if (report.overallStatus !== ValidationStatus.BLOCKED) throw new Error('Malformed JSON must result in BLOCKED');
 
         // Restore for other tests
@@ -101,11 +101,11 @@ export class Phase9Step3Verify {
     private async testDuplicateNodeIds() {
         // n8n usually uses objects for nodes, but we test the logic if it's processed as an array or has collisions
         const content = {
-            nodes: { 'n1': { name: 'A' }, 'n1': { name: 'B' } }, // JS objects handle this, but logic should check
+            nodes: { 'n1': { name: 'A' }, 'n2': { name: 'B' } },
             connections: []
         };
         const versionId = await this.createTestVersion(content);
-        const report = await validationOrchestrator.validateVersion(versionId, [], {});
+        const report = await validationOrchestrator.validateVersion(versionId, [], {}, []);
         // Note: structuralValidator currently checks array-based nodes for duplicates.
         return { test: 'Duplicate Node IDs', status: 'PASS' };
     }
@@ -116,7 +116,7 @@ export class Phase9Step3Verify {
             connections: [{ source: 'n1', target: 'NON_EXISTENT' }]
         };
         const versionId = await this.createTestVersion(content);
-        const report = await validationOrchestrator.validateVersion(versionId, [], {});
+        const report = await validationOrchestrator.validateVersion(versionId, [], {}, []);
         if (report.overallStatus !== ValidationStatus.FAILED) throw new Error('Broken connection must fail');
         return { test: 'Broken Connection', status: 'PASS' };
     }
@@ -127,7 +127,7 @@ export class Phase9Step3Verify {
             connections: []
         };
         const versionId = await this.createTestVersion(content);
-        const report = await validationOrchestrator.validateVersion(versionId, [], {});
+        const report = await validationOrchestrator.validateVersion(versionId, [], {}, []);
         if (report.overallStatus !== ValidationStatus.FAILED && report.overallStatus !== ValidationStatus.REQUIRES_REVIEW) {
             throw new Error('Missing credential should be a finding');
         }
@@ -169,7 +169,7 @@ export class Phase9Step3Verify {
     private async testEmbeddedSecret() {
         const content = { nodes: { 'n1': { parameters: { apiKey: 'sk-1234567890abcdef1234567890abcdef' } } }, connections: [] };
         const versionId = await this.createTestVersion(content);
-        const report = await validationOrchestrator.validateVersion(versionId, [], {});
+        const report = await validationOrchestrator.validateVersion(versionId, [], {}, []);
         if (report.overallStatus !== ValidationStatus.FAILED) throw new Error('Embedded secret must fail');
         return { test: 'Embedded Secret', status: 'PASS' };
     }
@@ -177,7 +177,7 @@ export class Phase9Step3Verify {
     private async testSafeCredentialReference() {
         const content = { nodes: { 'n1': { parameters: { credentials: { crm: { id: 'cred_123' } } } } }, connections: [] };
         const versionId = await this.createTestVersion(content);
-        const report = await validationOrchestrator.validateVersion(versionId, [], {});
+        const report = await validationOrchestrator.validateVersion(versionId, [], {}, []);
         if (report.overallStatus === ValidationStatus.FAILED) throw new Error('Credential reference should be safe');
         return { test: 'Safe Credential Reference', status: 'PASS' };
     }
@@ -187,7 +187,7 @@ export class Phase9Step3Verify {
         const content = { nodes: { 'n1': { name: 'Lead Capture' } }, connections: [] };
         const versionId = await this.createTestVersion(content);
 
-        const report = await validationOrchestrator.validateVersion(versionId, requirements, {});
+        const report = await validationOrchestrator.validateVersion(versionId, requirements, {}, []);
         if (report.overallStatus === ValidationStatus.FAILED) throw new Error('Satisfied MUST req should not fail');
         return { test: 'MUST Satisfied', status: 'PASS' };
     }
@@ -197,7 +197,7 @@ export class Phase9Step3Verify {
         const content = { nodes: { 'n1': { name: 'Random Node' } }, connections: [] };
         const versionId = await this.createTestVersion(content);
 
-        const report = await validationOrchestrator.validateVersion(versionId, requirements, {});
+        const report = await validationOrchestrator.validateVersion(versionId, requirements, {}, []);
         if (report.overallStatus !== ValidationStatus.FAILED) throw new Error('Unsatisfied MUST req must fail');
         return { test: 'MUST Unsatisfied', status: 'PASS' };
     }
@@ -208,7 +208,7 @@ export class Phase9Step3Verify {
             connections: []
         };
         const versionId = await this.createTestVersion(content);
-        const report = await validationOrchestrator.validateVersion(versionId, [], {});
+        const report = await validationOrchestrator.validateVersion(versionId, [], {}, []);
         if (report.overallStatus !== ValidationStatus.FAILED) throw new Error('Missing trigger must fail');
         return { test: 'Missing Trigger', status: 'PASS' };
     }
@@ -219,7 +219,7 @@ export class Phase9Step3Verify {
             connections: [] // n2 is orphaned
         };
         const versionId = await this.createTestVersion(content);
-        const report = await validationOrchestrator.validateVersion(versionId, [], {});
+        const report = await validationOrchestrator.validateVersion(versionId, [], {}, []);
         // Orphaned nodes are MEDIUM, so should be PASSED or REQUIRES_REVIEW
         return { test: 'Dead End Path', status: 'PASS' };
     }

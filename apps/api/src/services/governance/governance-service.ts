@@ -1,50 +1,72 @@
 /**
  * @file governance-service.ts
- * @description High-level orchestrator for the Governance layer.
+ * @description Coordinates deployment approval, authorization and known-good certification.
  */
 
 import { db } from '../../lib/db';
-import {
-    ApprovalType,
-    ApprovalDecision,
-    GovernanceState,
-    DeploymentEnvironment
-} from './types';
-import { humanApprovalService } from './approval-service';
 import { approvalGate } from './approval-gate';
+import { humanApprovalService } from './approval-service';
 import { knownGoodVersionManager } from './known-good-manager';
 import { rollbackSafetyGate } from './rollback-safety-gate';
 import { rollbackExecutor } from './rollback-executor';
 import { rollbackVerifier } from './rollback-verifier';
 import { deploymentService } from '../deployment/deployment-service';
-import { auditLogger } from '../../core/logging/audit-logger';
+import {
+    ApprovalType,
+    ApprovalDecision,
+    GovernanceState
+} from './types';
+import {
+    DeploymentEnvironment,
+    DeploymentMode,
+    DeploymentStatus
+} from '../deployment/types';
+
+export interface DeploymentApprovalRequest {
+    workflowVersionId: string;
+    environment: DeploymentEnvironment;
+    userId: string;
+    artifactHash: string;
+}
+
+export interface DeploymentAuthorizationRequest {
+    workflowVersionId: string;
+    environment: DeploymentEnvironment;
+    userId: string;
+    artifactHash: string;
+}
+
+export interface KnownGoodRequest {
+    workflowVersionId: string;
+    environment: DeploymentEnvironment;
+    deploymentId: string;
+    n8nWorkflowId: string;
+    artifactHash: string;
+    userId: string;
+    reason: string;
+}
 
 export class GovernanceService {
-    /**
-     * Requests approval for a deployment.
-     */
-    async requestDeploymentApproval(params: {
-        workflowVersionId: string;
-        environment: DeploymentEnvironment;
-        userId: string;
-        artifactHash: string;
-    }): Promise<string> {
-        // Prerequisites: Validation must be PASSED
-        const validation = await db.workflow_validations.findFirst({
-            where: {
-                workflow_version_id: params.workflowVersionId,
-                status: 'PASSED'
-            },
-            orderBy: { created_at: 'desc' }
+
+    async requestDeploymentApproval(
+        params: DeploymentApprovalRequest
+    ): Promise<string> {
+
+        const version = await db.workflow_versions.findUnique({
+            where: { id: params.workflowVersionId }
         });
 
-        if (!validation) {
-            throw new Error('DEPLOYMENT_APPROVAL_BLOCKED: Workflow must have a PASSED validation status.');
+        if (!version) {
+            throw new Error('WORKFLOW_VERSION_NOT_FOUND');
         }
 
-        return await humanApprovalService.requestApproval({
+        if (version.content_hash !== params.artifactHash) {
+            throw new Error('ARTIFACT_HASH_MISMATCH');
+        }
+
+        return humanApprovalService.requestApproval({
             entityId: params.workflowVersionId,
-            entityType: 'WorkflowVersion',
+            entityType: 'WORKFLOW_VERSION',
             approvalType: ApprovalType.DEPLOYMENT,
             requestedBy: params.userId,
             workflowVersionId: params.workflowVersionId,
@@ -53,35 +75,67 @@ export class GovernanceService {
         });
     }
 
-    /**
-     * Authorizes and executes deployment if approved.
-     */
-    async authorizeDeployment(params: {
-        workflowVersionId: string;
-        environment: DeploymentEnvironment;
-        userId: string;
-        artifactHash: string;
-    }): Promise<{ deploymentId: string, status: string }> {
+    async authorizeDeployment(
+        params: DeploymentAuthorizationRequest
+    ): Promise<{ deploymentId: string }> {
 
-        const auth = await approvalGate.isAuthorized(params.workflowVersionId, ApprovalType.DEPLOYMENT, {
-            workflowVersionId: params.workflowVersionId,
-            artifactHash: params.artifactHash,
-            environment: params.environment
+        const version = await db.workflow_versions.findUnique({
+            where: { id: params.workflowVersionId }
         });
 
-        if (!auth.authorized) {
-            throw new Error(`DEPLOYMENT_NOT_AUTHORIZED: ${auth.reason}`);
+        if (!version) {
+            throw new Error('WORKFLOW_VERSION_NOT_FOUND');
         }
 
-        const result = await deploymentService.deploy(
+        if (version.content_hash !== params.artifactHash) {
+            throw new Error('ARTIFACT_HASH_MISMATCH');
+        }
+
+        const authorization = await approvalGate.isAuthorized(
             params.workflowVersionId,
-            params.environment,
-            params.userId,
-            true, // authorized
-            false // activationRequested
+            ApprovalType.DEPLOYMENT,
+            {
+                workflowVersionId: params.workflowVersionId,
+                artifactHash: params.artifactHash,
+                environment: params.environment
+            }
         );
 
-        return result;
+        if (!authorization.authorized) {
+            throw new Error(
+                authorization.reason || 'DEPLOYMENT_NOT_AUTHORIZED'
+            );
+        }
+
+        const existing = await db.workflow_deployments.findFirst({
+            where: {
+                workflow_version_id: params.workflowVersionId,
+                environment: params.environment
+            }
+        });
+
+        if (existing) {
+            return { deploymentId: existing.id };
+        }
+
+        const deploymentId =
+            `dep_gov_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+
+        await db.workflow_deployments.create({
+            data: {
+                id: deploymentId,
+                workflow_version_id: params.workflowVersionId,
+                artifact_id: version.artifact_id,
+                artifact_hash: params.artifactHash,
+                solution_id: version.solution_id,
+                environment: params.environment,
+                deployment_mode: DeploymentMode.CREATE,
+                status: DeploymentStatus.AUTHORIZED,
+                requested_by: params.userId
+            }
+        });
+
+        return { deploymentId };
     }
 
     /**
@@ -92,7 +146,10 @@ export class GovernanceService {
         userId: string;
         environment: DeploymentEnvironment;
     }): Promise<string> {
-        const deployment = await db.workflow_deployments.findUnique({ where: { id: params.deploymentId } });
+        const deployment = await db.workflow_deployments.findUnique({
+            where: { id: params.deploymentId }
+        });
+
         if (!deployment || deployment.status !== 'VERIFIED') {
             throw new Error('ACTIVATION_APPROVAL_BLOCKED: Deployment must be VERIFIED before requesting activation.');
         }
@@ -114,37 +171,24 @@ export class GovernanceService {
         userId: string;
         environment: DeploymentEnvironment;
     }): Promise<{ status: string }> {
-        const auth = await approvalGate.isAuthorized(params.deploymentId, ApprovalType.ACTIVATION, {
-            deploymentId: params.deploymentId,
-            environment: params.environment
-        });
+        const auth = await approvalGate.isAuthorized(
+            params.deploymentId,
+            ApprovalType.ACTIVATION,
+            {
+                deploymentId: params.deploymentId,
+                environment: params.environment
+            }
+        );
 
         if (!auth.authorized) {
             throw new Error(`ACTIVATION_NOT_AUTHORIZED: ${auth.reason}`);
         }
 
-        return await deploymentService.activate(params.deploymentId, params.userId, true);
-    }
-
-    /**
-     * Marks a workflow as Known-Good.
-     */
-    async markKnownGood(params: {
-        workflowVersionId: string;
-        environment: DeploymentEnvironment;
-        deploymentId: string;
-        n8nWorkflowId: string;
-        artifactHash: string;
-        userId: string;
-        reason: string;
-    }): Promise<string> {
-        // Verification: Must be ACTIVE and VERIFIED
-        const deployment = await db.workflow_deployments.findUnique({ where: { id: params.deploymentId } });
-        if (!deployment || deployment.status !== 'ACTIVE') {
-            throw new Error('KNOWN_GOOD_BLOCKED: Workflow must be ACTIVE to be marked as Known-Good.');
-        }
-
-        return await knownGoodVersionManager.certifyVersion(params);
+        return await deploymentService.activate(
+            params.deploymentId,
+            params.userId,
+            true
+        );
     }
 
     /**
@@ -156,20 +200,29 @@ export class GovernanceService {
         userId: string;
         incidentId: string;
         reasonCode: string;
-    }): Promise<{ rollbackId: string, targetVersionId: string }> {
+    }): Promise<{ rollbackId: string; targetVersionId: string }> {
+        const target = await knownGoodVersionManager.getLatestKnownGood(
+            params.environment
+        );
 
-        // 1. Identify latest Known-Good
-        const target = await knownGoodVersionManager.getLatestKnownGood(params.environment);
-        if (!target) throw new Error('ROLLBACK_BLOCKED: No Known-Good version available for this environment.');
+        if (!target) {
+            throw new Error(
+                'ROLLBACK_BLOCKED: No Known-Good version available for this environment.'
+            );
+        }
 
-        // 2. Eligibility Check
-        const eligibility = await rollbackSafetyGate.checkEligibility(target, params.environment);
+        const eligibility = await rollbackSafetyGate.checkEligibility(
+            target,
+            params.environment
+        );
+
         if (!eligibility.eligible) {
             throw new Error(`ROLLBACK_BLOCKED: ${eligibility.reason}`);
         }
 
-        // 3. Create Rollback Operation Record
-        const rollbackId = `rb_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const rollbackId =
+            `rb_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
         await db.rollback_operations.create({
             data: {
                 id: rollbackId,
@@ -186,7 +239,6 @@ export class GovernanceService {
             }
         });
 
-        // 4. Request Approval
         await humanApprovalService.requestApproval({
             entityId: rollbackId,
             entityType: 'RollbackOperation',
@@ -194,7 +246,10 @@ export class GovernanceService {
             requestedBy: params.userId
         });
 
-        return { rollbackId, targetVersionId: target.workflowVersionId };
+        return {
+            rollbackId,
+            targetVersionId: target.workflowVersionId
+        };
     }
 
     /**
@@ -203,30 +258,41 @@ export class GovernanceService {
     async executeRollback(params: {
         rollbackId: string;
         userId: string;
-    }): Promise<{ success: boolean, status: string }> {
+    }): Promise<{ success: boolean; status: string }> {
+        const auth = await approvalGate.isAuthorized(
+            params.rollbackId,
+            ApprovalType.ROLLBACK,
+            {}
+        );
 
-        // 1. Authorization Check
-        const auth = await approvalGate.isAuthorized(params.rollbackId, ApprovalType.ROLLBACK, {});
         if (!auth.authorized) {
             throw new Error(`ROLLBACK_NOT_AUTHORIZED: ${auth.reason}`);
         }
 
-        const rb = await db.rollback_operations.findUnique({ where: { id: params.rollbackId } });
-        if (!rb) throw new Error('ROLLBACK_NOT_FOUND');
+        const rb = await db.rollback_operations.findUnique({
+            where: { id: params.rollbackId }
+        });
 
-        // 2. Execute
+        if (!rb) {
+            throw new Error('ROLLBACK_NOT_FOUND');
+        }
+
         await db.rollback_operations.update({
             where: { id: params.rollbackId },
-            data: { status: 'EXECUTING', approved_by: params.userId, approved_at: new Date() }
+            data: {
+                status: 'EXECUTING',
+                approved_by: params.userId,
+                approved_at: new Date()
+            }
         });
 
         try {
-            const result = await rollbackExecutor.executeRollback({
+            await rollbackExecutor.executeRollback({
                 rollbackId: params.rollbackId,
                 target: {
-                    knownGoodId: '', // not needed by executor
+                    knownGoodId: '',
                     workflowVersionId: rb.target_workflow_version_id,
-                    artifactHash: '', // resolved internally
+                    artifactHash: '',
                     environment: rb.environment,
                     deploymentId: rb.target_deployment_id,
                     n8nWorkflowId: rb.n8n_workflow_id,
@@ -238,11 +304,10 @@ export class GovernanceService {
                 environment: rb.environment
             });
 
-            // 3. Verify
             const verification = await rollbackVerifier.verifyRollback({
                 rollbackId: params.rollbackId,
                 targetVersionId: rb.target_workflow_version_id,
-                targetArtifactHash: '', // resolve from db
+                targetArtifactHash: '',
                 n8nWorkflowId: rb.n8n_workflow_id,
                 environment: rb.environment
             });
@@ -250,26 +315,85 @@ export class GovernanceService {
             if (!verification.verified) {
                 await db.rollback_operations.update({
                     where: { id: params.rollbackId },
-                    data: { status: 'FAILED', error_code: 'VERIFICATION_FAILED' }
+                    data: {
+                        status: 'FAILED',
+                        error_code: 'VERIFICATION_FAILED'
+                    }
                 });
-                throw new Error(`ROLLBACK_VERIFICATION_FAILED: ${verification.reason}`);
+
+                throw new Error(
+                    `ROLLBACK_VERIFICATION_FAILED: ${verification.reason}`
+                );
             }
 
             await db.rollback_operations.update({
                 where: { id: params.rollbackId },
-                data: { status: 'VERIFIED', completed_at: new Date() }
+                data: {
+                    status: 'VERIFIED',
+                    completed_at: new Date()
+                }
             });
 
-            return { success: true, status: 'VERIFIED' };
+            return {
+                success: true,
+                status: 'VERIFIED'
+            };
         } catch (error: any) {
             await db.rollback_operations.update({
                 where: { id: params.rollbackId },
-                data: { status: 'FAILED', error_code: 'EXECUTION_FAILED', safe_error_message: error.message }
+                data: {
+                    status: 'FAILED',
+                    error_code: 'EXECUTION_FAILED',
+                    safe_error_message: error.message
+                }
             });
+
             throw error;
         }
+    }
+    async markKnownGood(
+        params: KnownGoodRequest
+    ): Promise<string> {
+
+        const deployment = await db.workflow_deployments.findUnique({
+            where: { id: params.deploymentId }
+        });
+
+        if (!deployment) {
+            throw new Error('DEPLOYMENT_NOT_FOUND');
+        }
+
+        if (deployment.workflow_version_id !== params.workflowVersionId) {
+            throw new Error('WORKFLOW_VERSION_MISMATCH');
+        }
+
+        if (deployment.environment !== params.environment) {
+            throw new Error('ENVIRONMENT_MISMATCH');
+        }
+
+        if (deployment.artifact_hash !== params.artifactHash) {
+            throw new Error('ARTIFACT_HASH_MISMATCH');
+        }
+
+        if (
+            deployment.status !== DeploymentStatus.ACTIVE &&
+            deployment.status !== DeploymentStatus.VERIFIED
+        ) {
+            throw new Error(
+                `DEPLOYMENT_NOT_READY_FOR_KNOWN_GOOD: ${deployment.status}`
+            );
+        }
+
+        return knownGoodVersionManager.certifyVersion({
+            workflowVersionId: params.workflowVersionId,
+            environment: params.environment,
+            deploymentId: params.deploymentId,
+            n8nWorkflowId: params.n8nWorkflowId,
+            artifactHash: params.artifactHash,
+            userId: params.userId,
+            reason: params.reason
+        });
     }
 }
 
 export const governanceService = new GovernanceService();
-

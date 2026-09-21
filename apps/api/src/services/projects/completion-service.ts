@@ -58,7 +58,7 @@ export class CompletionService {
             details: { status: evaluation.status, blockingCount: evaluation.blockingReasons.length }
         });
 
-        return this.mapToDomain(readiness);
+        return this.mapReadinessToDomain(readiness);
     }
 
     /**
@@ -123,9 +123,9 @@ export class CompletionService {
             const snapshotId = `snap_close_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
             // Gather final references for snapshot
-            const acceptance = await tx.acceptance_records.findFirst({ where: { project_id: project.id }, orderBy: { created_at: 'desc' } });
-            const handover = await tx.handovers.findFirst({ where: { project_id: project.id }, orderBy: { completed_at: 'desc' } });
-            const plan = await tx.delivery_plans.findFirst({ where: { project_id: project.id }, orderBy: { plan_version: 'desc' } });
+            const acceptance = await db.acceptance_records.findFirst({ where: { project_id: project.id }, orderBy: { created_at: 'desc' } });
+            const handover = await db.handovers.findFirst({ where: { project_id: project.id }, orderBy: { completed_at: 'desc' } });
+            const plan = await db.delivery_plans.findFirst({ where: { project_id: project.id }, orderBy: { plan_version: 'desc' } });
 
             const snapshotContent = JSON.stringify({
                 acceptanceId: acceptance?.id,
@@ -135,7 +135,7 @@ export class CompletionService {
             });
             const closureHash = crypto.createHash('sha256').update(snapshotContent).digest('hex');
 
-            await tx.project_closure_snapshots.create({
+            await db.project_closure_snapshots.create({
                 data: {
                     id: snapshotId,
                     project_id: project.id,
@@ -151,7 +151,7 @@ export class CompletionService {
             });
 
             // 2. Transition Project to COMPLETED
-            await tx.projects.update({
+            await db.projects.update({
                 where: { id: project.id },
                 data: { status: ProjectStatus.COMPLETED }
             });
@@ -168,6 +168,24 @@ export class CompletionService {
         });
     }
 
+    private mapReadinessToDomain(readiness: any): CompletionReadiness {
+        return {
+            completionReadinessId: readiness.id,
+            projectId: readiness.project_id,
+            handoverId: readiness.handover_id,
+            acceptanceId: readiness.acceptance_id,
+            scopeVersionId: readiness.scope_version_id,
+            deliveryPlanVersionId: readiness.delivery_plan_version_id,
+            status: readiness.status as CompletionStatus,
+            evaluatedAt: readiness.evaluated_at,
+            evaluatedBy: readiness.evaluated_by,
+            rulesVersion: readiness.rules_version,
+            blockingReasons: readiness.blocking_reasons ?? [],
+            warnings: readiness.warnings ?? [],
+            createdAt: readiness.created_at,
+            evidenceReferences: readiness.evidence_references ?? []
+        };
+    }
     private mapToDomain(review: any): CompletionReview {
         return {
             completionReviewId: review.id,

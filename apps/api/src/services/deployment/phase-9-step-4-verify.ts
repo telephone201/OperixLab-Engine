@@ -6,7 +6,7 @@
 import { deploymentService } from './deployment-service';
 import { DeploymentEnvironment, DeploymentStatus } from './types';
 import { db } from '../../lib/db';
-import { workflowVersionService } from '../versioning/version-service';
+import { workflowVersionService, OriginType } from '../versioning/version-service';
 import { artifactService } from '../versioning/artifact-service';
 import fs from 'fs/promises';
 import crypto from 'crypto';
@@ -60,7 +60,7 @@ export class Phase9Step4Verify {
         const { versionId } = await workflowVersionService.createVersion({
             solutionId: 'sol_test_deploy',
             content,
-            originType: 'REUSED'
+            originType: OriginType.REUSED
         });
 
         // Mock a PASSED validation
@@ -140,7 +140,7 @@ export class Phase9Step4Verify {
         const { versionId: v2 } = await workflowVersionService.createVersion({
             solutionId: 'sol_test_deploy',
             content: newContent,
-            originType: 'REUSED'
+            originType: OriginType.REUSED
         });
         await db.workflow_validations.create({
             data: {

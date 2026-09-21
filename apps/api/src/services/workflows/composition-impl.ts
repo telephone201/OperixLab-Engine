@@ -93,15 +93,16 @@ export class CompositionImpl {
     }
 
     private mergeWorkflows(components: any[], blueprint: CompositionBlueprint): any {
-        const finalNodes = {};
-        const finalConnections = [];
+        const finalNodes: Record<string, Record<string, any>> = {};
+        const finalConnections: Record<string, any>[] = [];
 
         components.forEach((comp, index) => {
             const nodes = comp.content.nodes || {};
             // Remap node IDs to avoid collisions in the composed workflow
             for (const [id, node] of Object.entries(nodes)) {
                 const newId = `${comp.workflowId}_${id}`;
-                finalNodes[newId] = { ...node, id: newId };
+                const nodeObject = node as Record<string, any>;
+                finalNodes[newId] = { ...nodeObject, id: newId };
             }
 
             // Map connections to new IDs

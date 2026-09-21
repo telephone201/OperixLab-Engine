@@ -41,7 +41,7 @@ export class BusinessValidator {
         // For this implementation, we check if the requirement title or keywords
         // appear in any node names or parameters.
         const content = JSON.stringify(workflow).toLowerCase();
-        const keywords = req.title.toLowerCase().split(' ');
+        const keywords: string[] = req.title.toLowerCase().split(' ');
 
         return keywords.some(kw => kw.length > 3 && content.includes(kw));
     }
