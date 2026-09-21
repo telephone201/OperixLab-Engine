@@ -33,7 +33,7 @@ export class ProposalService {
 
         // 4. Persist Proposal and Version
         return await db.$transaction(async (tx) => {
-            const proposalId = `prop_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            const proposalId = crypto.randomUUID();
 
             const proposalResult = await tx.query(
                 `INSERT INTO "proposals"
@@ -45,7 +45,7 @@ export class ProposalService {
                     params.commercialPackageId,
                     ProposalStatus.GENERATED,
                     1,
-                    'system',
+                    params.createdBy,
                     new Date()
                 ]
             );
@@ -55,7 +55,7 @@ export class ProposalService {
             const contentString = JSON.stringify(content);
             const contentHash = crypto.createHash('sha256').update(contentString).digest('hex');
 
-            const proposalVersionId = `pv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            const proposalVersionId = crypto.randomUUID();
 
             const versionResult = await tx.query(
                 `INSERT INTO "proposal_versions"
@@ -80,7 +80,7 @@ export class ProposalService {
                     content,
                     contentHash,
                     ProposalStatus.GENERATED,
-                    'system',
+                    params.createdBy,
                     new Date()
                 ]
             );

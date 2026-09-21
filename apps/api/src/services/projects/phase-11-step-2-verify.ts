@@ -51,6 +51,7 @@ export class Phase11Step2Verify {
 
             // 2. Generate Proposal
             const genResult = await proposalService.generateProposal({
+                createdBy: userId,
                 commercialPackageId: pkg.commercialPackageId,
                 companyContext: { name: 'Test Corp' },
                 contactContext: { name: 'John Doe' },
@@ -88,6 +89,7 @@ export class Phase11Step2Verify {
 
             // 4. Forbidden Content Check
             const forbiddenTestInput = {
+                createdBy: userId,
                 commercialPackageId: pkg.commercialPackageId,
                 companyContext: { name: 'n8n Internal' },
                 contactContext: { name: 'Admin' },

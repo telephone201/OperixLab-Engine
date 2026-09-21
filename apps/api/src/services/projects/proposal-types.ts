@@ -75,6 +75,7 @@ export interface ProposalContent {
 }
 
 export interface ProposalGenerationInput {
+    createdBy: string;
     commercialPackageId: string;
     companyContext: any;
     contactContext: any;

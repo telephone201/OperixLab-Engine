@@ -52,7 +52,6 @@ export class AgreementService {
                 contact_id: params.contactId,
                 status: AgreementStatus.DRAFT,
                 fingerprint: fingerprint,
-                created_by: params.createdBy,
                 created_at: new Date(),
                 updated_at: new Date()
             }
@@ -62,10 +61,10 @@ export class AgreementService {
             action: 'AGREEMENT_CREATED',
             entityType: 'CommercialAgreement',
             entityId: agreement.id,
-            details: { status: AgreementStatus.DRAFT }
+            details: { status: AgreementStatus.DRAFT, createdBy: params.createdBy }
         });
 
-        return this.mapToDomain(agreement);
+        return this.mapToDomain(agreement, params.createdBy);
     }
 
     async sendAgreement(agreementId: string, contactEmail: string): Promise<void> {
@@ -159,7 +158,7 @@ export class AgreementService {
         return crypto.createHash('sha256').update(JSON.stringify(materialTerms)).digest('hex');
     }
 
-    private mapToDomain(dbAgreement: any): CommercialAgreement {
+    private mapToDomain(dbAgreement: any, createdBy: string): CommercialAgreement {
         return {
             agreementId: dbAgreement.id,
             commercialPackageId: dbAgreement.commercial_package_id,
@@ -172,7 +171,7 @@ export class AgreementService {
             fingerprint: dbAgreement.fingerprint,
             createdAt: dbAgreement.created_at,
             updatedAt: dbAgreement.updated_at,
-            createdBy: dbAgreement.created_by,
+            createdBy,
             acceptedAt: dbAgreement.accepted_at,
             acceptedBy: dbAgreement.accepted_by,
             acceptedVia: dbAgreement.accepted_via

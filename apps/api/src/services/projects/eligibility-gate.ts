@@ -22,9 +22,26 @@ export class ProjectStartEligibilityGate {
             return { eligible: false, reason: 'PROJECT_NOT_FOUND' };
         }
 
-        // 1. Commercial Gate: Payment must be verified
-        // Integration with PaymentReadinessService for deterministic verification
-        const readiness = await paymentReadinessService.evaluateReadiness(project.proposal_id);
+        // 1. Contract Gate: The project must be linked to a valid contract.
+        if (!project.contract_id) {
+            return { eligible: false, reason: 'CONTRACT_BLOCK: Project must be linked to a valid contract.' };
+        }
+
+        const contract = await db.contracts.findUnique({
+            where: { id: project.contract_id }
+        });
+
+        if (!contract) {
+            return { eligible: false, reason: 'CONTRACT_BLOCK: Project contract was not found.' };
+        }
+
+        if (!contract.proposal_id) {
+            return { eligible: false, reason: 'CONTRACT_BLOCK: Contract must be linked to a proposal.' };
+        }
+
+        // 2. Commercial Gate: Payment must be verified for the contract's proposal.
+        const readiness = await paymentReadinessService.evaluateReadiness(contract.proposal_id);
+
         if (readiness.status !== 'VERIFIED') {
             return {
                 eligible: false,
@@ -39,14 +56,8 @@ export class ProjectStartEligibilityGate {
             };
         }
 
-        // 2. Contract Gate: Must be linked to a contract (implied by schema FK, but verified here)
-        if (!project.contract_id) {
-            return { eligible: false, reason: 'CONTRACT_BLOCK: Project must be linked to a valid contract.' };
-        }
-
         return { eligible: true };
     }
 }
 
 export const projectStartEligibilityGate = new ProjectStartEligibilityGate();
-

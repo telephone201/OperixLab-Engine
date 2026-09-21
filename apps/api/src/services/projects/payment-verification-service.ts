@@ -20,7 +20,7 @@ export class PaymentVerificationService {
         verifiedBy: string; // Authorized Human User ID
         decision: 'VERIFY' | 'PARTIALLY_VERIFY' | 'REJECT';
         reason?: string;
-    }): Promise<{ success: boolean; newStatus: PaymentStatus }> {
+    }): Promise<{ success: boolean; newStatus: PaymentStatus; proposalId: string }> {
         const payment = await db.payments.findUnique({ where: { id: params.paymentId } });
         if (!payment) throw new Error('PAYMENT_NOT_FOUND');
 
@@ -58,7 +58,7 @@ export class PaymentVerificationService {
 
         await notifications.notify('PAYMENT_VERIFIED', `Payment ${params.paymentId} verified as ${newStatus}.`, 'HIGH', params.paymentId);
 
-        return { success: true, newStatus };
+        return { success: true, newStatus, proposalId: payment.proposal_id };
     }
 }
 

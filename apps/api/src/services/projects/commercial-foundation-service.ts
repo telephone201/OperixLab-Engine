@@ -14,6 +14,7 @@ import {
     BillingCycle
 } from './commercial-types';
 import { auditLogger } from '../../core/logging/audit-logger';
+import crypto from 'crypto';
 
 export class CommercialFoundationService {
     /**
@@ -42,7 +43,7 @@ export class CommercialFoundationService {
             return this.mapToDomain(existing);
         }
 
-        const packageId = `cp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const packageId = crypto.randomUUID();
 
         const pkg = await db.commercial_packages.create({
             data: {
@@ -85,7 +86,7 @@ export class CommercialFoundationService {
         assumptions?: string;
         riskFactors?: string;
     }): Promise<PricingRecommendation> {
-        const pricingId = `pr_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const pricingId = crypto.randomUUID();
 
         const pricing = await db.pricing_recommendations.create({
             data: {
@@ -132,7 +133,7 @@ export class CommercialFoundationService {
         optionalScope: string[];
         outOfScope: string[];
     }): Promise<OfferOption> {
-        const offerId = `off_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const offerId = crypto.randomUUID();
 
         const offer = await db.offer_options.create({
             data: {

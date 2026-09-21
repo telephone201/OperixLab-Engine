@@ -10,6 +10,9 @@ import { paymentService } from '../services/projects/payment-service';
 import { paymentVerificationService } from '../services/projects/payment-verification-service';
 import { paymentReadinessService } from '../services/projects/payment-readiness-service';
 import { projectStartEligibilityGate } from '../services/projects/eligibility-gate';
+import { projectService } from '../services/projects/project-service';
+import { commercialProjectHandoffService } from '../services/projects/commercial-project-handoff-service';
+import { ProjectStatus } from '../services/projects/types';
 
 export class AgreementPaymentController {
     /**
@@ -20,8 +23,19 @@ export class AgreementPaymentController {
         try {
             const { leadId } = req.params;
 
+            const commercialPackage = await db.commercial_packages.findFirst({
+                where: { lead_id: leadId },
+                orderBy: { created_at: 'desc' }
+            });
+
+            if (!commercialPackage) {
+                return res.status(404).json({
+                    error: { code: 'AGREEMENT_NOT_FOUND', message: 'No commercial package found for this lead' }
+                });
+            }
+
             const agreement = await db.commercial_agreements.findFirst({
-                where: { company_id: { lead_id: leadId } }, // Note: Adjust based on actual schema
+                where: { commercial_package_id: commercialPackage.id },
                 orderBy: { created_at: 'desc' }
             });
 
@@ -35,7 +49,17 @@ export class AgreementPaymentController {
                 where: { agreement_id: agreement.id }
             });
 
-            const readiness = await paymentReadinessService.evaluateReadiness(agreement.proposal_version_id);
+            const proposalVersion = await db.proposal_versions.findUnique({
+                where: { id: agreement.proposal_version_id }
+            });
+
+            if (!proposalVersion) {
+                return res.status(404).json({
+                    error: { code: 'PROPOSAL_VERSION_NOT_FOUND', message: 'Agreement proposal version was not found' }
+                });
+            }
+
+            const readiness = await paymentReadinessService.evaluateReadiness(proposalVersion.proposal_id);
 
             return res.json({
                 data: {
@@ -101,7 +125,28 @@ export class AgreementPaymentController {
                 decision,
                 reason
             });
-            return res.json({ data: result });
+
+            const readiness = await paymentReadinessService.evaluateReadiness(
+                result.proposalId
+            );
+
+            let handoff = null;
+
+            if (readiness.status === 'VERIFIED') {
+                handoff = await commercialProjectHandoffService.handoff({
+                    proposalId: result.proposalId,
+                    readinessStatus: readiness.status,
+                    actorId: String(verifiedBy)
+                });
+            }
+
+            return res.json({
+                data: {
+                    verification: result,
+                    readiness,
+                    handoff
+                }
+            });
         } catch (error: any) {
             return res.status(400).json({
                 error: { code: 'VERIFICATION_FAILED', message: error.message }
@@ -116,9 +161,42 @@ export class AgreementPaymentController {
     async checkProjectEligibility(req: Request, res: Response) {
         try {
             const { leadId } = req.params;
-            // We find the project associated with the lead
+
+            const commercialPackage = await db.commercial_packages.findFirst({
+                where: { lead_id: leadId },
+                orderBy: { created_at: 'desc' }
+            });
+
+            if (!commercialPackage) {
+                return res.status(404).json({
+                    error: { code: 'PROJECT_NOT_FOUND', message: 'No project found for this lead' }
+                });
+            }
+
+            const proposal = await db.proposals.findFirst({
+                where: { commercial_package_id: commercialPackage.id },
+                orderBy: { version: 'desc' }
+            });
+
+            if (!proposal) {
+                return res.status(404).json({
+                    error: { code: 'PROJECT_NOT_FOUND', message: 'No project found for this lead' }
+                });
+            }
+
+            const contract = await db.contracts.findFirst({
+                where: { proposal_id: proposal.id },
+                orderBy: { created_at: 'desc' }
+            });
+
+            if (!contract) {
+                return res.status(404).json({
+                    error: { code: 'PROJECT_NOT_FOUND', message: 'No project found for this lead' }
+                });
+            }
+
             const project = await db.projects.findFirst({
-                where: { lead_id: leadId }
+                where: { contract_id: contract.id }
             });
 
             if (!project) {
@@ -152,13 +230,14 @@ export class AgreementPaymentController {
                 });
             }
 
-            await db.projects.update({
-                where: { id: projectId },
-                data: {
-                    status: 'STARTED',
-                    started_at: new Date(),
-                    started_by: userId
-                }
+            const project = await projectService.getProject(String(projectId));
+
+            await projectService.transitionState({
+                projectId: String(projectId),
+                fromState: project.status,
+                toState: ProjectStatus.STARTED,
+                reason: 'Project started after eligibility verification',
+                actorId: String(userId)
             });
 
             return res.json({ data: { status: 'STARTED' } });

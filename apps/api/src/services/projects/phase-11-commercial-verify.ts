@@ -91,6 +91,7 @@ export class Phase11CommercialVerify {
             console.log('Testing Step 2: Proposal Engine...');
 
             const proposal = await proposalService.generateProposal({
+                createdBy: userId,
                 commercialPackageId: pkg.commercialPackageId,
                 companyContext: {
                     companyId,
