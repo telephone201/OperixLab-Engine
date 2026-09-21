@@ -138,6 +138,9 @@ export class CommercialProjectHandoffService {
                          "status",
                          "created_at")
                      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                     ON CONFLICT ("proposal_id")
+                     WHERE "proposal_id" IS NOT NULL
+                     DO NOTHING
                      RETURNING *`,
                     [
                         params.proposalId,
@@ -151,8 +154,26 @@ export class CommercialProjectHandoffService {
                     ]
                 );
 
-                contract = contractResult.rows[0];
-                contractCreated = true;
+                if (contractResult.rows[0]) {
+                    contract = contractResult.rows[0];
+                    contractCreated = true;
+                } else {
+                    const existingContractAfterConflict = await tx.query(
+                        `SELECT *
+                         FROM "contracts"
+                         WHERE "proposal_id" = $1
+                         LIMIT 1`,
+                        [params.proposalId]
+                    );
+
+                    contract = existingContractAfterConflict.rows[0];
+
+                    if (!contract) {
+                        throw new Error(
+                            'PROJECT_HANDOFF_FAILED: Contract conflict occurred but the existing contract could not be found.'
+                        );
+                    }
+                }
             }
 
             const existingProjectResult = await tx.query(
@@ -176,6 +197,9 @@ export class CommercialProjectHandoffService {
                          "payment_verified_at",
                          "created_at")
                      VALUES ($1, $2, $3, $4, $5, $6)
+                     ON CONFLICT ("contract_id")
+                     WHERE "contract_id" IS NOT NULL
+                     DO NOTHING
                      RETURNING *`,
                     [
                         contract.id,
@@ -187,8 +211,26 @@ export class CommercialProjectHandoffService {
                     ]
                 );
 
-                project = projectResult.rows[0];
-                projectCreated = true;
+                if (projectResult.rows[0]) {
+                    project = projectResult.rows[0];
+                    projectCreated = true;
+                } else {
+                    const existingProjectAfterConflict = await tx.query(
+                        `SELECT *
+                         FROM "projects"
+                         WHERE "contract_id" = $1
+                         LIMIT 1`,
+                        [contract.id]
+                    );
+
+                    project = existingProjectAfterConflict.rows[0];
+
+                    if (!project) {
+                        throw new Error(
+                            'PROJECT_HANDOFF_FAILED: Project conflict occurred but the existing project could not be found.'
+                        );
+                    }
+                }
             } else if (project.payment_status !== PaymentStatus.VERIFIED) {
                 const projectResult = await tx.query(
                     `UPDATE "projects"
