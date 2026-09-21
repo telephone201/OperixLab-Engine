@@ -52,11 +52,21 @@ export class CompletionEligibilityGate {
         }
 
         // 4. Support Transition Check
-        const support = await db.support_transitions.findFirst({
-            where: { project_id: projectId, status: 'COMPLETED' }
-        });
-        // Note: Support might be optional for some projects, but we assume required if defined in metadata.
-        // Here we treat it as required if the project reached HANDED_OVER.
+        // Support must belong to the latest completed handover for this project.
+        let support = null;
+
+        if (handover) {
+            support = await db.support_transitions.findFirst({
+                where: {
+                    project_id: projectId,
+                    handover_id: handover.id,
+                    status: 'COMPLETED'
+                },
+                orderBy: { transitioned_at: 'desc' }
+            });
+        }
+
+        // Support is required once the project has reached HANDED_OVER.
         if (!support) {
             blockingReasons.push('SUPPORT_TRANSITION_MISSING');
         }

@@ -25,7 +25,7 @@ export class CompletionService {
     async evaluateCompletionReadiness(projectId: string, userId: string): Promise<CompletionReadiness> {
         const evaluation = await completionEligibilityGate.evaluate(projectId);
 
-        const readinessId = `cr_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const readinessId = crypto.randomUUID();
 
         // Fetch references for the snapshot
         const project = await db.projects.findUnique({ where: { id: projectId } });
@@ -65,36 +65,93 @@ export class CompletionService {
      * Initiates a formal completion review.
      */
     async startCompletionReview(projectId: string, readinessId: string, userId: string): Promise<CompletionReview> {
-        const readiness = await db.completion_readiness.findUnique({ where: { id: readinessId } });
-        if (!readiness || readiness.status !== CompletionStatus.READY) {
-            throw new Error('COMPLETION_NOT_READY: Project must be in READY status for completion review.');
-        }
+        const result = await db.transaction(async (tx) => {
+            const projectResult = await tx.query(
+                `SELECT id
+                 FROM projects
+                 WHERE id = $1
+                 FOR UPDATE`,
+                [projectId]
+            );
 
-        const reviewId = `crev_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-        const review = await db.completion_reviews.create({
-            data: {
-                id: reviewId,
-                project_id: projectId,
-                completion_readiness_id: readinessId,
-                completion_version: 1,
-                status: CompletionReviewStatus.READY,
-                reviewed_by: userId,
-                reviewed_at: new Date(),
-                decision: CompletionDecision.PENDING,
-                reason: 'Review initiated',
-                created_at: new Date()
+            if (projectResult.rowCount !== 1) {
+                throw new Error('PROJECT_NOT_FOUND');
             }
+
+            const readinessResult = await tx.query(
+                `SELECT id, project_id, status
+                 FROM completion_readiness
+                 WHERE id = $1
+                 FOR UPDATE`,
+                [readinessId]
+            );
+
+            if (readinessResult.rowCount !== 1) {
+                throw new Error('COMPLETION_READINESS_NOT_FOUND');
+            }
+
+            const readiness = readinessResult.rows[0];
+
+            if (readiness.project_id !== projectId) {
+                throw new Error('COMPLETION_READINESS_PROJECT_MISMATCH');
+            }
+
+            if (readiness.status !== CompletionStatus.READY) {
+                throw new Error(
+                    'COMPLETION_NOT_READY: Project must be in READY status for completion review.'
+                );
+            }
+
+            const versionResult = await tx.query(
+                `SELECT COALESCE(MAX(completion_version), 0) + 1 AS next_version
+                 FROM completion_reviews
+                 WHERE project_id = $1`,
+                [projectId]
+            );
+
+            const completionVersion = Number(versionResult.rows[0].next_version);
+            const reviewId = crypto.randomUUID();
+            const now = new Date();
+
+            const reviewResult = await tx.query(
+                `INSERT INTO completion_reviews
+                    (id, project_id, completion_readiness_id, completion_version,
+                     status, reviewed_by, reviewed_at, decision, reason, created_at)
+                 VALUES
+                    ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                 RETURNING *`,
+                [
+                    reviewId,
+                    projectId,
+                    readinessId,
+                    completionVersion,
+                    CompletionReviewStatus.READY,
+                    userId,
+                    now,
+                    CompletionDecision.PENDING,
+                    'Review initiated',
+                    now
+                ]
+            );
+
+            if (reviewResult.rowCount !== 1) {
+                throw new Error('COMPLETION_REVIEW_CREATE_FAILED');
+            }
+
+            return reviewResult.rows[0];
         });
 
         await auditLogger.log({
             action: 'COMPLETION_REVIEW_CREATED',
             entityType: 'CompletionReview',
-            entityId: reviewId,
-            details: { projectId }
+            entityId: result.id,
+            details: {
+                projectId,
+                completionVersion: result.completion_version
+            }
         });
 
-        return this.mapToDomain(review);
+        return this.mapToDomain(result);
     }
 
     /**
@@ -104,68 +161,152 @@ export class CompletionService {
     async finalizeCompletion(reviewId: string, userId: string): Promise<{ projectId: string, snapshotId: string }> {
         const review = await db.completion_reviews.findUnique({ where: { id: reviewId } });
         if (!review) throw new Error('COMPLETION_REVIEW_NOT_FOUND');
+
         if (review.decision !== CompletionDecision.APPROVED) {
             throw new Error('COMPLETION_NOT_APPROVED: Only approved reviews can finalize a project.');
         }
 
-        const project = await db.projects.findUnique({ where: { id: review.project_id } });
-        if (!project) throw new Error('PROJECT_NOT_FOUND');
-
-        // Final Integrity Check (SOP Rule 22)
-        const finalCheck = await completionEligibilityGate.evaluate(project.id);
+        const finalCheck = await completionEligibilityGate.evaluate(review.project_id);
         if (!finalCheck.ready) {
             throw new Error(`FINAL_INTEGRITY_CHECK_FAILED: ${finalCheck.blockingReasons.join(', ')}`);
         }
 
-        // Transactional Closure
-        return await db.$transaction(async (tx) => {
-            // 1. Create Closure Snapshot
-            const snapshotId = `snap_close_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const result = await db.transaction(async (tx) => {
+            const projectResult = await tx.query(
+                `SELECT id, status
+                 FROM projects
+                 WHERE id = $1
+                 FOR UPDATE`,
+                [review.project_id]
+            );
 
-            // Gather final references for snapshot
-            const acceptance = await db.acceptance_records.findFirst({ where: { project_id: project.id }, orderBy: { created_at: 'desc' } });
-            const handover = await db.handovers.findFirst({ where: { project_id: project.id }, orderBy: { completed_at: 'desc' } });
-            const plan = await db.delivery_plans.findFirst({ where: { project_id: project.id }, orderBy: { plan_version: 'desc' } });
+            if (projectResult.rowCount !== 1) {
+                throw new Error('PROJECT_NOT_FOUND');
+            }
+
+            const project = projectResult.rows[0];
+
+            if (project.status !== ProjectStatus.HANDED_OVER) {
+                if (project.status === ProjectStatus.COMPLETED) {
+                    throw new Error('PROJECT_ALREADY_COMPLETED');
+                }
+
+                throw new Error(
+                    `PROJECT_STATE_CONFLICT: Project must be HANDED_OVER before completion. Current state is ${project.status}`
+                );
+            }
+
+            const acceptanceResult = await tx.query(
+                `SELECT id, scope_baseline_id
+                 FROM acceptance_records
+                 WHERE project_id = $1
+                 ORDER BY created_at DESC
+                 LIMIT 1`,
+                [project.id]
+            );
+
+            const handoverResult = await tx.query(
+                `SELECT id
+                 FROM handovers
+                 WHERE project_id = $1
+                 ORDER BY completed_at DESC NULLS LAST, created_at DESC
+                 LIMIT 1`,
+                [project.id]
+            );
+
+            const planResult = await tx.query(
+                `SELECT id
+                 FROM delivery_plans
+                 WHERE project_id = $1
+                 ORDER BY plan_version DESC
+                 LIMIT 1`,
+                [project.id]
+            );
+
+            const acceptance = acceptanceResult.rows[0];
+            const handover = handoverResult.rows[0];
+            const plan = planResult.rows[0];
+
+            const snapshotId = crypto.randomUUID();
+            const completionDate = new Date();
 
             const snapshotContent = JSON.stringify({
                 acceptanceId: acceptance?.id,
                 handoverId: handover?.id,
                 planId: plan?.id,
-                status: 'COMPLETED'
-            });
-            const closureHash = crypto.createHash('sha256').update(snapshotContent).digest('hex');
-
-            await db.project_closure_snapshots.create({
-                data: {
-                    id: snapshotId,
-                    project_id: project.id,
-                    acceptance_id: acceptance?.id,
-                    scope_version_id: acceptance?.scope_baseline_id,
-                    delivery_plan_version_id: plan?.id,
-                    completion_review_id: review.id,
-                    completion_version: review.completion_version,
-                    completion_date: new Date(),
-                    closure_hash: closureHash,
-                    created_at: new Date()
-                }
+                completionReviewId: review.id,
+                completionVersion: review.completion_version,
+                status: ProjectStatus.COMPLETED
             });
 
-            // 2. Transition Project to COMPLETED
-            await db.projects.update({
-                where: { id: project.id },
-                data: { status: ProjectStatus.COMPLETED }
-            });
+            const closureHash = crypto
+                .createHash('sha256')
+                .update(snapshotContent)
+                .digest('hex');
 
-            // 3. Audit Event
-            await auditLogger.log({
-                action: 'PROJECT_COMPLETED',
-                entityType: 'Project',
-                entityId: project.id,
-                details: { completionReviewId: review.id, snapshotId: snapshotId }
-            });
+            const snapshotResult = await tx.query(
+                `INSERT INTO project_closure_snapshots
+                    (id, project_id, acceptance_id, scope_version_id,
+                     delivery_plan_version_id, completion_review_id,
+                     completion_version, completion_date, closure_hash, created_at)
+                 VALUES
+                    ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                 RETURNING id`,
+                [
+                    snapshotId,
+                    project.id,
+                    acceptance?.id ?? null,
+                    acceptance?.scope_baseline_id ?? null,
+                    plan?.id ?? null,
+                    review.id,
+                    review.completion_version,
+                    completionDate,
+                    closureHash,
+                    completionDate
+                ]
+            );
 
-            return { projectId: project.id, snapshotId };
+            if (snapshotResult.rowCount !== 1) {
+                throw new Error('COMPLETION_SNAPSHOT_FAILED');
+            }
+
+            const projectUpdate = await tx.query(
+                `UPDATE projects
+                 SET status = $1
+                 WHERE id = $2
+                   AND status = $3
+                 RETURNING id`,
+                [
+                    ProjectStatus.COMPLETED,
+                    project.id,
+                    ProjectStatus.HANDED_OVER
+                ]
+            );
+
+            if (projectUpdate.rowCount !== 1) {
+                throw new Error(
+                    'PROJECT_STATE_CONFLICT: Project state changed before completion.'
+                );
+            }
+
+            return {
+                projectId: project.id,
+                snapshotId
+            };
         });
+
+        await auditLogger.log({
+            action: 'PROJECT_COMPLETED',
+            entityType: 'Project',
+            entityId: result.projectId,
+            details: {
+                completionReviewId: review.id,
+                snapshotId: result.snapshotId,
+                completedBy: userId
+            }
+        });
+
+        return result;
     }
 
     private mapReadinessToDomain(readiness: any): CompletionReadiness {

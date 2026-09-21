@@ -18,6 +18,7 @@ import {
 } from './handover-types';
 import { ProjectStatus } from './types';
 import { auditLogger } from '../../core/logging/audit-logger';
+import crypto from 'crypto';
 
 export class HandoverService {
     /**
@@ -74,51 +75,55 @@ export class HandoverService {
         const handover = await db.handovers.findUnique({ where: { id: handoverId } });
         if (!handover) throw new Error('HANDOVER_NOT_FOUND');
 
-        const items: any[] = [
-            {
-                id: `hi_${Date.now()}_1`,
-                handover_id: handoverId,
-                category: HandoverItemCategory.DELIVERABLE,
-                title: 'Accepted Scope Verified',
-                description: 'Ensure all accepted scope items are physically delivered',
-                required: true,
-                status: HandoverItemStatus.PENDING
-            },
-            {
-                id: `hi_${Date.now()}_2`,
-                handover_id: handoverId,
-                category: HandoverItemCategory.DOCUMENTATION,
-                title: 'Operational Manual Delivered',
-                description: 'Provide client with operating instructions',
-                required: true,
-                status: HandoverItemStatus.PENDING
-            },
-            {
-                id: `hi_${Date.now()}_3`,
-                handover_id: handoverId,
-                category: HandoverItemCategory.ACCESS,
-                title: 'Credential Transfer',
-                description: 'Hand over administrative access to client',
-                required: true,
-                status: HandoverItemStatus.PENDING
-            }
-        ];
+        await db.transaction(async (client) => {
+            await client.query(
+                'INSERT INTO handover_items (id, handover_id, category, title, description, required, status) VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6), (gen_random_uuid(), $1, $7, $8, $9, $5, $6), (gen_random_uuid(), $1, $10, $11, $12, $5, $6) ON CONFLICT (handover_id, category, title) DO NOTHING',
+                [
+                    handoverId,
+                    HandoverItemCategory.DELIVERABLE,
+                    'Accepted Scope Verified',
+                    'Ensure all accepted scope items are physically delivered',
+                    true,
+                    HandoverItemStatus.PENDING,
+                    HandoverItemCategory.DOCUMENTATION,
+                    'Operational Manual Delivered',
+                    'Provide client with operating instructions',
+                    HandoverItemCategory.ACCESS,
+                    'Credential Transfer',
+                    'Hand over administrative access to client'
+                ]
+            );
+        });
 
-        await db.handover_items.createMany({ data: items });
+        const items = await db.handover_items.findMany({
+            where: { handover_id: handoverId },
+            orderBy: { created_at: 'asc' }
+        });
 
         return items.map(i => this.mapToDomainItem(i));
     }
 
-    /**
-     * Marks a handover item as complete.
-     */
     async completeHandoverItem(itemId: string, userId: string, evidence?: string): Promise<void> {
-        await db.handover_items.update({
-            where: { id: itemId },
-            data: {
-                status: HandoverItemStatus.COMPLETED,
-                completed_at: new Date(),
-                evidence_reference: evidence
+        const now = new Date();
+
+        await db.transaction(async (client) => {
+            const result = await client.query(
+                'UPDATE handover_items SET status = , completed_at = , evidence_reference =  WHERE id =  AND status <>  RETURNING id',
+                [
+                    HandoverItemStatus.COMPLETED,
+                    now,
+                    evidence,
+                    itemId,
+                    HandoverItemStatus.COMPLETED
+                ]
+            );
+
+            if (result.rowCount !== 1) {
+                const item = await db.handover_items.findUnique({ where: { id: itemId } });
+                if (!item) {
+                    throw new Error('HANDOVER_ITEM_NOT_FOUND');
+                }
+                throw new Error('HANDOVER_ITEM_CONFLICT: Item has already been completed or changed.');
             }
         });
 
@@ -129,30 +134,48 @@ export class HandoverService {
             details: { completedBy: userId }
         });
     }
-
-    /**
-     * Approves the handover and transitions the project state.
-     */
     async approveHandover(handoverId: string, userId: string): Promise<void> {
-        const handover = await db.handovers.findUnique({ where: { id: handoverId } });
-        if (!handover) throw new Error('HANDOVER_NOT_FOUND');
-
-        const incomplete = await db.handover_items.count({
-            where: {
-                handover_id: handoverId,
-                required: true,
-                status: { not: HandoverItemStatus.COMPLETED }
-            }
-        });
-
-        if (incomplete > 0) {
-            throw new Error(`HANDOVER_BLOCKED: ${incomplete} required items are still pending.`);
-        }
-
         const now = new Date();
+
+        let projectId = '';
 
         await db.transaction(async (client) => {
             const handoverResult = await client.query(
+                `SELECT id, project_id, status
+                 FROM handovers
+                 WHERE id = $1
+                 FOR UPDATE`,
+                [handoverId]
+            );
+
+            if (handoverResult.rowCount !== 1) {
+                throw new Error('HANDOVER_NOT_FOUND');
+            }
+
+            const handover = handoverResult.rows[0];
+
+            if (handover.status === HandoverStatus.HANDED_OVER) {
+                throw new Error('HANDOVER_CONFLICT: Handover has already been finalized.');
+            }
+
+            const incompleteResult = await client.query(
+                `SELECT COUNT(*)::int AS count
+                 FROM handover_items
+                 WHERE handover_id = $1
+                   AND required = TRUE
+                   AND status <> $2`,
+                [handoverId, HandoverItemStatus.COMPLETED]
+            );
+
+            const incomplete = incompleteResult.rows[0].count;
+
+            if (incomplete > 0) {
+                throw new Error(
+                    'HANDOVER_BLOCKED: ' + incomplete + ' required items are still pending.'
+                );
+            }
+
+            const updateResult = await client.query(
                 `UPDATE handovers
                  SET status = $1,
                      approved_at = $2,
@@ -169,11 +192,11 @@ export class HandoverService {
                 ]
             );
 
-            if (handoverResult.rowCount !== 1) {
+            if (updateResult.rowCount !== 1) {
                 throw new Error('HANDOVER_CONFLICT: Handover has already been finalized or changed.');
             }
 
-            const projectId = handoverResult.rows[0].project_id;
+            projectId = updateResult.rows[0].project_id;
 
             const projectResult = await client.query(
                 `UPDATE projects
@@ -189,9 +212,7 @@ export class HandoverService {
             );
 
             if (projectResult.rowCount !== 1) {
-                throw new Error(
-                    'PROJECT_STATE_CONFLICT: Project is no longer in ACCEPTED state.'
-                );
+                throw new Error('PROJECT_STATE_CONFLICT: Project is no longer in ACCEPTED state.');
             }
         });
 
@@ -201,7 +222,7 @@ export class HandoverService {
             entityId: handoverId,
             details: {
                 approvedBy: userId,
-                projectId: handover.project_id
+                projectId
             }
         });
     }
@@ -218,27 +239,46 @@ export class HandoverService {
         escalationReference: string;
         userId: string;
     }): Promise<SupportReadiness> {
-        const srId = `sr_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const readinessId = crypto.randomUUID();
+        const now = new Date();
 
-        const readiness = await db.support_readiness.create({
-            data: {
-                id: srId,
-                project_id: params.projectId,
-                handover_id: params.handoverId,
-                status: SupportReadinessStatus.READY,
-                support_mode: params.supportMode,
-                support_reference: params.supportReference,
-                known_limitations: params.knownLimitations,
-                operational_requirements: params.operationalRequirements,
-                escalation_reference: params.escalationReference,
-                prepared_by: params.userId,
-                prepared_at: new Date()
-            }
+        const result = await db.query(
+            `INSERT INTO support_readiness
+                (id, project_id, handover_id, status, support_mode, support_reference,
+                 known_limitations, operational_requirements, escalation_reference,
+                 prepared_by, prepared_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+             ON CONFLICT (handover_id) DO NOTHING
+             RETURNING *`,
+            [
+                readinessId,
+                params.projectId,
+                params.handoverId,
+                SupportReadinessStatus.READY,
+                params.supportMode,
+                params.supportReference,
+                params.knownLimitations,
+                params.operationalRequirements,
+                params.escalationReference,
+                params.userId,
+                now
+            ]
+        );
+
+        if (result.rows.length === 1) {
+            return this.mapToDomainReadiness(result.rows[0]);
+        }
+
+        const existing = await db.support_readiness.findUnique({
+            where: { handover_id: params.handoverId }
         });
 
-        return this.mapToDomainReadiness(readiness);
-    }
+        if (!existing) {
+            throw new Error('SUPPORT_READINESS_CONFLICT: Readiness could not be established.');
+        }
 
+        return this.mapToDomainReadiness(existing);
+    }
     /**
      * Activates the support transition.
      */
@@ -248,23 +288,42 @@ export class HandoverService {
         supportReadinessId: string;
         userId: string;
     }): Promise<void> {
-        const readiness = await db.support_readiness.findUnique({ where: { id: params.supportReadinessId } });
-        if (!readiness || readiness.status !== SupportReadinessStatus.READY) {
+        const readiness = await db.support_readiness.findUnique({
+            where: { id: params.supportReadinessId }
+        });
+
+        if (
+            !readiness ||
+            readiness.project_id !== params.projectId ||
+            readiness.handover_id !== params.handoverId ||
+            readiness.status !== SupportReadinessStatus.READY
+        ) {
             throw new Error('SUPPORT_ACTIVATION_BLOCKED: Support readiness not established.');
         }
 
-        const transitionId = `st_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        await db.support_transitions.create({
-            data: {
-                id: transitionId,
-                project_id: params.projectId,
-                handover_id: params.handoverId,
-                support_readiness_id: params.supportReadinessId,
-                status: SupportTransitionStatus.COMPLETED,
-                transitioned_by: params.userId,
-                transitioned_at: new Date()
-            }
-        });
+        const transitionId = crypto.randomUUID();
+        const now = new Date();
+
+        const result = await db.query(
+            `INSERT INTO support_transitions
+                (id, project_id, handover_id, support_readiness_id, status, transitioned_by, transitioned_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)
+             ON CONFLICT (handover_id, support_readiness_id) DO NOTHING
+             RETURNING id`,
+            [
+                transitionId,
+                params.projectId,
+                params.handoverId,
+                params.supportReadinessId,
+                SupportTransitionStatus.COMPLETED,
+                params.userId,
+                now
+            ]
+        );
+
+        if (result.rows.length === 0) {
+            return;
+        }
 
         await auditLogger.log({
             action: 'SUPPORT_ACTIVATED',
