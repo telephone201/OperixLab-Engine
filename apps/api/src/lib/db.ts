@@ -400,11 +400,10 @@ const dbImplementation: DbClient = {
                                     updateParams.push(value);
                                     return `${quoteIdentifier(key)} = $${updateParams.length}`;
                                 }).join(", ");
-                                const updateWhereParams: any[] = [];
-                                const updateWhereSql = buildWhere(where, updateWhereParams);
+                                const updateWhereSql = buildWhere(where, updateParams);
                                 const result = await client.query(
                                     `UPDATE ${quoteIdentifier(tableName)} SET ${setClause} WHERE ${updateWhereSql} RETURNING *`,
-                                    [...updateParams, ...updateWhereParams]
+                                    updateParams
                                 );
                                 await client.query("COMMIT");
                                 return result.rows[0];
