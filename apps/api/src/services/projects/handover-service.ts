@@ -137,7 +137,6 @@ export class HandoverService {
         const handover = await db.handovers.findUnique({ where: { id: handoverId } });
         if (!handover) throw new Error('HANDOVER_NOT_FOUND');
 
-        // 1. Verify all required items are completed
         const incomplete = await db.handover_items.count({
             where: {
                 handover_id: handoverId,
@@ -150,30 +149,62 @@ export class HandoverService {
             throw new Error(`HANDOVER_BLOCKED: ${incomplete} required items are still pending.`);
         }
 
-        // 2. Update Handover Status
-        await db.handovers.update({
-            where: { id: handoverId },
-            data: {
-                status: HandoverStatus.HANDED_OVER,
-                approved_at: new Date(),
-                completed_at: new Date()
-            }
-        });
+        const now = new Date();
 
-        // 3. Transition Project Status
-        await db.projects.update({
-            where: { id: handover.project_id },
-            data: { status: 'HANDED_OVER' }
+        await db.transaction(async (client) => {
+            const handoverResult = await client.query(
+                `UPDATE handovers
+                 SET status = $1,
+                     approved_at = $2,
+                     completed_at = $2,
+                     updated_at = $2
+                 WHERE id = $3
+                   AND status <> $4
+                 RETURNING project_id`,
+                [
+                    HandoverStatus.HANDED_OVER,
+                    now,
+                    handoverId,
+                    HandoverStatus.HANDED_OVER
+                ]
+            );
+
+            if (handoverResult.rowCount !== 1) {
+                throw new Error('HANDOVER_CONFLICT: Handover has already been finalized or changed.');
+            }
+
+            const projectId = handoverResult.rows[0].project_id;
+
+            const projectResult = await client.query(
+                `UPDATE projects
+                 SET status = $1
+                 WHERE id = $2
+                   AND status = $3
+                 RETURNING id`,
+                [
+                    ProjectStatus.HANDED_OVER,
+                    projectId,
+                    ProjectStatus.ACCEPTED
+                ]
+            );
+
+            if (projectResult.rowCount !== 1) {
+                throw new Error(
+                    'PROJECT_STATE_CONFLICT: Project is no longer in ACCEPTED state.'
+                );
+            }
         });
 
         await auditLogger.log({
             action: 'HANDOVER_APPROVED',
             entityType: 'Handover',
             entityId: handoverId,
-            details: { approvedBy: userId }
+            details: {
+                approvedBy: userId,
+                projectId: handover.project_id
+            }
         });
     }
-
     /**
      * Establishes support readiness.
      */
