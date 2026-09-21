@@ -58,6 +58,11 @@ export class PaymentService {
         clientReference: string;
         evidenceRef?: string;
     }): Promise<Payment> {
+        const existingPayment = await db.payments.findUnique({
+            where: { id: params.paymentId }
+        });
+
+        if (!existingPayment) throw new Error('PAYMENT_NOT_FOUND');
         const payment = await db.payments.update({
             where: { id: params.paymentId },
             data: {
