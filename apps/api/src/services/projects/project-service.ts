@@ -42,18 +42,44 @@ export class ProjectService {
         const project = await db.projects.findUnique({ where: { id: params.projectId } });
         if (!project) throw new Error('PROJECT_NOT_FOUND');
 
-        this.validateTransition(project.status as ProjectStatus, params.toState);
+        const currentState = project.status as ProjectStatus;
+        const requestedFromState = params.fromState;
 
-        await db.projects.update({
-            where: { id: params.projectId },
+        if (requestedFromState !== currentState) {
+            throw new Error(
+                `STALE_PROJECT_STATE: Expected ${requestedFromState} but current state is ${currentState}`
+            );
+        }
+
+        this.validateTransition(currentState, params.toState);
+
+        const updated = await db.projects.updateMany({
+            where: {
+                AND: [
+                    { id: params.projectId },
+                    { status: currentState }
+                ]
+            },
             data: { status: params.toState }
         });
+
+        if (updated.count !== 1) {
+            const latestProject = await db.projects.findUnique({
+                where: { id: params.projectId }
+            });
+
+            if (!latestProject) throw new Error('PROJECT_NOT_FOUND');
+
+            throw new Error(
+                `PROJECT_STATE_CONFLICT: Project state changed from ${currentState} to ${latestProject.status}`
+            );
+        }
 
         await auditLogger.log({
             action: `PROJECT_STATE_TRANSITION_${params.toState}`,
             entityType: 'Project',
             entityId: params.projectId,
-            details: { from: project.status, reason: params.reason, actor: params.actorId }
+            details: { from: currentState, reason: params.reason, actor: params.actorId }
         });
     }
 
