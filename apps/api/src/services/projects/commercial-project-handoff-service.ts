@@ -219,7 +219,3 @@ export class CommercialProjectHandoffService {
 
 export const commercialProjectHandoffService =
     new CommercialProjectHandoffService();
-
-
-
-
