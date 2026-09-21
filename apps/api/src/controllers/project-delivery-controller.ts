@@ -253,6 +253,12 @@ export class ProjectDeliveryController {
 
             return res.json({ data: { status: 'TRANSITIONED', newState: toState } });
         } catch (error: any) {
+            if (error?.message === 'PROJECT_NOT_FOUND') {
+                return res.status(404).json({
+                    error: { code: 'PROJECT_NOT_FOUND', message: 'Project not found' }
+                });
+            }
+
             return res.status(400).json({
                 error: { code: 'TRANSITION_FAILED', message: error.message }
             });
