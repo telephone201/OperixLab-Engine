@@ -67,8 +67,9 @@ async function run() {
         console.log('[PARITY] Comparing schemas...');
         const testSchema = await getSchemaSnapshot('migration_test');
 
-        const operationalTables = Object.keys(operationalSchema);
-        const testTables = Object.keys(testSchema);
+        const EXCLUDED_METADATA_TABLES = new Set(['migrations_history']);
+        const operationalTables = Object.keys(operationalSchema).filter(t => !EXCLUDED_METADATA_TABLES.has(t));
+        const testTables = Object.keys(testSchema).filter(t => !EXCLUDED_METADATA_TABLES.has(t));
 
         const missingTables = operationalTables.filter(t => !testTables.includes(t));
         const extraTables = testTables.filter(t => !operationalTables.includes(t));
