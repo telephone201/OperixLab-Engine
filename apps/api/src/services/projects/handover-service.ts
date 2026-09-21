@@ -108,7 +108,7 @@ export class HandoverService {
 
         await db.transaction(async (client) => {
             const result = await client.query(
-                'UPDATE handover_items SET status = , completed_at = , evidence_reference =  WHERE id =  AND status <>  RETURNING id',
+                'UPDATE handover_items SET status = $1, completed_at = $2, evidence_reference = $3 WHERE id = $4 AND status <> $5 RETURNING id',
                 [
                     HandoverItemStatus.COMPLETED,
                     now,
