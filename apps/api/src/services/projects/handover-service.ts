@@ -39,7 +39,7 @@ export class HandoverService {
             throw new Error('HANDOVER_BLOCKED: Project must be in ACCEPTED status to begin handover.');
         }
 
-        const handoverId = `ho_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const handoverId = crypto.randomUUID();
 
         const handover = await db.handovers.create({
             data: {
@@ -72,10 +72,20 @@ export class HandoverService {
      * Generates a deterministic handover checklist based on the project scope and strategy.
      */
     async generateHandoverChecklist(handoverId: string): Promise<HandoverItem[]> {
-        const handover = await db.handovers.findUnique({ where: { id: handoverId } });
-        if (!handover) throw new Error('HANDOVER_NOT_FOUND');
 
         await db.transaction(async (client) => {
+            const handoverResult = await client.query(
+                `SELECT id
+                 FROM handovers
+                 WHERE id = $1
+                 FOR UPDATE`,
+                [handoverId]
+            );
+
+            if (handoverResult.rowCount !== 1) {
+                throw new Error('HANDOVER_NOT_FOUND');
+            }
+
             await client.query(
                 'INSERT INTO handover_items (id, handover_id, category, title, description, required, status) VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6), (gen_random_uuid(), $1, $7, $8, $9, $5, $6), (gen_random_uuid(), $1, $10, $11, $12, $5, $6) ON CONFLICT (handover_id, category, title) DO NOTHING',
                 [
