@@ -34,40 +34,81 @@ export class HandoverService {
         workflowVersionId: string;
         userId: string;
     }): Promise<Handover> {
-        const project = await db.projects.findUnique({ where: { id: params.projectId } });
-        if (!project || project.status !== 'ACCEPTED') {
-            throw new Error('HANDOVER_BLOCKED: Project must be in ACCEPTED status to begin handover.');
-        }
+        const handover = await db.transaction(async (client) => {
+            const projectResult = await client.query(
+                `SELECT id, status
+                 FROM projects
+                 WHERE id = $1
+                 FOR UPDATE`,
+                [params.projectId]
+            );
 
-        const handoverId = crypto.randomUUID();
-
-        const handover = await db.handovers.create({
-            data: {
-                id: handoverId,
-                project_id: params.projectId,
-                acceptance_id: params.acceptanceId,
-                scope_baseline_id: params.scopeBaselineId,
-                delivery_plan_version_id: params.deliveryPlanVersionId,
-                solution_version_id: params.solutionVersionId,
-                workflow_version_id: params.workflowVersionId,
-                handover_version: 1,
-                status: HandoverStatus.DRAFT,
-                created_by: params.userId,
-                created_at: new Date(),
-                updated_at: new Date()
+            if (projectResult.rowCount !== 1) {
+                throw new Error('PROJECT_NOT_FOUND');
             }
+
+            const project = projectResult.rows[0];
+
+            if (project.status !== ProjectStatus.ACCEPTED) {
+                throw new Error(
+                    'HANDOVER_BLOCKED: Project must be in ACCEPTED status to begin handover.'
+                );
+            }
+
+            const versionResult = await client.query(
+                `SELECT COALESCE(MAX(handover_version), 0) + 1 AS next_version
+                 FROM handovers
+                 WHERE project_id = $1`,
+                [params.projectId]
+            );
+
+            const handoverVersion = Number(versionResult.rows[0].next_version);
+            const handoverId = crypto.randomUUID();
+            const now = new Date();
+
+            const handoverResult = await client.query(
+                `INSERT INTO handovers
+                    (id, project_id, acceptance_id, scope_baseline_id,
+                     delivery_plan_version_id, solution_version_id,
+                     workflow_version_id, handover_version, status,
+                     created_by, created_at, updated_at)
+                 VALUES
+                    ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $11)
+                 RETURNING *`,
+                [
+                    handoverId,
+                    params.projectId,
+                    params.acceptanceId,
+                    params.scopeBaselineId,
+                    params.deliveryPlanVersionId,
+                    params.solutionVersionId,
+                    params.workflowVersionId,
+                    handoverVersion,
+                    HandoverStatus.DRAFT,
+                    params.userId,
+                    now
+                ]
+            );
+
+            if (handoverResult.rowCount !== 1) {
+                throw new Error('HANDOVER_CREATE_FAILED');
+            }
+
+            return handoverResult.rows[0];
         });
 
         await auditLogger.log({
             action: 'HANDOVER_CREATED',
             entityType: 'Handover',
-            entityId: handoverId,
-            details: { projectId: params.projectId }
+            entityId: handover.id,
+            details: {
+                projectId: params.projectId,
+                handoverVersion: handover.handover_version
+            }
         });
 
         return this.mapToDomain(handover);
     }
-
     /**
      * Generates a deterministic handover checklist based on the project scope and strategy.
      */
