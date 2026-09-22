@@ -159,16 +159,12 @@ export class CompletionService {
      * This is the atomic operation that closes the project.
      */
     async finalizeCompletion(reviewId: string, userId: string): Promise<{ projectId: string, snapshotId: string }> {
-        const review = await db.completion_reviews.findUnique({ where: { id: reviewId } });
-        if (!review) throw new Error('COMPLETION_REVIEW_NOT_FOUND');
+        const initialReview = await db.completion_reviews.findUnique({
+            where: { id: reviewId }
+        });
 
-        if (review.decision !== CompletionDecision.APPROVED) {
-            throw new Error('COMPLETION_NOT_APPROVED: Only approved reviews can finalize a project.');
-        }
-
-        const finalCheck = await completionEligibilityGate.evaluate(review.project_id);
-        if (!finalCheck.ready) {
-            throw new Error(`FINAL_INTEGRITY_CHECK_FAILED: ${finalCheck.blockingReasons.join(', ')}`);
+        if (!initialReview) {
+            throw new Error('COMPLETION_REVIEW_NOT_FOUND');
         }
 
         const result = await db.transaction(async (tx) => {
@@ -177,7 +173,7 @@ export class CompletionService {
                  FROM projects
                  WHERE id = $1
                  FOR UPDATE`,
-                [review.project_id]
+                [initialReview.project_id]
             );
 
             if (projectResult.rowCount !== 1) {
@@ -196,6 +192,41 @@ export class CompletionService {
                 );
             }
 
+            const reviewResult = await tx.query(
+                `SELECT id, project_id, completion_version, decision
+                 FROM completion_reviews
+                 WHERE id = $1
+                 FOR UPDATE`,
+                [reviewId]
+            );
+
+            if (reviewResult.rowCount !== 1) {
+                throw new Error('COMPLETION_REVIEW_NOT_FOUND');
+            }
+
+            const review = reviewResult.rows[0];
+
+            if (review.project_id !== project.id) {
+                throw new Error('COMPLETION_REVIEW_PROJECT_MISMATCH');
+            }
+
+            if (review.decision !== CompletionDecision.APPROVED) {
+                throw new Error(
+                    'COMPLETION_NOT_APPROVED: Only approved reviews can finalize a project.'
+                );
+            }
+
+            const finalCheck = await completionEligibilityGate.evaluateWithClient(
+                project.id,
+                tx
+            );
+
+            if (!finalCheck.ready) {
+                throw new Error(
+                    `FINAL_INTEGRITY_CHECK_FAILED: ${finalCheck.blockingReasons.join(', ')}`
+                );
+            }
+
             const acceptanceResult = await tx.query(
                 `SELECT id, scope_baseline_id
                  FROM acceptance_records
@@ -206,9 +237,11 @@ export class CompletionService {
             );
 
             const handoverResult = await tx.query(
-                `SELECT id
+                `SELECT id, scope_baseline_id, delivery_plan_version_id,
+                        solution_version_id, workflow_version_id
                  FROM handovers
                  WHERE project_id = $1
+                   AND status = 'HANDED_OVER'
                  ORDER BY completed_at DESC NULLS LAST, created_at DESC
                  LIMIT 1`,
                 [project.id]
@@ -227,13 +260,39 @@ export class CompletionService {
             const handover = handoverResult.rows[0];
             const plan = planResult.rows[0];
 
+            if (!handover) {
+                throw new Error('HANDOVER_MISSING_OR_INCOMPLETE');
+            }
+
+            const supportResult = await tx.query(
+                `SELECT id
+                 FROM support_transitions
+                 WHERE project_id = $1
+                   AND handover_id = $2
+                   AND status = 'COMPLETED'
+                 ORDER BY transitioned_at DESC
+                 LIMIT 1`,
+                [project.id, handover.id]
+            );
+
+            const support = supportResult.rows[0];
+
+            if (!support) {
+                throw new Error('SUPPORT_TRANSITION_MISSING');
+            }
+
             const snapshotId = crypto.randomUUID();
             const completionDate = new Date();
 
             const snapshotContent = JSON.stringify({
-                acceptanceId: acceptance?.id,
-                handoverId: handover?.id,
-                planId: plan?.id,
+                projectId: project.id,
+                acceptanceId: acceptance?.id ?? null,
+                scopeVersionId: handover.scope_baseline_id ?? acceptance?.scope_baseline_id ?? null,
+                deliveryPlanVersionId: handover.delivery_plan_version_id ?? plan?.id ?? null,
+                solutionVersionId: handover.solution_version_id ?? null,
+                workflowVersionId: handover.workflow_version_id ?? null,
+                handoverId: handover.id,
+                supportTransitionId: support.id,
                 completionReviewId: review.id,
                 completionVersion: review.completion_version,
                 status: ProjectStatus.COMPLETED
@@ -247,17 +306,24 @@ export class CompletionService {
             const snapshotResult = await tx.query(
                 `INSERT INTO project_closure_snapshots
                     (id, project_id, acceptance_id, scope_version_id,
-                     delivery_plan_version_id, completion_review_id,
-                     completion_version, completion_date, closure_hash, created_at)
+                     delivery_plan_version_id, solution_version_id,
+                     workflow_version_id, handover_id, support_transition_id,
+                     completion_review_id, completion_version,
+                     completion_date, closure_hash, created_at)
                  VALUES
-                    ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                    ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+                     $11, $12, $13, $14)
                  RETURNING id`,
                 [
                     snapshotId,
                     project.id,
                     acceptance?.id ?? null,
-                    acceptance?.scope_baseline_id ?? null,
-                    plan?.id ?? null,
+                    handover.scope_baseline_id ?? acceptance?.scope_baseline_id ?? null,
+                    handover.delivery_plan_version_id ?? plan?.id ?? null,
+                    handover.solution_version_id ?? null,
+                    handover.workflow_version_id ?? null,
+                    handover.id,
+                    support.id,
                     review.id,
                     review.completion_version,
                     completionDate,
@@ -291,7 +357,8 @@ export class CompletionService {
 
             return {
                 projectId: project.id,
-                snapshotId
+                snapshotId,
+                completionReviewId: review.id
             };
         });
 
@@ -300,15 +367,17 @@ export class CompletionService {
             entityType: 'Project',
             entityId: result.projectId,
             details: {
-                completionReviewId: review.id,
+                completionReviewId: result.completionReviewId,
                 snapshotId: result.snapshotId,
                 completedBy: userId
             }
         });
 
-        return result;
+        return {
+            projectId: result.projectId,
+            snapshotId: result.snapshotId
+        };
     }
-
     private mapReadinessToDomain(readiness: any): CompletionReadiness {
         return {
             completionReadinessId: readiness.id,
