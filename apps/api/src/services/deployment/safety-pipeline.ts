@@ -13,6 +13,7 @@ import {
 import { deploymentEligibilityGate } from './eligibility-gate';
 import { db } from '../../lib/db';
 import { artifactService } from '../versioning/artifact-service';
+import crypto from 'crypto';
 
 export class DeploymentSafetyPipeline {
     /**
@@ -71,7 +72,7 @@ export class DeploymentSafetyPipeline {
 
         // 5. Construct Manifest
         const manifest: DeploymentManifest = {
-            deploymentId: `dep_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            deploymentId: crypto.randomUUID(),
             workflowVersionId: versionId,
             artifactId: artifact.id,
             artifactHash: version.content_hash,
@@ -100,7 +101,7 @@ export class DeploymentSafetyPipeline {
     }
 
     private calculateHash(buffer: Buffer): string {
-        return require('crypto').createHash('sha256').update(buffer).digest('hex');
+        return crypto.createHash('sha256').update(buffer).digest('hex');
     }
 }
 

@@ -220,15 +220,35 @@ export class Phase9Step4Verify {
 
     private async testSuccessfulUpdate() {
         const versionId = await this.setupValidatedVersion();
-        await this.testDeploymentService.deploy(versionId, DeploymentEnvironment.LOCAL, crypto.randomUUID(), true);
+        const firstDeployment = await this.testDeploymentService.deploy(
+            versionId,
+            DeploymentEnvironment.LOCAL,
+            crypto.randomUUID(),
+            true
+        );
 
-        // Create a new version for the same solution
-        const newContent = Buffer.from(JSON.stringify({ nodes: [{ id: 'n1' }], connections: [] }));
+        if (!firstDeployment.n8nWorkflowId) {
+            throw new Error('UPDATE_TEST_MISSING_INITIAL_N8N_WORKFLOW_ID');
+        }
+
+        const firstVersion = await db.workflow_versions.findUnique({
+            where: { id: versionId }
+        });
+
+        if (!firstVersion) {
+            throw new Error('UPDATE_TEST_INITIAL_VERSION_NOT_FOUND');
+        }
+
+        const newContent = Buffer.from(
+            JSON.stringify({ nodes: [{ id: 'n1' }], connections: [] })
+        );
+
         const { versionId: v2 } = await workflowVersionService.createVersion({
-            solutionId: crypto.randomUUID(),
+            solutionId: firstVersion.solution_id,
             content: newContent,
             originType: OriginType.REUSED
         });
+
         await db.workflow_validations.create({
             data: {
                 id: crypto.randomUUID(),
@@ -239,13 +259,43 @@ export class Phase9Step4Verify {
             }
         });
 
-        const res = await this.testDeploymentService.deploy(v2, DeploymentEnvironment.LOCAL, crypto.randomUUID(), true);
+        await db.query(
+            `
+            INSERT INTO workflow_environment_bindings (
+                id,
+                workflow_version_id,
+                environment,
+                n8n_workflow_id
+            )
+            VALUES ($1, $2, $3, $4)
+            `,
+            [
+                crypto.randomUUID(),
+                v2,
+                DeploymentEnvironment.LOCAL,
+                firstDeployment.n8nWorkflowId
+            ]
+        );
+
+        const res = await this.testDeploymentService.deploy(
+            v2,
+            DeploymentEnvironment.LOCAL,
+            crypto.randomUUID(),
+            true
+        );
+
         if (res.status !== DeploymentStatus.VERIFIED && res.status !== DeploymentStatus.ACTIVE) {
             throw new Error(`Expected VERIFIED/ACTIVE, got ${res.status}`);
         }
+
+        if (res.n8nWorkflowId !== firstDeployment.n8nWorkflowId) {
+            throw new Error(
+                `UPDATE_TEST_TARGET_CHANGED: expected ${firstDeployment.n8nWorkflowId}, got ${res.n8nWorkflowId}`
+            );
+        }
+
         return { test: 'Successful Update', status: 'PASS' };
     }
-
     private async testIdempotentDeployment() {
         const versionId = await this.setupValidatedVersion();
         await this.testDeploymentService.deploy(versionId, DeploymentEnvironment.LOCAL, crypto.randomUUID(), true);
@@ -443,10 +493,46 @@ export class Phase9Step4Verify {
         return { test: 'Concurrent Activation', status: 'PASS' };
     }
     private async testSourceImmutability() {
-        // In a real test, we would check hashes of workflow-library/source
+        const sourceRoot = 'D:\\OperixLabs Engine\\workflow-library\\source\\N8N\\All flows';
+        const entries = await fs.readdir(sourceRoot, { recursive: true });
+        const files = entries
+            .filter((entry: string) => entry.toLowerCase().endsWith('.json'))
+            .slice(0, 5)
+            .map((entry: string) => sourceRoot + '\\' + entry);
+
+        if (files.length === 0) {
+            throw new Error('SOURCE_IMMUTABILITY_NO_FIXTURES');
+        }
+
+        const before = new Map<string, string>();
+        for (const file of files) {
+            const buffer = await fs.readFile(file);
+            before.set(file, crypto.createHash('sha256').update(buffer).digest('hex'));
+        }
+
+        const versionId = await this.setupValidatedVersion();
+        await this.testDeploymentService.deploy(
+            versionId,
+            DeploymentEnvironment.LOCAL,
+            crypto.randomUUID(),
+            true
+        );
+
+        const after = new Map<string, string>();
+        for (const file of files) {
+            const buffer = await fs.readFile(file);
+            after.set(file, crypto.createHash('sha256').update(buffer).digest('hex'));
+        }
+
+        for (const [file, beforeHash] of before) {
+            const afterHash = after.get(file);
+            if (afterHash !== beforeHash) {
+                throw new Error('SOURCE_IMMUTABILITY_VIOLATION: ' + file);
+            }
+        }
+
         return { test: 'Source Immutability', status: 'PASS' };
     }
-
     private async testZipImmutability() {
         const zipPath = 'D:\\OperixLabs Engine\\N8N.zip';
         const expectedHash = '735b01c20157c3756745e68c1b83715d0fcc36d3e190bd7bdabef0e7f94a451b';
