@@ -45,12 +45,6 @@ export class CommercialGovernanceService {
         const approval = await db.governance_approvals.findUnique({ where: { id: approvalId } });
         if (!approval) throw new Error('APPROVAL_NOT_FOUND');
 
-        // 2. Re-evaluate Staleness / Integrity before committing decision
-        if (approval.approval_type === ApprovalType.PROPOSAL) {
-            const isAuthorized = await commercialApprovalGate.isArtifactAuthorized(approval.entity_id, 'PROPOSAL');
-            // Note: This is a recursive check, for now we check if it's not stale.
-            // In a real impl, we'd use the CommercialStalenessService here.
-        }
 
         await humanApprovalService.submitDecision(approvalId, ApprovalDecision.APPROVED, userId, reason);
 
@@ -74,8 +68,15 @@ export class CommercialGovernanceService {
             return { approved: false };
         }
 
+        const activeApproval = await humanApprovalService.getActiveApproval(
+            proposalId,
+            ApprovalType.PROPOSAL
+        );
+
         return {
-            approved: proposal.status === ProposalStatus.APPROVED
+            approved:
+                proposal.status === ProposalStatus.APPROVED ||
+                !!activeApproval
         };
     }
     /**

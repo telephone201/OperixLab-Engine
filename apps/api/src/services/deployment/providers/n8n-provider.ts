@@ -8,14 +8,16 @@ import axios, { AxiosInstance } from 'axios';
 
 export class N8NProvider implements IDeploymentProvider {
     private client: AxiosInstance;
+    private readonly configured: boolean = false;
 
     constructor() {
         const baseUrl = process.env.N8N_BASE_URL;
         const apiKey = process.env.N8N_API_KEY;
 
-        if (!baseUrl || !apiKey) {
-            // We don't throw in constructor to allow the service to handle
-            // N8N_NOT_CONFIGURED error gracefully.
+        this.configured = Boolean(baseUrl && apiKey);
+
+        if (!this.configured) {
+            // Provider remains constructible so callers can report a controlled configuration error.
         }
 
         this.client = axios.create({
@@ -28,7 +30,14 @@ export class N8NProvider implements IDeploymentProvider {
         });
     }
 
+    private ensureConfigured(): void {
+        if (!this.configured) {
+            throw new Error('N8N_NOT_CONFIGURED');
+        }
+    }
     public async getWorkflow(id: string) {
+        this.ensureConfigured();
+        if (!this.configured) throw new Error('N8N_NOT_CONFIGURED');
         try {
             const response = await this.client.get(`/workflows/${id}`);
             const data = response.data;
@@ -45,6 +54,8 @@ export class N8NProvider implements IDeploymentProvider {
     }
 
     public async createWorkflow(name: string, content: any) {
+        this.ensureConfigured();
+        if (!this.configured) throw new Error('N8N_NOT_CONFIGURED');
         try {
             const response = await this.client.post('/workflows', {
                 name,
@@ -59,6 +70,8 @@ export class N8NProvider implements IDeploymentProvider {
     }
 
     public async updateWorkflow(id: string, content: any) {
+        this.ensureConfigured();
+        if (!this.configured) throw new Error('N8N_NOT_CONFIGURED');
         try {
             const response = await this.client.put(`/workflows/${id}`, {
                 nodes: content.nodes,
@@ -72,6 +85,8 @@ export class N8NProvider implements IDeploymentProvider {
     }
 
     public async activateWorkflow(id: string) {
+        this.ensureConfigured();
+        if (!this.configured) throw new Error('N8N_NOT_CONFIGURED');
         try {
             await this.client.put(`/workflows/${id}/activate`);
         } catch (error: any) {
@@ -80,6 +95,8 @@ export class N8NProvider implements IDeploymentProvider {
     }
 
     public async deactivateWorkflow(id: string) {
+        this.ensureConfigured();
+        if (!this.configured) throw new Error('N8N_NOT_CONFIGURED');
         try {
             await this.client.put(`/workflows/${id}/deactivate`);
         } catch (error: any) {
@@ -88,6 +105,8 @@ export class N8NProvider implements IDeploymentProvider {
     }
 
     public async getWorkflowStatus(id: string) {
+        this.ensureConfigured();
+        if (!this.configured) throw new Error('N8N_NOT_CONFIGURED');
         try {
             const workflow = await this.getWorkflow(id);
             return {

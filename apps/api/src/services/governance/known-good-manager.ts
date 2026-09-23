@@ -6,6 +6,7 @@
 import { db } from '../../lib/db';
 import { DeploymentEnvironment } from '../deployment/types';
 import { KnownGoodVersion } from './types';
+import crypto from 'crypto';
 
 export class KnownGoodVersionManager {
     /**
@@ -21,7 +22,7 @@ export class KnownGoodVersionManager {
         userId: string;
         reason: string;
     }): Promise<string> {
-        const knownGoodId = `kg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const knownGoodId = crypto.randomUUID();
 
         await db.known_good_versions.create({
             data: {

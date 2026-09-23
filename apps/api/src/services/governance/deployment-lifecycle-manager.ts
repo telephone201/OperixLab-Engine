@@ -6,6 +6,7 @@
 import { db } from '../../lib/db';
 import { GovernanceState } from './types';
 import { auditLogger } from '../../core/logging/audit-logger';
+import crypto from 'crypto';
 
 export class DeploymentLifecycleManager {
     /**
@@ -26,7 +27,7 @@ export class DeploymentLifecycleManager {
         // 2. Persist Transition (Append-only)
         await db.workflow_lifecycle_transitions.create({
             data: {
-                id: `evt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                id: crypto.randomUUID(),
                 entity_type: 'WorkflowDeployment',
                 entity_id: params.deploymentId,
                 previous_state: params.fromState,

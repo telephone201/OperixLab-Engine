@@ -30,7 +30,7 @@ export class DeploymentEligibilityGate {
                 workflow_version_id: versionId,
                 // We look for the latest validation run
             },
-            orderBy: { created_at: 'desc' }
+            orderBy: { completed_at: 'desc' }
         });
 
         if (!validation || validation.status !== 'PASSED') {

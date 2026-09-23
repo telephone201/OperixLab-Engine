@@ -59,7 +59,10 @@ export class AgreementPaymentController {
                 });
             }
 
-            const readiness = await paymentReadinessService.evaluateReadiness(proposalVersion.proposal_id);
+            const readiness = await paymentReadinessService.evaluateReadiness(
+                agreement.id,
+                proposalVersion.proposal_id
+            );
 
             return res.json({
                 data: {
@@ -127,6 +130,7 @@ export class AgreementPaymentController {
             });
 
             const readiness = await paymentReadinessService.evaluateReadiness(
+                result.agreementId,
                 result.proposalId
             );
 

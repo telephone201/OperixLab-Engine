@@ -46,15 +46,29 @@ export class ArtifactService {
         const fileName = `${hash}.json`;
         const storagePath = path.join(this.artifactsRoot, fileName);
 
-        // Check if artifact already exists to avoid duplication
+        // Check if artifact already exists to avoid duplication.
+        // Reuse it only when the persisted bytes still match the content hash.
         const existing = await db.workflow_artifacts.findFirst({
             where: { content_hash: hash }
         });
 
         if (existing) {
+            let existingIsValid = false;
+
+            try {
+                const existingContent = await fs.readFile(existing.storage_path);
+                const existingHash = hashService.hashBuffer(existingContent);
+                existingIsValid = existingHash === hash;
+            } catch {
+                existingIsValid = false;
+            }
+
+            if (!existingIsValid) {
+                await fs.writeFile(existing.storage_path, content);
+            }
+
             return { artifactId: existing.id, hash };
         }
-
         // Write raw bytes to avoid JSON serialization drift
         await fs.writeFile(storagePath, content);
 

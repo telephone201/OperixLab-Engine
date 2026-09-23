@@ -3,6 +3,7 @@
  * @description Records proposal engagement events and updates engagement metrics.
  */
 
+import crypto from 'crypto';
 import { db } from '../../lib/db';
 import {
     EngagementEvent,
@@ -38,7 +39,7 @@ export class EngagementService {
             if (existing) return this.mapToDomain(existing);
         }
 
-        const eventId = `evt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const eventId = crypto.randomUUID();
 
         const event = await db.engagement_events.create({
             data: {

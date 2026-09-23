@@ -1,8 +1,10 @@
 import { DeploymentVerification } from './types';
 import { n8nProvider } from './providers/n8n-provider';
+import { IDeploymentProvider } from './providers/deployment-provider.interface';
 import crypto from 'crypto';
 
 export class DeploymentVerifier {
+    constructor(private readonly provider: IDeploymentProvider = n8nProvider) {}
     async verify(
         deploymentId: string,
         n8nWorkflowId: string,
@@ -18,7 +20,7 @@ export class DeploymentVerifier {
             const expectedContent = this.normalizeWorkflow(artifactWorkflow);
             const expectedHash = this.hashCanonicalWorkflow(expectedContent);
 
-            const deployedWorkflow = await n8nProvider.getWorkflow(n8nWorkflowId);
+            const deployedWorkflow = await this.provider.getWorkflow(n8nWorkflowId);
 
             const deployedContent = this.normalizeWorkflow(deployedWorkflow);
             const deployedHash = this.hashCanonicalWorkflow(deployedContent);
@@ -29,7 +31,7 @@ export class DeploymentVerifier {
                     : 'VERIFICATION_FAILED';
 
             return {
-                verificationId: `ver_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                verificationId: crypto.randomUUID(),
                 deploymentId,
                 status,
                 deployedHash,
@@ -40,7 +42,7 @@ export class DeploymentVerifier {
             console.error(`[VERIFY] Verification error:`, error);
 
             return {
-                verificationId: `ver_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                verificationId: crypto.randomUUID(),
                 deploymentId,
                 status: 'VERIFICATION_FAILED',
                 deployedHash: '',

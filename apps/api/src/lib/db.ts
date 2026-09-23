@@ -431,6 +431,10 @@ const dbImplementation: DbClient = {
     },
 };
 
+export async function closeDbPool(): Promise<void> {
+    await pool.end();
+}
+
 export const db = new Proxy(dbImplementation, {
     get: (target, prop: string) => {
         if (prop in target) return (target as any)[prop];

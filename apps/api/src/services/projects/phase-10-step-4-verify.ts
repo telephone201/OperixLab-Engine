@@ -6,6 +6,9 @@
 import { scopeManager } from './scope-manager';
 import { ScopeClassification, ConfirmationStatus, ScopeBaselineStatus, ChangeRequestStatus } from './scope-types';
 import { db } from '../../lib/db';
+import { humanApprovalService } from '../governance/approval-service';
+import { ApprovalDecision } from '../governance/types';
+import crypto from 'crypto';
 
 export class Phase10Step4Verify {
     async runTests() {
@@ -13,17 +16,33 @@ export class Phase10Step4Verify {
         const results = [];
 
         try {
-            const projectId = 'proj_scope_test_123';
-            const userId = 'user_admin_123';
-            const solArchId = 'sol_arch_123';
-            const solVerId = 'sol_ver_123';
-            const reqVerId = 'req_ver_123';
-            const planVerId = 'plan_ver_123';
+            const projectId = crypto.randomUUID();
+            const userId = crypto.randomUUID();
+            const solArchId = crypto.randomUUID();
+            const solVerId = crypto.randomUUID();
+            const reqVerId = crypto.randomUUID();
+            const planVerId = crypto.randomUUID();
+        const req1Id = crypto.randomUUID();
+        const req2Id = crypto.randomUUID();
+        const req3Id = crypto.randomUUID();
+            const contractId = crypto.randomUUID();
 
+            await db.contracts.create({
+                data: {
+                    id: contractId,
+                    commercial_model: 'FIXED_FEE',
+                    payment_terms: 'TEST',
+                    minimum_commitment: 1,
+                    scope: 'Scope management verification fixture',
+                    support_terms: 'TEST',
+                    status: 'ACCEPTED',
+                    created_at: new Date()
+                }
+            });
             await db.projects.create({
                 data: {
                     id: projectId,
-                    contract_id: 'cont_123',
+                    contract_id: contractId,
                     name: 'Scope Test Project',
                     status: 'READY_TO_START',
                     payment_status: 'VERIFIED'
@@ -37,8 +56,8 @@ export class Phase10Step4Verify {
             });
 
             await scopeManager.snapshotRequirements(conf.confirmationId, userId, [
-                { requirementId: 'req_1', classification: ScopeClassification.INCLUDED, priority: 'HIGH' },
-                { requirementId: 'req_2', classification: ScopeClassification.OPTIONAL, priority: 'MEDIUM' }
+                { requirementId: req1Id, classification: ScopeClassification.INCLUDED, priority: 'HIGH' },
+                { requirementId: req2Id, classification: ScopeClassification.OPTIONAL, priority: 'MEDIUM' }
             ]);
 
             const baseline = await scopeManager.confirmScope(conf.confirmationId, userId);
@@ -55,7 +74,7 @@ export class Phase10Step4Verify {
             });
 
             await scopeManager.snapshotRequirements(conf2.confirmationId, userId, [
-                { requirementId: 'req_3', classification: ScopeClassification.UNRESOLVED, priority: 'HIGH' }
+                { requirementId: req3Id, classification: ScopeClassification.UNRESOLVED, priority: 'HIGH' }
             ]);
 
             try {
@@ -85,7 +104,23 @@ export class Phase10Step4Verify {
                 confidence: 'High', analyzedAt: new Date(), analyzedBy: userId
             });
 
-            await scopeManager.approveChangeRequest(cr.changeRequestId, userId, 'Approved based on analysis');
+            const approvalId = await scopeManager.requestChangeRequestApproval(
+                cr.changeRequestId,
+                userId
+            );
+
+            await humanApprovalService.submitDecision(
+                approvalId,
+                ApprovalDecision.APPROVED,
+                userId,
+                'Approved based on analysis'
+            );
+
+            await scopeManager.approveChangeRequest(
+                cr.changeRequestId,
+                userId,
+                'Approved based on analysis'
+            );
 
             const updatedCr = await db.change_requests.findUnique({ where: { id: cr.changeRequestId } });
             if (updatedCr?.status === ChangeRequestStatus.APPROVED) {

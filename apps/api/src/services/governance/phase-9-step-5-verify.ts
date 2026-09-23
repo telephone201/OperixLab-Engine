@@ -19,16 +19,17 @@ export class Phase9Step5Verify {
         const results = [];
 
         try {
-            const testUserId = 'user_admin_123';
+            const testUserId = crypto.randomUUID();
             const testVersionId = await this.setupValidatedVersion();
 
             // --- GROUP 1: APPROVALS ---
-            results.push(await this.testDeploymentApprovalFlow(testVersionId, testUserId));
+            const deploymentApprovalResult = await this.testDeploymentApprovalFlow(testVersionId, testUserId);
+            results.push(deploymentApprovalResult);
             results.push(await this.testApprovalExpiration());
             results.push(await this.testApprovalImmutability());
 
             // --- GROUP 2: KNOWN-GOOD ---
-            results.push(await this.testKnownGoodCertification(testVersionId, testUserId));
+            results.push(await this.testKnownGoodCertification(testVersionId, testUserId, deploymentApprovalResult.deploymentId));
             results.push(await this.testKnownGoodEnvironmentIsolation());
 
             // --- GROUP 3: ROLLBACK ---
@@ -51,15 +52,23 @@ export class Phase9Step5Verify {
 
     private async setupValidatedVersion(): Promise<string> {
         const content = Buffer.from(JSON.stringify({ nodes: [], connections: [] }));
+        const solution = await db.solutions.create({
+            data: {
+                name: `Phase 9 Governance Test ${Date.now()}`,
+                description: 'Temporary solution fixture for Phase 9 Step 5 verification',
+                solution_type: 'EXISTING_CUSTOMIZED'
+            }
+        });
+
         const { versionId } = await workflowVersionService.createVersion({
-            solutionId: 'sol_test_gov',
+            solutionId: solution.id,
             content,
             originType: OriginType.REUSED
         });
 
         await db.workflow_validations.create({
             data: {
-                id: `val_gov_${Date.now()}`,
+                id: crypto.randomUUID(),
                 workflow_version_id: versionId,
                 artifact_hash: crypto.createHash('sha256').update(content).digest('hex'),
                 status: 'PASSED',
@@ -91,30 +100,30 @@ export class Phase9Step5Verify {
         });
 
         if (!auth.deploymentId) throw new Error('Deployment should have been authorized');
-        return { test: 'Deployment Approval Flow', status: 'PASS' };
+        return { test: 'Deployment Approval Flow', status: 'PASS', deploymentId: auth.deploymentId };
     }
 
     private async testApprovalExpiration() {
         // Request approval with 0 hours expiry
         const appId = await humanApprovalService.requestApproval({
-            entityId: 'test', entityType: 'test', approvalType: ApprovalType.DEPLOYMENT,
-            requestedBy: 'u1', expiryHours: -1
+            entityId: crypto.randomUUID(), entityType: crypto.randomUUID(), approvalType: ApprovalType.DEPLOYMENT,
+            requestedBy: crypto.randomUUID(), expiryHours: -1
         });
-        await humanApprovalService.submitDecision(appId, ApprovalDecision.APPROVED, 'u1');
+        await humanApprovalService.submitDecision(appId, ApprovalDecision.APPROVED, crypto.randomUUID());
 
-        const approval = await humanApprovalService.getActiveApproval('test', ApprovalType.DEPLOYMENT);
+        const approval = await humanApprovalService.getActiveApproval(crypto.randomUUID(), ApprovalType.DEPLOYMENT);
         if (approval) throw new Error('Expired approval should not be active');
         return { test: 'Approval Expiration', status: 'PASS' };
     }
 
     private async testApprovalImmutability() {
         const appId = await humanApprovalService.requestApproval({
-            entityId: 'test2', entityType: 'test', approvalType: ApprovalType.DEPLOYMENT, requestedBy: 'u1'
+            entityId: crypto.randomUUID(), entityType: crypto.randomUUID(), approvalType: ApprovalType.DEPLOYMENT, requestedBy: crypto.randomUUID()
         });
-        await humanApprovalService.submitDecision(appId, ApprovalDecision.APPROVED, 'u1');
+        await humanApprovalService.submitDecision(appId, ApprovalDecision.APPROVED, crypto.randomUUID());
 
         try {
-            await humanApprovalService.submitDecision(appId, ApprovalDecision.REJECTED, 'u1');
+            await humanApprovalService.submitDecision(appId, ApprovalDecision.REJECTED, crypto.randomUUID());
             throw new Error('Should not allow mutating decision');
         } catch (e: any) {
             if (e.message.includes('APPROVAL_ALREADY_DECIDED')) return { test: 'Approval Immutability', status: 'PASS' };
@@ -122,21 +131,10 @@ export class Phase9Step5Verify {
         }
     }
 
-    private async testKnownGoodCertification(versionId: string, userId: string) {
-        // Setup deployment to be ACTIVE and VERIFIED
-        const deploymentId = `dep_kg_test_${Date.now()}`;
-        await db.workflow_deployments.create({
-            data: {
-                id: deploymentId,
-                workflow_version_id: versionId,
-                artifact_id: (await db.workflow_versions.findUnique({ where: { id: versionId } }))!.artifact_id,
-                artifact_hash: (await db.workflow_versions.findUnique({ where: { id: versionId } }))!.content_hash,
-                solution_id: 'sol_test_gov',
-                environment: DeploymentEnvironment.STAGING,
-                deployment_mode: 'CREATE',
-                status: DeploymentStatus.ACTIVE,
-                requested_by: userId
-            }
+    private async testKnownGoodCertification(versionId: string, userId: string, deploymentId: string) {
+        await db.workflow_deployments.update({
+            where: { id: deploymentId },
+            data: { status: DeploymentStatus.VERIFIED }
         });
 
         const kgId = await governanceService.markKnownGood({
@@ -161,10 +159,10 @@ export class Phase9Step5Verify {
         await knownGoodVersionManager.certifyVersion({
             workflowVersionId: versionId,
             environment: DeploymentEnvironment.STAGING,
-            deploymentId: 'd1',
+            deploymentId: crypto.randomUUID(),
             n8nWorkflowId: 'n8n_1',
             artifactHash: hash,
-            userId: 'u1',
+            userId: crypto.randomUUID(),
             reason: 'OK'
         });
 
@@ -174,11 +172,12 @@ export class Phase9Step5Verify {
     }
 
     private async testRollbackSafety(versionId: string, userId: string) {
+        versionId = await this.setupValidatedVersion();
         // Setup a Known-Good target
         await knownGoodVersionManager.certifyVersion({
             workflowVersionId: versionId,
             environment: DeploymentEnvironment.STAGING,
-            deploymentId: 'd_kg',
+            deploymentId: crypto.randomUUID(),
             n8nWorkflowId: 'n8n_kg',
             artifactHash: (await db.workflow_versions.findUnique({ where: { id: versionId } }))!.content_hash,
             userId: userId,
@@ -198,13 +197,13 @@ export class Phase9Step5Verify {
     }
 
     private async testLifecycleTransitions() {
-        const depId = 'dep_lifecycle_test';
+        const depId = crypto.randomUUID();
         try {
             await deploymentLifecycleManager.transition({
                 deploymentId: depId,
                 fromState: GovernanceState.GOVERNANCE_PENDING,
                 newState: GovernanceState.DEPLOYMENT_APPROVAL_PENDING,
-                actor: 'sys',
+                actor: crypto.randomUUID(),
                 reason: 'init'
             });
 
@@ -213,7 +212,7 @@ export class Phase9Step5Verify {
                 deploymentId: depId,
                 fromState: GovernanceState.DEPLOYMENT_APPROVAL_PENDING,
                 newState: GovernanceState.ACTIVE,
-                actor: 'sys',
+                actor: crypto.randomUUID(),
                 reason: 'cheat'
             });
             throw new Error('Should block invalid transition');
@@ -233,4 +232,3 @@ export class Phase9Step5Verify {
 }
 
 export const phase9Step5Verify = new Phase9Step5Verify();
-

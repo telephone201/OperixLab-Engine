@@ -42,7 +42,7 @@ export class RollbackSafetyGate {
                 workflow_version_id: target.workflowVersionId,
                 status: 'PASSED'
             },
-            orderBy: { created_at: 'desc' }
+            orderBy: { started_at: 'desc' }
         });
 
         if (!validation) {

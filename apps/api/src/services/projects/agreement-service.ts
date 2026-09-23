@@ -34,7 +34,9 @@ export class AgreementService {
         createdBy: string;
     }): Promise<CommercialAgreement> {
         // 1. Agreement Approval Gate: Ensure source is approved and not stale
-        const gateCheck = await commercialApprovalGate.isArtifactAuthorized(params.proposalVersionId, 'PROPOSAL');
+        const proposalVersion = await db.proposal_versions.findUnique({ where: { id: params.proposalVersionId } });
+        if (!proposalVersion || !proposalVersion.proposal_id) { throw new Error('AGREEMENT_BLOCKED: Proposal version was not found or is not linked to a proposal.'); }
+        const gateCheck = await commercialApprovalGate.isArtifactAuthorized(proposalVersion.proposal_id, 'PROPOSAL');
         if (!gateCheck.authorized) {
             throw new Error(`AGREEMENT_BLOCKED: Proposal ${params.proposalVersionId} is not approved or is stale.`);
         }
@@ -88,31 +90,58 @@ export class AgreementService {
         actorType: 'CLIENT' | 'LEGAL_REPRESENTATIVE';
         evidence?: string;
     }): Promise<void> {
-        const agreement = await db.commercial_agreements.findUnique({ where: { id: params.agreementId } });
-        if (!agreement) throw new Error('AGREEMENT_NOT_FOUND');
+        await db.transaction(async (tx) => {
+            const agreementResult = await tx.query(
+                `SELECT id, status
+                 FROM commercial_agreements
+                 WHERE id = $1
+                 FOR UPDATE`,
+                [params.agreementId]
+            );
 
-        if (agreement.status === AgreementStatus.ACCEPTED) {
-            throw new Error('AGREEMENT_ALREADY_ACCEPTED');
-        }
-
-        // Record immutable acceptance
-        await db.commercial_agreement_acceptances.create({
-            data: {
-                agreement_id: params.agreementId,
-                actor_id: params.actorId,
-                actor_type: params.actorType,
-                evidence_ref: params.evidence,
-                timestamp: new Date()
+            if (agreementResult.rowCount !== 1) {
+                throw new Error('AGREEMENT_NOT_FOUND');
             }
-        });
 
-        await db.commercial_agreements.update({
-            where: { id: params.agreementId },
-            data: {
-                status: AgreementStatus.ACCEPTED,
-                accepted_at: new Date(),
-                accepted_by: params.actorId,
-                updated_at: new Date()
+            const agreement = agreementResult.rows[0];
+
+            if (agreement.status === AgreementStatus.ACCEPTED) {
+                throw new Error('AGREEMENT_ALREADY_ACCEPTED');
+            }
+
+            const now = new Date();
+
+            await tx.query(
+                `INSERT INTO commercial_agreement_acceptances
+                    (agreement_id, actor_id, actor_type, evidence_ref, timestamp)
+                 VALUES ($1, $2, $3, $4, $5)`,
+                [
+                    params.agreementId,
+                    params.actorId,
+                    params.actorType,
+                    params.evidence || null,
+                    now
+                ]
+            );
+
+            const updateResult = await tx.query(
+                `UPDATE commercial_agreements
+                 SET status = $1,
+                     accepted_at = $2,
+                     accepted_by = $3,
+                     updated_at = $2
+                 WHERE id = $4
+                   AND status <> $1`,
+                [
+                    AgreementStatus.ACCEPTED,
+                    now,
+                    params.actorId,
+                    params.agreementId
+                ]
+            );
+
+            if (updateResult.rowCount !== 1) {
+                throw new Error('AGREEMENT_ACCEPTANCE_UPDATE_FAILED');
             }
         });
 
@@ -123,9 +152,13 @@ export class AgreementService {
             details: { actorId: params.actorId }
         });
 
-        await notifications.notify('AGREEMENT_ACCEPTED', `Agreement ${params.agreementId} has been accepted by client.`, 'HIGH', params.agreementId);
+        await notifications.notify(
+            'AGREEMENT_ACCEPTED',
+            `Agreement ${params.agreementId} has been accepted by client.`,
+            'HIGH',
+            params.agreementId
+        );
     }
-
     async checkStaleness(agreementId: string): Promise<{ isStale: boolean; reason?: string }> {
         const agreement = await db.commercial_agreements.findUnique({ where: { id: agreementId } });
         if (!agreement) throw new Error('AGREEMENT_NOT_FOUND');

@@ -55,14 +55,17 @@ export class DeploymentSafetyPipeline {
         }
 
         // 4. Resolve Target Identity & Mode
-        const binding = await db.workflow_environment_bindings.findUnique({
-            where: {
-                workflow_version_id_environment: {
-                    workflow_version_id: versionId,
-                    environment: environment
-                }
-            }
-        });
+        const bindingResult = await db.query(
+            `
+            SELECT workflow_version_id, environment, n8n_workflow_id
+            FROM workflow_environment_bindings
+            WHERE workflow_version_id = $1
+              AND environment = $2
+            LIMIT 1
+            `,
+            [versionId, environment]
+        );
+        const binding = bindingResult.rows[0] ?? null;
 
         const mode = binding ? DeploymentMode.UPDATE : DeploymentMode.CREATE;
 
@@ -89,7 +92,7 @@ export class DeploymentSafetyPipeline {
         // Populate validationId
         const lastValidation = await db.workflow_validations.findFirst({
             where: { workflow_version_id: versionId, status: 'PASSED' },
-            orderBy: { created_at: 'desc' }
+            orderBy: { completed_at: 'desc' }
         });
         manifest.validationId = lastValidation?.id || '';
 

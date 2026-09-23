@@ -9,37 +9,48 @@ import { PaymentStatus } from './types';
 
 export class PaymentReadinessService {
     /**
-     * Evaluates payment readiness for a proposal.
-     * Readiness is VERIFIED only when at least one required payment exists,
-     * every required payment is VERIFIED, and the verified total covers
-     * the required total.
+     * Evaluates payment readiness for a specific commercial agreement.
+     *
+     * The agreement is explicit because a proposal may have multiple
+     * agreements over its lifecycle. Payments are scoped strictly to
+     * the selected agreement and its proposal.
      */
-    async evaluateReadiness(proposalId: string): Promise<PaymentReadiness> {
+    async evaluateReadiness(
+        agreementId: string,
+        proposalId: string
+    ): Promise<PaymentReadiness> {
+        const agreement = await db.commercial_agreements.findUnique({
+            where: { id: agreementId }
+        });
+
+        if (!agreement) {
+            throw new Error('AGREEMENT_NOT_FOUND');
+        }
+
+        const proposalVersion = await db.proposal_versions.findUnique({
+            where: { id: agreement.proposal_version_id }
+        });
+
+        if (!proposalVersion || proposalVersion.proposal_id !== proposalId) {
+            throw new Error('AGREEMENT_PROPOSAL_MISMATCH');
+        }
+
         const payments = await db.payments.findMany({
-            where: { proposal_id: proposalId }
+            where: {
+                agreement_id: agreementId,
+                proposal_id: proposalId
+            }
         });
-
-        const proposalVersion = await db.proposal_versions.findFirst({
-            where: { proposal_id: proposalId },
-            orderBy: { version_number: 'desc' }
-        });
-
-        const agreement = proposalVersion
-            ? await db.commercial_agreements.findFirst({
-                where: { proposal_version_id: proposalVersion.id },
-                orderBy: { created_at: 'desc' }
-            })
-            : null;
 
         let totalRequired = 0;
         let totalVerified = 0;
         let allRequiredVerified = payments.length > 0;
 
-        for (const p of payments) {
-            totalRequired += Number(p.expected_amount || 0);
-            totalVerified += Number(p.verified_amount || 0);
+        for (const payment of payments) {
+            totalRequired += Number(payment.expected_amount || 0);
+            totalVerified += Number(payment.verified_amount || 0);
 
-            if (p.status !== PaymentStatus.VERIFIED) {
+            if (payment.status !== PaymentStatus.VERIFIED) {
                 allRequiredVerified = false;
             }
         }
@@ -51,11 +62,13 @@ export class PaymentReadinessService {
                 ? PaymentReadinessStatus.VERIFIED
                 : PaymentReadinessStatus.NOT_READY;
 
+        const now = new Date();
+
         const readiness: PaymentReadiness = {
             proposalId,
-            agreementId: agreement?.id || 'unknown',
+            agreementId,
             status,
-            lastEvaluatedAt: new Date(),
+            lastEvaluatedAt: now,
             verifiedAmountTotal: totalVerified,
             requiredAmountTotal: totalRequired,
             details: {
@@ -65,19 +78,23 @@ export class PaymentReadinessService {
         };
 
         await db.payment_readiness.upsert({
-            where: { proposal_id: proposalId },
+            where: { agreement_id: agreementId },
             update: {
+                agreement_id: agreementId,
                 status,
-                last_evaluated_at: new Date(),
+                last_evaluated_at: now,
                 verified_amount_total: totalVerified,
-                required_amount_total: totalRequired
+                required_amount_total: totalRequired,
+                details: readiness.details
             },
             create: {
                 proposal_id: proposalId,
-                agreement_id: agreement?.id || 'unknown',
+                agreement_id: agreementId,
                 status,
+                last_evaluated_at: now,
                 verified_amount_total: totalVerified,
-                required_amount_total: totalRequired
+                required_amount_total: totalRequired,
+                details: readiness.details
             }
         });
 

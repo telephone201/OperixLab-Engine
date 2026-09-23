@@ -3,6 +3,7 @@
  * @description Coordinates deployment approval, authorization and known-good certification.
  */
 
+import crypto from 'crypto';
 import { db } from '../../lib/db';
 import { approvalGate } from './approval-gate';
 import { humanApprovalService } from './approval-service';
@@ -118,24 +119,54 @@ export class GovernanceService {
             return { deploymentId: existing.id };
         }
 
-        const deploymentId =
-            `dep_gov_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+        const deploymentId = crypto.randomUUID();
 
-        await db.workflow_deployments.create({
-            data: {
-                id: deploymentId,
+        const inserted = await db.query(
+            `
+            INSERT INTO workflow_deployments (
+                id,
+                workflow_version_id,
+                artifact_id,
+                artifact_hash,
+                solution_id,
+                environment,
+                deployment_mode,
+                status,
+                requested_by
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            ON CONFLICT (workflow_version_id, environment) DO NOTHING
+            RETURNING id
+            `,
+            [
+                deploymentId,
+                params.workflowVersionId,
+                version.artifact_id,
+                params.artifactHash,
+                version.solution_id,
+                params.environment,
+                DeploymentMode.CREATE,
+                DeploymentStatus.AUTHORIZED,
+                params.userId
+            ]
+        );
+
+        if (inserted.rows.length > 0) {
+            return { deploymentId: inserted.rows[0].id };
+        }
+
+        const concurrentDeployment = await db.workflow_deployments.findFirst({
+            where: {
                 workflow_version_id: params.workflowVersionId,
-                artifact_id: version.artifact_id,
-                artifact_hash: params.artifactHash,
-                solution_id: version.solution_id,
-                environment: params.environment,
-                deployment_mode: DeploymentMode.CREATE,
-                status: DeploymentStatus.AUTHORIZED,
-                requested_by: params.userId
+                environment: params.environment
             }
         });
 
-        return { deploymentId };
+        if (!concurrentDeployment) {
+            throw new Error('DEPLOYMENT_CREATE_CONFLICT');
+        }
+
+        return { deploymentId: concurrentDeployment.id };
     }
 
     /**
