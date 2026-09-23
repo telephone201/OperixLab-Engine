@@ -21,7 +21,7 @@ export class ManualInstaPayProvider implements PaymentProvider {
             },
             {
                 identifier: 'mazenhegazy21@instapay',
-                url: 'https://ipn.eg/S/mazenhegazy21@instapay',
+                url: 'https://ipn.eg/S/mazenhegazy21/instapay/7BHsiF',
                 instructions: 'Secondary payment destination.'
             }
         ];
