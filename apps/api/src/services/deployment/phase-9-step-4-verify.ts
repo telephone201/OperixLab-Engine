@@ -298,13 +298,43 @@ export class Phase9Step4Verify {
     }
     private async testIdempotentDeployment() {
         const versionId = await this.setupValidatedVersion();
-        await this.testDeploymentService.deploy(versionId, DeploymentEnvironment.LOCAL, crypto.randomUUID(), true);
 
-        const res = await this.testDeploymentService.deploy(versionId, DeploymentEnvironment.LOCAL, crypto.randomUUID(), true);
-        // Depending on implementation, should either return existing or create new versioned deployment
+        const first = await this.testDeploymentService.deploy(
+            versionId,
+            DeploymentEnvironment.LOCAL,
+            crypto.randomUUID(),
+            true
+        );
+
+        if (!first.deploymentId) {
+            throw new Error('IDEMPOTENCY_TEST_MISSING_FIRST_DEPLOYMENT_ID');
+        }
+
+        if (!first.n8nWorkflowId) {
+            throw new Error('IDEMPOTENCY_TEST_MISSING_FIRST_N8N_WORKFLOW_ID');
+        }
+
+        const second = await this.testDeploymentService.deploy(
+            versionId,
+            DeploymentEnvironment.LOCAL,
+            crypto.randomUUID(),
+            true
+        );
+
+        if (second.deploymentId !== first.deploymentId) {
+            throw new Error(
+                `IDEMPOTENCY_TEST_CREATED_DUPLICATE: expected ${first.deploymentId}, got ${second.deploymentId}`
+            );
+        }
+
+        if (second.n8nWorkflowId !== first.n8nWorkflowId) {
+            throw new Error(
+                `IDEMPOTENCY_TEST_TARGET_CHANGED: expected ${first.n8nWorkflowId}, got ${second.n8nWorkflowId}`
+            );
+        }
+
         return { test: 'Idempotent Deployment', status: 'PASS' };
     }
-
     private async testConcurrentDeploymentIdempotency() {
         const versionId = await this.setupValidatedVersion();
         const environment = DeploymentEnvironment.LOCAL;
