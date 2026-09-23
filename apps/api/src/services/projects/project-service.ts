@@ -60,7 +60,12 @@ export class ProjectService {
                     { status: currentState }
                 ]
             },
-            data: { status: params.toState }
+            data: {
+                status: params.toState,
+                ...(params.toState === ProjectStatus.STARTED
+                    ? { start_date: new Date() }
+                    : {})
+            }
         });
 
         if (updated.count !== 1) {
