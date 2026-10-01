@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file domain-api.ts
  * @description Domain-specific API functions for the Acquisition & Intelligence workspace.
  */
@@ -81,6 +81,33 @@ export const domainApi = {
   async getLeadRequirements(id: string): Promise<{ data: LeadRequirements | null; error?: any }> {
     const response = await apiClient.get<LeadRequirements>(`/leads/${id}/requirements`);
     return response;
+  },
+
+  /**
+   * Calculates and persists a new qualification score version for a lead.
+   */
+  async calculateQualification(id: string): Promise<{ data: any | null; error?: any }> {
+    return apiClient.post(`/leads/${id}/qualification`, {});
+  },
+
+  /**
+   * Initiates a pain analysis task for a lead.
+   */
+  async initiatePain(
+    id: string,
+    provider: 'PERPLEXITY' | 'GEMINI' = 'PERPLEXITY'
+  ): Promise<{ data: any | null; error?: any }> {
+    return apiClient.post(`/leads/${id}/pain`, { provider });
+  },
+
+  /**
+   * Initiates requirements extraction analysis for a lead.
+   */
+  async initiateRequirements(
+    id: string,
+    provider: 'PERPLEXITY' | 'GEMINI' = 'PERPLEXITY'
+  ): Promise<{ data: any | null; error?: any }> {
+    return apiClient.post(`/leads/${id}/requirements`, { provider });
   },
 };
 

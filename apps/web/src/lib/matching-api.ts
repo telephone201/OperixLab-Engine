@@ -184,6 +184,38 @@ export const matchingApi = {
     );
 
     return { data: response.data ? mapDecisionResult(response.data) : null, error: response.error };
+  },
+
+  /**
+   * POST /api/leads/:leadId/matching/run
+   * Executes workflow matching for the lead's latest requirements analysis.
+   */
+  async runMatching(
+    leadId: string
+  ): Promise<{ data: any | null; error?: any }> {
+    const response = await apiClient.post<any>(
+      `/leads/${leadId}/matching/run`,
+      {}
+    );
+
+    return response;
+  },
+
+  /**
+   * POST /api/leads/:leadId/matching/sessions/:sessionId/handoff
+   * Converts an APPROVED matching session into a DRAFT commercial package and proposal.
+   */
+  async handoffToCommercial(
+    leadId: string,
+    sessionId: string,
+    currency: string = 'EGP'
+  ): Promise<{ data: any | null; error?: any }> {
+    const response = await apiClient.post<any>(
+      `/leads/${leadId}/matching/sessions/${sessionId}/handoff`,
+      { currency }
+    );
+
+    return response;
   }
 };
 

@@ -108,6 +108,7 @@ apiRouter.post('/matching/review/:sessionId/reject', requireAuth, requireRole('O
 // Matching Read Routes (STEP 6): read-only surface over the persisted matching artifacts
 apiRouter.get('/leads/:id/matching', requireAuth, (req, res) => matchingReadController.getLeadMatchingSessions(req, res));
 apiRouter.get('/leads/:id/matching/sessions/:sessionId', requireAuth, (req, res) => matchingReadController.getMatchingSessionDetail(req, res));
+apiRouter.post('/leads/:id/matching/run', requireAuth, requireRole('OWNER', 'OPERATOR'), (req, res) => matchingReviewController.runMatching(req, res));
 apiRouter.post('/leads/:id/matching/sessions/:sessionId/handoff', requireAuth, requireRole('OWNER', 'OPERATOR'), (req, res) => matchingHandoffController.handoff(req, res));
 
 // Mapping Review Session Routes: human review of purchased-source mapping

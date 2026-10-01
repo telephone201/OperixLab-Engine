@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { domainApi } from '@/lib/domain-api';
 import { matchingApi, MatchingSessionListItem } from '@/lib/matching-api';
 import { MatchingSessionDetail } from '@/types/matching';
@@ -19,6 +19,7 @@ type Tab = 'overview' | 'research' | 'qualification' | 'pain' | 'requirements' |
 
 export default function LeadDetailPage() {
   const { leadId } = useParams();
+  const router = useRouter();
   const id = leadId as string;
   const { user } = useAuth();
   const canManageResearch =
@@ -43,6 +44,13 @@ export default function LeadDetailPage() {
   const [requirements, setRequirements] = useState<{ data: LeadRequirements | null; loading: boolean; error: string | null }>({ data: null, loading: true, error: null });
   const [globalLoading, setGlobalLoading] = useState(true);
   const [globalError, setGlobalError] = useState<string | null>(null);
+
+  // Pipeline orchestration state
+  const [isRunningQualPain, setIsRunningQualPain] = useState(false);
+  const [isExtractingReqs, setIsExtractingReqs] = useState(false);
+  const [isRunningMatching, setIsRunningMatching] = useState(false);
+  const [isGeneratingProposal, setIsGeneratingProposal] = useState(false);
+  const [pipelineAlert, setPipelineAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   // Matching Review Surface (lazy: fetched only while the tab is active).
   const [matchingSessions, setMatchingSessions] = useState<MatchingSessionListItem[] | null>(null);
@@ -209,6 +217,144 @@ export default function LeadDetailPage() {
     await refetchMatchingDetail(sessionId);
   };
 
+  /**
+   * Action 1: Run Qualification & Pain Analysis sequentially.
+   * Requirement: Qualification must complete successfully before Pain Analysis starts.
+   */
+  const handleRunQualAndPain = async () => {
+    setIsRunningQualPain(true);
+    setPipelineAlert(null);
+    try {
+      // Step 1: Qualification
+      const qualRes = await domainApi.calculateQualification(id);
+      if (qualRes.error) {
+        throw new Error(qualRes.error.message || 'Failed to calculate qualification score.');
+      }
+
+      // Step 2: Pain Analysis (strictly sequential, only after qualification succeeds)
+      const painRes = await domainApi.initiatePain(id, researchProvider);
+      if (painRes.error) {
+        throw new Error(painRes.error.message || 'Failed to initiate pain analysis.');
+      }
+
+      setPipelineAlert({
+        type: 'success',
+        message: 'Qualification scored and Pain Analysis initiated successfully.'
+      });
+      await refreshTab('qualification');
+      await refreshTab('pain');
+      setActiveTab('qualification');
+    } catch (err: any) {
+      setPipelineAlert({
+        type: 'error',
+        message: err.message || 'Failed to execute Qualification and Pain Analysis.'
+      });
+    } finally {
+      setIsRunningQualPain(false);
+    }
+  };
+
+  /**
+   * Action 2: Extract Requirements
+   */
+  const handleExtractRequirements = async () => {
+    setIsExtractingReqs(true);
+    setPipelineAlert(null);
+    try {
+      const res = await domainApi.initiateRequirements(id, researchProvider);
+      if (res.error) {
+        throw new Error(res.error.message || 'Failed to initiate requirements extraction.');
+      }
+
+      setPipelineAlert({
+        type: 'success',
+        message: 'Requirements extraction initiated successfully.'
+      });
+      await refreshTab('requirements');
+      setActiveTab('requirements');
+    } catch (err: any) {
+      setPipelineAlert({
+        type: 'error',
+        message: err.message || 'Failed to extract requirements.'
+      });
+    } finally {
+      setIsExtractingReqs(false);
+    }
+  };
+
+  /**
+   * Action 3: Run Workflow Matching
+   */
+  const handleRunWorkflowMatching = async () => {
+    setIsRunningMatching(true);
+    setPipelineAlert(null);
+    try {
+      const res = await matchingApi.runMatching(id);
+      if (res.error) {
+        throw new Error(res.error.message || 'Workflow matching failed.');
+      }
+
+      setPipelineAlert({
+        type: 'success',
+        message: 'Workflow matching completed successfully.'
+      });
+      setActiveTab('matching');
+      await refreshTab('matching');
+    } catch (err: any) {
+      setPipelineAlert({
+        type: 'error',
+        message: err.message || 'Failed to execute workflow matching.'
+      });
+    } finally {
+      setIsRunningMatching(false);
+    }
+  };
+
+  /**
+   * Action 4: Generate Proposal Package
+   */
+  const handleGenerateProposalPackage = async () => {
+    if (!matchingDetail?.sessionId) {
+      setPipelineAlert({
+        type: 'error',
+        message: 'No matching session available. Run matching first.'
+      });
+      return;
+    }
+
+    if (matchingDetail.architecture?.status !== 'APPROVED') {
+      setPipelineAlert({
+        type: 'error',
+        message: 'Matching recommendation must be APPROVED before generating a commercial proposal.'
+      });
+      return;
+    }
+
+    setIsGeneratingProposal(true);
+    setPipelineAlert(null);
+    try {
+      const res = await matchingApi.handoffToCommercial(id, matchingDetail.sessionId, 'EGP');
+      if (res.error) {
+        throw new Error(res.error.message || 'Proposal package handoff failed.');
+      }
+
+      setPipelineAlert({
+        type: 'success',
+        message: 'Commercial proposal package created successfully! Redirecting...'
+      });
+      setTimeout(() => {
+        router.push(`/acquisition/${id}/commercial`);
+      }, 1000);
+    } catch (err: any) {
+      setPipelineAlert({
+        type: 'error',
+        message: err.message || 'Failed to generate proposal package.'
+      });
+    } finally {
+      setIsGeneratingProposal(false);
+    }
+  };
+
   if (globalLoading) return <div className="p-6 animate-pulse">Loading lead workspace...</div>;
   if (globalError) return <div className="p-6 text-red-600 font-bold">Error: {globalError}</div>;
   if (!lead) return <div className="p-6 text-gray-500">Lead not found.</div>;
@@ -249,6 +395,129 @@ export default function LeadDetailPage() {
           </div>
         </div>
       </header>
+
+      {/* Pipeline Alert Banner */}
+      {pipelineAlert && (
+        <div
+          className={cn(
+            'mb-6 p-4 rounded-xl border flex items-center justify-between transition-all',
+            pipelineAlert.type === 'success'
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+              : 'bg-rose-50 border-rose-200 text-rose-800'
+          )}
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-lg">
+              {pipelineAlert.type === 'success' ? '✅' : '⚠️'}
+            </span>
+            <span className="text-sm font-medium">{pipelineAlert.message}</span>
+          </div>
+          <button
+            onClick={() => setPipelineAlert(null)}
+            className="text-xs text-gray-500 hover:text-gray-800 px-2 py-1 rounded"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* Sales Pipeline Continuity Action Bar */}
+      <section className="mb-8 bg-gradient-to-r from-slate-900 to-slate-800 text-white p-5 rounded-xl shadow-md border border-slate-700">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-blue-400">
+                Sales Pipeline Operations
+              </span>
+              <span className="text-[10px] bg-slate-700 text-slate-300 px-2 py-0.5 rounded font-mono">
+                Operator Actions
+              </span>
+            </div>
+            <p className="text-xs text-slate-300 mt-1">
+              Trigger sequential intelligence stages and advance this lead to a commercial proposal.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Action 1: Run Qualification & Pain */}
+            <button
+              onClick={handleRunQualAndPain}
+              disabled={isRunningQualPain || !canManageResearch}
+              className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-400 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all shadow-sm cursor-pointer disabled:cursor-not-allowed"
+              title="Calculates qualification scores and initiates pain analysis sequentially"
+            >
+              {isRunningQualPain ? (
+                <span className="animate-spin inline-block h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full" />
+              ) : (
+                <span>⚡</span>
+              )}
+              <span>1. Run Qual & Pain</span>
+            </button>
+
+            {/* Action 2: Extract Requirements */}
+            <button
+              onClick={handleExtractRequirements}
+              disabled={isExtractingReqs || !canManageResearch}
+              className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 disabled:text-slate-400 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all shadow-sm cursor-pointer disabled:cursor-not-allowed"
+              title="Extracts prioritized requirements based on research and pain"
+            >
+              {isExtractingReqs ? (
+                <span className="animate-spin inline-block h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full" />
+              ) : (
+                <span>📋</span>
+              )}
+              <span>2. Extract Reqs</span>
+            </button>
+
+            {/* Action 3: Run Workflow Matching */}
+            <button
+              onClick={handleRunWorkflowMatching}
+              disabled={isRunningMatching || !canManageResearch}
+              className="px-3.5 py-2 bg-violet-600 hover:bg-violet-500 disabled:bg-slate-700 disabled:text-slate-400 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all shadow-sm cursor-pointer disabled:cursor-not-allowed"
+              title="Runs matching against ~6953 workflows in the library"
+            >
+              {isRunningMatching ? (
+                <span className="animate-spin inline-block h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full" />
+              ) : (
+                <span>🔄</span>
+              )}
+              <span>3. Run Matching</span>
+            </button>
+
+            {/* Action 4: Generate Proposal Package */}
+            <button
+              onClick={handleGenerateProposalPackage}
+              disabled={
+                isGeneratingProposal ||
+                !canManageResearch ||
+                matchingDetail?.architecture?.status !== 'APPROVED'
+              }
+              className={cn(
+                "px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all shadow-sm",
+                matchingDetail?.architecture?.status === 'APPROVED'
+                  ? "bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer"
+                  : "bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed"
+              )}
+              title={
+                matchingDetail?.architecture?.status === 'APPROVED'
+                  ? "Converts approved architecture to commercial proposal"
+                  : "Requires Approved Matching Architecture"
+              }
+            >
+              {isGeneratingProposal ? (
+                <span className="animate-spin inline-block h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full" />
+              ) : (
+                <span>💼</span>
+              )}
+              <span>
+                {matchingDetail?.architecture?.status === 'APPROVED'
+                  ? "4. Generate Proposal"
+                  : "4. Proposal (Requires Approved Match)"}
+              </span>
+            </button>
+          </div>
+        </div>
+      </section>
 
       {/* Lifecycle Indicator */}
       <div className="mb-8 flex items-center justify-between px-2">
