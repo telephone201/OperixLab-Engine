@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file api-client.ts
  * @description Centralized API client for the Operix Operator Dashboard.
  */
@@ -33,7 +33,9 @@ class ApiClient {
         const url = `${this.baseUrl}${endpoint}`;
 
         const headers = new Headers(options.headers);
-        headers.set('Content-Type', 'application/json');
+        if (!(options.body instanceof FormData)) {
+            headers.set('Content-Type', 'application/json');
+        }
 
         const token =
             typeof window !== 'undefined'
@@ -131,6 +133,18 @@ class ApiClient {
             ...(body !== undefined
                 ? { body: JSON.stringify(body) }
                 : {}),
+        });
+    }
+
+    async postFormData<T>(
+        endpoint: string,
+        formData: FormData,
+        options?: RequestInit
+    ): Promise<ApiResponse<T>> {
+        return this.request<T>(endpoint, {
+            ...options,
+            method: 'POST',
+            body: formData,
         });
     }
 

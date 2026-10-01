@@ -109,5 +109,47 @@ export const domainApi = {
   ): Promise<{ data: any | null; error?: any }> {
     return apiClient.post(`/leads/${id}/requirements`, { provider });
   },
+
+  /**
+   * Uploads an external CSV or XLSX lead file via multipart/form-data.
+   * Stages rows and creates a mapping review session without auto-creating leads.
+   */
+  async uploadExternalLeads(
+    file: File,
+    batchName?: string
+  ): Promise<{ data: any | null; error?: any }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (batchName) {
+      formData.append('batchName', batchName);
+    }
+    return apiClient.postFormData('/acquisition/upload', formData);
+  },
+
+  /**
+   * Lists recent external lead ingestion batches.
+   */
+  async getIngestionBatches(): Promise<{ data: any[] | null; error?: any }> {
+    return apiClient.get('/acquisition/batches');
+  },
+
+  /**
+   * Promotes staged leads from an APPROVED mapping review session to live leads.
+   */
+  async promoteApprovedBatch(
+    batchId: string
+  ): Promise<{ data: any | null; error?: any }> {
+    return apiClient.post(`/acquisition/batches/${batchId}/promote`, {});
+  },
+
+  /**
+   * Approves a mapping review session.
+   */
+  async approveReviewSession(
+    sessionId: string
+  ): Promise<{ data: any | null; error?: any }> {
+    return apiClient.post(`/acquisition/review-sessions/${sessionId}/approve`, {});
+  },
 };
+
 

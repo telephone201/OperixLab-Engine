@@ -21,8 +21,16 @@ import { publicProposalController } from '../controllers/public-proposal-control
 import { chatController } from '../controllers/chat-controller';
 import { requireAuth, requireRole } from '../middleware/auth-middleware';
 import { mappingReviewController } from '../controllers/mapping-review-controller';
+import { ingestionController } from '../controllers/ingestion-controller';
+import multer from 'multer';
+import os from 'os';
 
 const apiRouter = Router();
+
+const upload = multer({
+    dest: os.tmpdir(),
+    limits: { fileSize: 50 * 1024 * 1024 }
+});
 
 // Auth
 const authCtrl = new AuthController();
@@ -122,6 +130,11 @@ apiRouter.post('/acquisition/review-sessions/:id/sections/:sectionId/reject', re
 apiRouter.post('/acquisition/review-sessions/:id/approve', requireAuth, requireRole('OWNER', 'OPERATOR'), (req, res) => mappingReviewController.approveSession(req, res));
 apiRouter.post('/acquisition/review-sessions/:id/reject', requireAuth, requireRole('OWNER', 'OPERATOR'), (req, res) => mappingReviewController.rejectSession(req, res));
 apiRouter.get('/acquisition/review-sessions/:id/source-integrity', requireAuth, (req, res) => mappingReviewController.verifySourceIntegrity(req, res));
+
+// External Lead Ingestion & Staging Routes (Multipart upload, batch listing, approved promotion)
+apiRouter.post('/acquisition/upload', requireAuth, requireRole('OWNER', 'OPERATOR'), upload.single('file'), (req, res) => ingestionController.upload(req, res));
+apiRouter.get('/acquisition/batches', requireAuth, (req, res) => ingestionController.listBatches(req, res));
+apiRouter.post('/acquisition/batches/:batchId/promote', requireAuth, requireRole('OWNER', 'OPERATOR'), (req, res) => ingestionController.promoteBatch(req, res));
 
 // Project Delivery Routes
 apiRouter.get('/projects', requireAuth, (req, res) => projectDeliveryCtrl.getProjects(req, res));
