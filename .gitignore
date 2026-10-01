@@ -9,3 +9,102 @@ build/
 coverage/
 .vscode/
 .DS_Store
+
+# Local verification files
+*.bak
+*.log
+*.tmp
+*.tsbuildinfo
+.next/
+
+# Generated test artifacts
+data/
+temp-data-inspection/
+workflow-library/artifacts/
+
+# Local inspection scripts
+scripts/inspect-*
+scripts/verify-*
+scripts/test-*
+scripts/tmp-*
+
+# OperixLabs local scripts and verification artifacts
+apps/api/scripts/inspect-*
+apps/api/scripts/verify-*
+apps/api/scripts/test-*
+apps/api/scripts/tmp-*
+
+# Root temporary verification files
+apps/api/*.log
+apps/api/*.txt
+apps/api/*.tmp
+apps/api/*.bak
+apps/api/*.tsbuildinfo
+
+# Backup files anywhere
+*.bak
+*.log
+*.tmp
+*.tsbuildinfo
+
+# Build outputs
+apps/web/.next/
+apps/api/dist/
+apps/api/build/
+
+# Generated local data
+data/
+temp-data-inspection/
+workflow-library/artifacts/
+config/backups/
+
+# Backup variants
+*.backup
+*.bak-*
+*.before-*
+*.g7-*
+*.r3-*
+*.step7-*
+
+# Temporary root files
+status-*.txt
+contact-search-result.txt
+
+# Temporary scripts
+apps/api/tmp-*
+apps/api/test-*.ts
+
+# All backup naming variants
+*.bak*
+*.backup*
+*.before*
+*.g8-*
+*.r3-*
+*.step7-*
+
+# Local verification artifacts
+apps/api/*-test.ts
+apps/api/scripts/*-test.ts
+apps/api/scripts/create-*
+apps/api/scripts/check-*
+apps/api/scripts/diagnose-*
+apps/api/scripts/discover-*
+apps/api/scripts/evaluate-*
+apps/api/scripts/find-*
+apps/api/scripts/inspect-*
+apps/api/scripts/profile-*
+apps/api/scripts/prepare-*
+apps/api/scripts/preview-*
+apps/api/scripts/scan-*
+apps/api/scripts/search-*
+apps/api/scripts/submit-*
+
+*.g3-*
+apps/api/inspect-*.ts
+apps/api/scripts/run-*.ts
+apps/api/scripts/g*-*.ts
+apps/api/scripts/*-verify.ts
+apps/api/src/services/**/**-verify.ts
+apps/api/src/services/**/**.test.ts
+apps/api/scripts/compare-uae-profiler.ts
+apps/api/scripts/patch-g7-fixture-safe.py
