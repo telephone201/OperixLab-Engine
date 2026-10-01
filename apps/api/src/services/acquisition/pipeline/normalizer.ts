@@ -1,9 +1,13 @@
-/**
+﻿/**
  * @file normalizer.ts
  * @description Cleans and standardizes raw lead data.
  */
 
-import { RawRecord, NormalizedCompany, NormalizedContact } from '../types/acquisition-types';
+import {
+    RawRecord,
+    NormalizedCompany,
+    NormalizedContact
+} from '../types/acquisition-types';
 
 export class NormalizationService {
     normalizeCompany(raw: RawRecord): NormalizedCompany {
@@ -14,7 +18,7 @@ export class NormalizationService {
             companyName: name,
             normalizedName: this.cleanCompanyName(name),
             website: website || null,
-            domain: this.extractDomain(website),
+            domain: this.extractCompanyDomain(website),
             phone: this.normalizePhone(raw.phone),
             address: raw.address || null,
             city: raw.city || null,
@@ -41,11 +45,36 @@ export class NormalizationService {
             .trim();
     }
 
-    private extractDomain(url: string): string | null {
+    private extractCompanyDomain(url: string): string | null {
         if (!url) return null;
+
         try {
-            const parsed = new URL(url.startsWith('http') ? url : `https://${url}`);
-            return parsed.hostname.replace(/^www\./, '');
+            const parsed = new URL(
+                url.startsWith('http') ? url : `https://${url}`
+            );
+
+            const hostname = parsed.hostname
+                .toLowerCase()
+                .replace(/^www\./, '');
+
+            const nonCompanyDomains = new Set([
+                'facebook.com',
+                'instagram.com',
+                'wa.me',
+                'linktr.ee',
+                'sites.google.com'
+            ]);
+
+            if (
+                nonCompanyDomains.has(hostname) ||
+                [...nonCompanyDomains].some(
+                    (domain) => hostname.endsWith(`.${domain}`)
+                )
+            ) {
+                return null;
+            }
+
+            return hostname;
         } catch {
             return null;
         }
@@ -53,7 +82,7 @@ export class NormalizationService {
 
     private normalizePhone(phone?: string): string | null {
         if (!phone) return null;
-        // Simple normalization: remove non-digits and keep leading +
+
         return phone.replace(/[^\d+]/g, '');
     }
 }

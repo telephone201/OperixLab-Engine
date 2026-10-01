@@ -38,14 +38,24 @@ export class DependencyValidator {
         });
 
         // 2. Scan for environment variable references
-        // Simplified check for strings like {{ $env.VAR_NAME }}
+        // n8n expressions use the form: {{ .VAR_NAME }}
         const jsonString = JSON.stringify(workflowJson);
-        const envRegex = /\{\{\s*\\\$env\.([a-zA-Z0-9_]+)\s*\}\}/g;
+        const envRegex = /\{\{\s*(?:\$env\.|\.)?([\w]+)\s*\}\}/g;
         let match;
         while ((match = envRegex.exec(jsonString)) !== null) {
             const varName = match[1];
-            // In a real system, we'd check if varName exists in a config manager
-            // For this static check, we log them as a dependency to be verified
+
+            // Never expose or persist the value of an environment variable.
+            // Validation only determines whether the referenced dependency exists.
+            if (!process.env[varName]) {
+                findings.push(this.createFinding(
+                    'DEP-002',
+                    FindingSeverity.HIGH,
+                    'Missing Environment Variable',
+                    'Workflow references environment variable ' + varName + ', but it is not available in the runtime environment.',
+                    true
+                ));
+            }
         }
 
         return findings;

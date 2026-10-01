@@ -1,7 +1,9 @@
-/**
+﻿/**
  * @file api-client.ts
  * @description Centralized API client for the Operix Operator Dashboard.
  */
+
+import { notifyAuthSessionExpired } from './auth';
 
 export interface ApiResponse<T> {
     data: T;
@@ -11,81 +13,147 @@ export interface ApiResponse<T> {
     };
 }
 
+interface ApiEnvelope<T> {
+    data: T;
+}
+
 class ApiClient {
     private baseUrl: string;
 
     constructor() {
-        this.baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000/api';
+        this.baseUrl =
+            process.env.NEXT_PUBLIC_API_BASE_URL ||
+            'http://localhost:3000/api';
     }
 
-    private async request<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
+    private async request<T>(
+        endpoint: string,
+        options: RequestInit = {}
+    ): Promise<ApiResponse<T>> {
         const url = `${this.baseUrl}${endpoint}`;
 
-        const headers = {
-            'Content-Type': 'application/json',
-            ...options.headers,
-        };
+        const headers = new Headers(options.headers);
+        headers.set('Content-Type', 'application/json');
 
-        // Auth interceptor: Add token from localStorage if present
-        const token = localStorage.getItem('operix_auth_token');
+        const token =
+            typeof window !== 'undefined'
+                ? localStorage.getItem('operix_auth_token')
+                : null;
+
         if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
+            headers.set('Authorization', `Bearer ${token}`);
         }
 
         try {
             const response = await fetch(url, { ...options, headers });
 
-            if (response.status === 401) {
-                // Handle unauthorized - e.g., trigger logout
-                return { data: null as any, error: { code: 'UNAUTHORIZED', message: 'Session expired' } };
-            }
+            const body = await response.json().catch(() => null);
 
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
+            if (response.status === 401) {
+                const authErrorCode =
+                    body?.error?.code || 'UNAUTHORIZED';
+
+                if (
+                    endpoint !== '/auth/login' &&
+                    endpoint !== '/auth/logout'
+                ) {
+                    notifyAuthSessionExpired();
+                }
+
                 return {
                     data: null as any,
                     error: {
-                        code: errorData.code || 'API_ERROR',
-                        message: errorData.message || `HTTP ${response.status}`
-                    }
+                        code: authErrorCode,
+                        message:
+                            body?.error?.message ||
+                            'Authentication required',
+                    },
                 };
             }
 
-            const data = await response.json();
-            return { data };
+            if (!response.ok) {
+                return {
+                    data: null as any,
+                    error: {
+                        code:
+                            body?.error?.code ||
+                            body?.code ||
+                            'API_ERROR',
+                        message:
+                            body?.error?.message ||
+                            body?.message ||
+                            `HTTP ${response.status}`,
+                    },
+                };
+            }
+
+            const payload =
+                body &&
+                typeof body === 'object' &&
+                'data' in body
+                    ? (body as ApiEnvelope<T>).data
+                    : body;
+
+            return {
+                data: payload as T,
+            };
         } catch (error: any) {
             return {
                 data: null as any,
                 error: {
                     code: 'NETWORK_ERROR',
-                    message: error.message || 'Failed to connect to API'
-                }
+                    message:
+                        error.message ||
+                        'Failed to connect to API',
+                },
             };
         }
     }
 
-    async get<T>(endpoint: string, options?: RequestInit): Promise<ApiResponse<T>> {
-        return this.request<T>(endpoint, { ...options, method: 'GET' });
+    async get<T>(
+        endpoint: string,
+        options?: RequestInit
+    ): Promise<ApiResponse<T>> {
+        return this.request<T>(endpoint, {
+            ...options,
+            method: 'GET',
+        });
     }
 
-    async post<T>(endpoint: string, body: any, options?: RequestInit): Promise<ApiResponse<T>> {
+    async post<T>(
+        endpoint: string,
+        body?: any,
+        options?: RequestInit
+    ): Promise<ApiResponse<T>> {
         return this.request<T>(endpoint, {
             ...options,
             method: 'POST',
-            body: JSON.stringify(body)
+            ...(body !== undefined
+                ? { body: JSON.stringify(body) }
+                : {}),
         });
     }
 
-    async put<T>(endpoint: string, body: any, options?: RequestInit): Promise<ApiResponse<T>> {
+    async put<T>(
+        endpoint: string,
+        body: any,
+        options?: RequestInit
+    ): Promise<ApiResponse<T>> {
         return this.request<T>(endpoint, {
             ...options,
             method: 'PUT',
-            body: JSON.stringify(body)
+            body: JSON.stringify(body),
         });
     }
 
-    async delete<T>(endpoint: string, options?: RequestInit): Promise<ApiResponse<T>> {
-        return this.request<T>(endpoint, { ...options, method: 'DELETE' });
+    async delete<T>(
+        endpoint: string,
+        options?: RequestInit
+    ): Promise<ApiResponse<T>> {
+        return this.request<T>(endpoint, {
+            ...options,
+            method: 'DELETE',
+        });
     }
 }
 

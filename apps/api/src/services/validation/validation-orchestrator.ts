@@ -21,6 +21,7 @@ import { operationalValidator } from './operational-validator';
 import { workflowStructureInspector } from '../workflows/workflow-structure-inspector';
 import { artifactService } from '../versioning/artifact-service';
 import { auditLogger } from '../../core/logging/audit-logger';
+import crypto from 'crypto';
 
 export class ValidationOrchestrator {
     /**
@@ -39,15 +40,16 @@ export class ValidationOrchestrator {
         if (!version) throw new Error(`Workflow version ${versionId} not found`);
 
         const contentBuffer = await artifactService.getArtifactContent(version.artifact_id);
-        const workflowJson = JSON.parse(contentBuffer.toString());
-        const structure = workflowStructureInspector.inspect(workflowJson);
 
-        const validationId = `val_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const validationId = crypto.randomUUID();
         const allFindings: ValidationFinding[] = [];
         const layerResults = {} as Record<ValidationLayer, ValidationLayerResult>;
 
         // 2. Execute Layers in Order
         try {
+            const workflowJson = JSON.parse(contentBuffer.toString());
+            const structure = workflowStructureInspector.inspect(workflowJson);
+
             // Layer 1: Structural
             const structFindings = await structuralValidator.validate(workflowJson);
             layerResults[ValidationLayer.STRUCTURAL] = this.aggregateLayer(ValidationLayer.STRUCTURAL, structFindings);
@@ -182,4 +184,3 @@ export class ValidationOrchestrator {
 }
 
 export const validationOrchestrator = new ValidationOrchestrator();
-

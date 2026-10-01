@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file pain-analysis-verification-tests.ts
  * @description Verification suite for Phase 6: Pain Analysis & Problem Intelligence.
  */
@@ -24,6 +24,7 @@ export class Phase6VerificationSuite {
             this.testAutomationRelevance.bind(this),
             this.testPrimaryPainSelection.bind(this),
             this.testNoFabrication.bind(this),
+            this.testNoSupportedPainsResponse.bind(this),
             this.testVersioning.bind(this),
             this.testIdempotency.bind(this),
             this.testBoundaryChecks.bind(this),
@@ -113,18 +114,58 @@ export class Phase6VerificationSuite {
         return 'No fabricated metrics found in impact analysis.';
     }
 
+    private async testNoSupportedPainsResponse() {
+        const parser = (this.service as any).parseAIResponse.bind(this.service);
+
+        const result = parser(
+            `NO_SUPPORTED_PAINS
+
+REASON:
+No evidence-supported pain was found.`,
+            []
+        );
+
+        if (!Array.isArray(result)) {
+            throw new Error('NO_SUPPORTED_PAINS should return an array');
+        }
+
+        if (result.length !== 0) {
+            throw new Error(
+                `NO_SUPPORTED_PAINS must produce zero pains, received ${result.length}`
+            );
+        }
+
+        return 'NO_SUPPORTED_PAINS correctly produces an empty pain set without fabrication.';
+    }
     private async testVersioning() {
         return 'Versioning managed via PainVersionManager.';
     }
 
     private async testIdempotency() {
-        return 'Idempotency handled via analysisVersion and deterministic fingerprints.';
+        return 'Idempotency is not implemented in the Pain layer; repeated analyses are intentionally stored as new versions. Concurrency safety is provided by the per-lead advisory lock.';
     }
 
     private async testBoundaryChecks() {
-        // Verify no Requirements Extraction implemented
-        const a = (await import('./pain-analysis-service')).PainAnalysisService;
-        // Check that no methods like 'extractRequirements' exist
-        return 'Phase 6 boundaries verified: no requirements extraction found.';
+        const Service = (await import('./pain-analysis-service')).PainAnalysisService;
+        const prototype = Service.prototype;
+
+        const forbiddenMethods: string[] = [
+            'extractRequirements',
+            'processRequirements',
+            'analyzeRequirements',
+        ];
+
+        const violations = forbiddenMethods.filter(
+            method => typeof (prototype as any)[method] === 'function'
+        );
+
+        if (violations.length > 0) {
+            throw new Error(
+                `Pain layer boundary violation: ${violations.join(', ')}`
+            );
+        }
+
+        return 'Phase 6 boundaries verified: PainAnalysisService does not implement requirements extraction.';
     }
 }
+

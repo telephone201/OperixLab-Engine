@@ -1,5 +1,7 @@
+"use client";
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { domainApi } from '@/lib/domain-api';
 import { Lead } from '@/types/domain';
 
@@ -7,6 +9,7 @@ export default function AcquisitionPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     async function fetchLeads() {
@@ -79,7 +82,7 @@ export default function AcquisitionPage() {
               </tr>
             ) : (
               leads.map((lead) => (
-                <tr key={lead.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => window.location.href = `/acquisition/${lead.id}`}>
+                <tr key={lead.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => router.push(`/acquisition/${lead.id}`)}>
                   <td className="p-4 text-sm font-medium">{lead.company}</td>
                   <td className="p-4 text-sm text-gray-600">{lead.contact}</td>
                   <td className="p-4 text-sm text-gray-500">{lead.source}</td>
@@ -96,7 +99,7 @@ export default function AcquisitionPage() {
                       href={`/acquisition/${lead.id}`}
                       className="text-blue-600 hover:text-blue-800 text-sm font-medium"
                     >
-                      View Details →
+                       View Details →
                     </Link>
                   </td>
                 </tr>

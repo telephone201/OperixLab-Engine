@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file domain-api.ts
  * @description Domain-specific API functions for the Acquisition & Intelligence workspace.
  */
@@ -27,6 +27,28 @@ export const domainApi = {
   async getLead(id: string): Promise<{ data: Lead | null; error?: any }> {
     const response = await apiClient.get<Lead>(`/leads/${id}`);
     return response;
+  },
+
+  /**
+   * Creates a manual AI research task for a specific lead.
+   */
+  async createResearchTask(
+    id: string,
+    provider: 'PERPLEXITY' | 'GEMINI'
+  ): Promise<{
+    data: {
+      taskId: string;
+      researchRequestId: string;
+      provider: 'PERPLEXITY' | 'GEMINI';
+      prompt: string;
+      status: string;
+    } | null;
+    error?: any;
+  }> {
+    return apiClient.post(
+      `/leads/${id}/research`,
+      { provider }
+    );
   },
 
   /**
@@ -61,3 +83,4 @@ export const domainApi = {
     return response;
   },
 };
+

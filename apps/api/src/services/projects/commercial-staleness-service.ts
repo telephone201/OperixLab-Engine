@@ -1,10 +1,4 @@
-/**
- * @file commercial-staleness-service.ts
- * @description Detects if a commercial artifact has become stale due to upstream dependency changes.
- */
-
-import { db } from '../../lib/db';
-
+﻿import { db } from '../../lib/db';
 
 export interface StalenessResult {
     isStale: boolean;
@@ -16,9 +10,6 @@ export interface StalenessResult {
 }
 
 export class CommercialStalenessService {
-    /**
-     * Generates a deterministic dependency fingerprint for a commercial artifact.
-     */
     async calculateFingerprint(entity: any): Promise<string> {
         const fingerprint = {
             solutionVersionId: entity.solutionVersionId,
@@ -27,51 +18,108 @@ export class CommercialStalenessService {
             qualificationVersionId: entity.qualificationVersionId,
             intentVersionId: entity.intentVersionId,
             demoId: entity.demoId,
-            // For proposals, we also track pricing and offer versions
-            pricingVersionId: (entity as any).pricingRecommendationId,
-            offerVersionId: (entity as any).offerOptionId,
+            pricingVersionId: entity.pricingRecommendationId,
+            offerVersionId: entity.offerOptionId,
         };
 
-        return require('crypto').createHash('sha256').update(JSON.stringify(fingerprint)).digest('hex');
+        return require('crypto')
+            .createHash('sha256')
+            .update(JSON.stringify(fingerprint))
+            .digest('hex');
     }
 
-    /**
-     * Evaluates if a commercial package is stale relative to the latest approved upstream versions.
-     */
     async evaluatePackageStaleness(packageId: string): Promise<StalenessResult> {
-        const pkg = await db.commercial_packages.findUnique({ where: { id: packageId } });
-        if (!pkg) throw new Error('COMMERCIAL_PACKAGE_NOT_FOUND');
+        const pkg = await db.commercial_packages.findUnique({
+            where: { id: packageId }
+        });
+
+        if (!pkg) {
+            throw new Error('COMMERCIAL_PACKAGE_NOT_FOUND');
+        }
 
         const reasons: string[] = [];
         const changedDeps: string[] = [];
 
-        // In a real implementation, we would compare pkg.solution_version_id against
-        // the latest finalized version in the workflow_versions table.
+        const currentVersion = await db.workflow_versions.findUnique({
+            where: { id: pkg.solution_version_id }
+        });
 
-        // Mocking a check for this foundation step
-        const isStale = false;
+        if (!currentVersion) {
+            reasons.push('SOLUTION_VERSION_NOT_FOUND');
+            changedDeps.push(`WorkflowVersion:${pkg.solution_version_id}`);
+        } else {
+            const latestFinalized = await db.workflow_versions.findFirst({
+                where: {
+                    solution_id: currentVersion.solution_id,
+                    status: 'FINALIZED'
+                },
+                orderBy: {
+                    version_number: 'desc'
+                }
+            });
+
+            if (
+                latestFinalized &&
+                latestFinalized.id !== currentVersion.id
+            ) {
+                reasons.push('SOLUTION_VERSION_SUPERSEDED');
+                changedDeps.push(`WorkflowVersion:${latestFinalized.id}`);
+            }
+        }
+
+        const isStale = reasons.length > 0;
 
         return {
             isStale,
             checkedAt: new Date(),
             reasons,
             changedDependencies: changedDeps,
-            severity: 'LOW',
-            recommendedAction: isStale ? 'REGENERATE_COMMERCIAL_PACKAGE' : 'NO_ACTION'
+            severity: isStale ? 'HIGH' : 'LOW',
+            recommendedAction: isStale
+                ? 'REGENERATE_COMMERCIAL_PACKAGE'
+                : 'NO_ACTION'
         };
     }
 
-    /**
-     * Evaluates if a proposal version is stale.
-     */
     async evaluateProposalStaleness(proposalVersionId: string): Promise<StalenessResult> {
-        const version = await db.proposal_versions.findUnique({ where: { id: proposalVersionId } });
-        if (!version) throw new Error('PROPOSAL_VERSION_NOT_FOUND');
+        const version = await db.proposal_versions.findUnique({
+            where: { id: proposalVersionId }
+        });
+
+        if (!version) {
+            throw new Error('PROPOSAL_VERSION_NOT_FOUND');
+        }
 
         const reasons: string[] = [];
         const changedDeps: string[] = [];
 
-        // Check if the referenced PricingRecommendation has been superseded
+        const currentVersion = await db.workflow_versions.findUnique({
+            where: { id: version.solution_version_id }
+        });
+
+        if (!currentVersion) {
+            reasons.push('SOLUTION_VERSION_NOT_FOUND');
+            changedDeps.push(`WorkflowVersion:${version.solution_version_id}`);
+        } else {
+            const latestFinalized = await db.workflow_versions.findFirst({
+                where: {
+                    solution_id: currentVersion.solution_id,
+                    status: 'FINALIZED'
+                },
+                orderBy: {
+                    version_number: 'desc'
+                }
+            });
+
+            if (
+                latestFinalized &&
+                latestFinalized.id !== currentVersion.id
+            ) {
+                reasons.push('SOLUTION_VERSION_SUPERSEDED');
+                changedDeps.push(`WorkflowVersion:${latestFinalized.id}`);
+            }
+        }
+
         const pricing = await db.pricing_recommendations.findUnique({
             where: { id: version.pricing_recommendation_id }
         });
@@ -89,10 +137,11 @@ export class CommercialStalenessService {
             reasons,
             changedDependencies: changedDeps,
             severity: isStale ? 'HIGH' : 'LOW',
-            recommendedAction: isStale ? 'REGENERATE_PROPOSAL' : 'NO_ACTION'
+            recommendedAction: isStale
+                ? 'REGENERATE_PROPOSAL'
+                : 'NO_ACTION'
         };
     }
 }
 
 export const commercialStalenessService = new CommercialStalenessService();
-

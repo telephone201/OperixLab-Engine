@@ -44,8 +44,10 @@ export class RequirementCoverageAnalyzer {
     private evaluateRequirement(workflow: any, req: any): { level: CoverageLevel, evidence: string, confidence: number } {
         // 1. Check for explicit capability match in metadata
         const hasIntegration = req.integration_requirements &&
-            workflow.integrations.some((i: string) =>
-                req.integration_requirements.includes(i)
+            (req.integration_requirements as string[]).some((r: string) =>
+                workflow.integrations.some((i: string) =>
+                    r.trim().toLowerCase() === i.trim().toLowerCase()
+                )
             );
 
         const hasTrigger = req.trigger_definition &&

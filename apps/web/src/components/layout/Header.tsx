@@ -1,9 +1,15 @@
-import React from 'react';
+﻿import React from 'react';
 import { User, Bell, LogOut } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 
 export function Header() {
     const { user, logout } = useAuth();
+
+    const displayName = user?.email
+        ? user.email.split('@')[0]
+        : 'Operator';
+
+    const displayRole = user?.role || 'VIEWER';
 
     return (
         <header className="h-16 border-b border-slate-700 bg-operix-surface px-6 flex items-center justify-between text-operix-text">
@@ -21,14 +27,14 @@ export function Header() {
 
                 <div className="flex items-center gap-3 pl-6 border-l border-slate-700">
                     <div className="text-right">
-                        <p className="text-sm font-medium">{user?.name || 'Operator'}</p>
-                        <p className="text-xs text-operix-muted">{user?.role || 'Admin'}</p>
+                        <p className="text-sm font-medium">{displayName}</p>
+                        <p className="text-xs text-operix-muted">{displayRole}</p>
                     </div>
                     <div className="w-8 h-8 rounded-full bg-slate-600 flex items-center justify-center">
                         <User size={18} />
                     </div>
                     <button
-                        onClick={logout}
+                        onClick={() => void logout()}
                         className="p-2 text-operix-muted hover:text-red-400 transition-colors"
                         title="Logout"
                     >

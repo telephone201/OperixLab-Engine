@@ -107,7 +107,7 @@ export class CommercialProjectHandoffService {
             );
         }
 
-        return await db.$transaction(async (tx) => {
+        const result = await db.$transaction(async (tx) => {
             const existingContractResult = await tx.query(
                 `SELECT *
                  FROM "contracts"
@@ -252,9 +252,24 @@ export class CommercialProjectHandoffService {
                 contractId: contract.id,
                 projectId: project.id,
                 proposalId: params.proposalId,
-                status: contractCreated || projectCreated ? 'CREATED' : 'ALREADY_EXISTS'
+                status: (contractCreated || projectCreated ? 'CREATED' : 'ALREADY_EXISTS') as 'CREATED' | 'ALREADY_EXISTS'
             };
         });
+
+        // Audit: commercial-to-project handoff completed
+        await auditLogger.log({
+            action: 'PROJECT_HANDOFF',
+            entityType: 'Project',
+            entityId: result.projectId,
+            details: {
+                contractId: result.contractId,
+                proposalId: result.proposalId,
+                status: result.status,
+                actorId: params.actorId
+            }
+        });
+
+        return result;
     }
 }
 

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file score-component-calculator.ts
  * @description Deterministic calculator that maps research evidence to numerical scores.
  */
@@ -23,6 +23,13 @@ export const DEFAULT_WEIGHTS: ScoringWeights = {
     demoPotential: 5,
 };
 
+interface ResearchEvidenceReference {
+    id: string;
+    text?: string;
+    sourceUrl?: string | null;
+    timestamp?: Date | string;
+}
+
 export class ScoreComponentCalculator {
     /**
      * Calculates a specific score component based on research evidence.
@@ -40,6 +47,37 @@ export class ScoreComponentCalculator {
         let confidence = 0;
         const evidenceIds: string[] = [];
 
+        const researchEvidence: ResearchEvidenceReference[] =
+            Array.isArray(evidence?.researchEvidence)
+                ? evidence.researchEvidence
+                : [];
+
+        const allResearchEvidenceIds = researchEvidence
+            .map(item => item?.id)
+            .filter((id): id is string => typeof id === 'string' && id.length > 0);
+
+        const findEvidenceIdsContaining = (patterns: string[]): string[] => {
+            const normalizedPatterns = patterns.map(pattern =>
+                pattern.toLowerCase()
+            );
+
+            return researchEvidence
+                .filter(item => {
+                    const text = typeof item?.text === 'string'
+                        ? item.text.toLowerCase()
+                        : '';
+
+                    return normalizedPatterns.some(pattern =>
+                        text.includes(pattern)
+                    );
+                })
+                .map(item => item.id)
+                .filter(
+                    (id): id is string =>
+                        typeof id === 'string' && id.length > 0
+                );
+        };
+
         switch (componentName) {
             case 'ICP Fit':
                 // Logic: High score if industry/size matches target ICP
@@ -47,6 +85,10 @@ export class ScoreComponentCalculator {
                     score = maxScore;
                     reasoning = `Industry ${evidence.industry} is a primary target.`;
                     confidence = 1.0;
+
+                    evidenceIds.push(
+                        ...findEvidenceIdsContaining([evidence.industry])
+                    );
                 } else {
                     score = maxScore * 0.3;
                     reasoning = 'Industry is not a primary target or unknown.';
@@ -55,13 +97,27 @@ export class ScoreComponentCalculator {
                 break;
 
             case 'Automation Opportunity':
-                // Logic: High score if 'automation_readiness' signals are present and positive
+                // Logic: High score if verified operational automation-gap signals are present.
+                // Provenance is supplied by the Research -> Qualification adapter.
                 const signals = evidence.automationSignals || [];
                 if (signals.length > 0) {
-                    const positiveSignals = signals.filter((s: any) => s.value === true).length;
+                    const positiveSignals = signals.filter(
+                        (s: any) => s.value === true
+                    ).length;
+
                     score = (positiveSignals / signals.length) * maxScore;
                     reasoning = `Observed ${positiveSignals} automation signals.`;
                     confidence = 0.8;
+
+                    evidenceIds.push(
+                        ...signals
+                            .filter((signal: any) => signal.value === true)
+                            .map((signal: any) => signal.evidenceId)
+                            .filter(
+                                (id: any): id is string =>
+                                    typeof id === 'string' && id.length > 0
+                            )
+                    );
                 } else {
                     score = 0;
                     reasoning = 'No automation signals observed.';
@@ -71,7 +127,10 @@ export class ScoreComponentCalculator {
 
             case 'Decision Maker':
                 // Logic: Score based on whether a verified DM was found
-                if (evidence.decisionMaker && evidence.decisionMaker.verified_status === 'VERIFIED') {
+                if (
+                    evidence.decisionMaker &&
+                    evidence.decisionMaker.verified_status === 'VERIFIED'
+                ) {
                     score = maxScore;
                     reasoning = `Verified Decision Maker found: ${evidence.decisionMaker.person_name}.`;
                     confidence = 1.0;
@@ -102,6 +161,7 @@ export class ScoreComponentCalculator {
             case 'Data Confidence':
                 // Logic: Score based on the amount and quality of evidence
                 const totalEvidence = evidence.evidenceCount || 0;
+
                 if (totalEvidence > 5) {
                     score = maxScore;
                     reasoning = 'High volume of evidence available.';
@@ -115,6 +175,8 @@ export class ScoreComponentCalculator {
                     reasoning = 'No evidence found.';
                     confidence = 0.2;
                 }
+
+                evidenceIds.push(...allResearchEvidenceIds);
                 break;
 
             case 'Demo Potential':
@@ -123,10 +185,16 @@ export class ScoreComponentCalculator {
                     score = maxScore;
                     reasoning = 'Clear digital presence makes for a high-impact demo.';
                     confidence = 0.8;
+
+                    evidenceIds.push(...allResearchEvidenceIds);
                 } else {
                     score = maxScore * 0.4;
                     reasoning = 'Generic or poor digital presence.';
                     confidence = 0.6;
+
+                    if (allResearchEvidenceIds.length > 0) {
+                        evidenceIds.push(...allResearchEvidenceIds);
+                    }
                 }
                 break;
 
@@ -143,7 +211,7 @@ export class ScoreComponentCalculator {
             max_score: maxScore,
             confidence,
             reasoning,
-            evidence_ids: evidenceIds,
+            evidence_ids: [...new Set(evidenceIds)],
             is_overridden: false,
         };
     }

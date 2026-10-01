@@ -48,6 +48,34 @@ export class CommercialGovernanceService {
 
         await humanApprovalService.submitDecision(approvalId, ApprovalDecision.APPROVED, userId, reason);
 
+        // 2. Project the governance decision onto the underlying artifact.
+        // Proposal approvals must move the proposals row GENERATED -> APPROVED
+        // so that CommercialApprovalGate (status = APPROVED check) and the
+        // dashboard review queues observe the transition. The UPDATE is
+        // guarded so only a GENERATED proposal can transition; if no row was
+        // transitioned we fail explicitly instead of silently claiming the
+        // artifact was approved. Non-proposal entity types keep the previous
+        // behavior (governance approval only).
+        if (approval.entity_type === 'Proposal') {
+            const projection = await db.query(
+                `UPDATE "proposals"
+                 SET "status" = $1, "updated_at" = NOW()
+                 WHERE "id" = $2
+                   AND "status" = $3`,
+                [
+                    ProposalStatus.APPROVED,
+                    approval.entity_id,
+                    ProposalStatus.GENERATED
+                ]
+            );
+
+            if (projection.rowCount !== 1) {
+                throw new Error(
+                    `PROPOSAL_APPROVAL_PROJECTION_FAILED: proposal ${approval.entity_id} was not in GENERATED state`
+                );
+            }
+        }
+
         await auditLogger.log({
             action: 'COMMERCIAL_ARTIFACT_APPROVED',
             entityType: approval.entity_type,

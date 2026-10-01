@@ -1,10 +1,9 @@
-/**
- * @file research-manager.ts
- * @description Manages the lifecycle of research requests and versions.
- */
+import crypto from 'crypto';
+import { db } from '../../lib/db';
 
 export interface ResearchRequest {
-    companyId: string;
+    id: string;
+    leadId: string;
     priority: 'LOW' | 'MEDIUM' | 'HIGH';
     objectives: string[];
     status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'FAILED';
@@ -13,35 +12,62 @@ export interface ResearchRequest {
 }
 
 export class ResearchManager {
-    // In-memory store for now; backed by 'research' and 'research_versions' tables.
-    private requests: Map<string, ResearchRequest> = new Map();
-
-    async createRequest(companyId: string, objectives: string[] = []): Promise<ResearchRequest> {
+    async createRequest(
+        leadId: string,
+        objectives: string[] = []
+    ): Promise<ResearchRequest> {
         const id = crypto.randomUUID();
-        const request: ResearchRequest = {
-            companyId,
+
+        const row = await db.research_requests.create({
+            data: {
+                id,
+                lead_id: leadId,
+                status: 'PENDING'
+            }
+        });
+
+        return {
+            id: row.id,
+            leadId: row.lead_id,
             priority: 'MEDIUM',
             objectives,
-            status: 'PENDING',
-            createdAt: new Date(),
-            updatedAt: new Date()
+            status: row.status,
+            createdAt: row.created_at,
+            updatedAt: row.updated_at
         };
-
-        this.requests.set(id, request);
-        return request;
     }
 
-    async updateStatus(requestId: string, status: ResearchRequest['status']): Promise<void> {
-        const request = this.requests.get(requestId);
-        if (!request) throw new Error('Research request not found');
-
-        request.status = status;
-        request.updatedAt = new Date();
-        this.requests.set(requestId, request);
+    async updateStatus(
+        requestId: string,
+        status: ResearchRequest['status']
+    ): Promise<void> {
+        await db.research_requests.update({
+            where: { id: requestId },
+            data: {
+                status,
+                updated_at: new Date()
+            }
+        });
     }
 
     async getRequest(id: string): Promise<ResearchRequest | null> {
-        return this.requests.get(id) || null;
+        const row = await db.research_requests.findUnique({
+            where: { id }
+        });
+
+        if (!row) {
+            return null;
+        }
+
+        return {
+            id: row.id,
+            leadId: row.lead_id,
+            priority: 'MEDIUM',
+            objectives: [],
+            status: row.status,
+            createdAt: row.created_at,
+            updatedAt: row.updated_at
+        };
     }
 }
 

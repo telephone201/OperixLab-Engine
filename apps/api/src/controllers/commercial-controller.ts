@@ -81,12 +81,78 @@ export class CommercialController {
                 })
             ]);
 
+            // Map database snake_case fields to the frontend commercial API contract.
+            const pricingData = pricing
+                ? {
+                    pricingId: pricing.id,
+                    commercialPackageId: pricing.commercial_package_id,
+                    solutionArchitectureId: pricing.solution_architecture_id,
+                    solutionVersionId: pricing.solution_version_id,
+                    pricingVersion: pricing.pricing_version,
+                    currency: pricing.currency,
+                    marketRangeMin: pricing.market_range_min,
+                    marketRangeMax: pricing.market_range_max,
+                    costFloor: pricing.cost_floor,
+                    targetPrice: pricing.target_price,
+                    recommendedPrice: pricing.recommended_price,
+                    pricingConfidence: pricing.pricing_confidence,
+                    marketDataConfidence: pricing.market_data_confidence,
+                    reasoning: pricing.reasoning,
+                    assumptions: pricing.assumptions,
+                    riskFactors: pricing.risk_factors,
+                    pricingEvidenceReference: pricing.pricing_evidence_reference,
+                    status: pricing.status,
+                    createdAt: pricing.created_at,
+                    createdBy: pricing.created_by
+                }
+                : null;
+
+            const offersData = offers.map((offer: any) => ({
+                offerId: offer.id,
+                commercialPackageId: offer.commercial_package_id,
+                name: offer.name,
+                description: offer.description,
+                includedScope: offer.included_scope,
+                optionalScope: offer.optional_scope,
+                outOfScope: offer.out_of_scope,
+                setupFee: offer.setup_fee,
+                recurringFee: offer.recurring_fee,
+                currency: offer.currency,
+                billingCycle: offer.billing_cycle,
+                minimumCommitmentMonths: offer.minimum_commitment_months,
+                paymentTerms: offer.payment_terms,
+                setupPaymentPercentage: offer.setup_payment_percentage,
+                setupBalanceTerms: offer.setup_balance_terms,
+                implementationStartCondition: offer.implementation_start_condition,
+                cancellationTerms: offer.cancellation_terms,
+                scopeChangeTerms: offer.scope_change_terms,
+                supportTerms: offer.support_terms,
+                validUntil: offer.valid_until,
+                status: offer.status,
+                version: offer.version,
+                createdAt: offer.created_at,
+                createdBy: offer.created_by
+            }));
+
+            const proposalData = proposal
+                ? {
+                    proposalId: proposal.id,
+                    commercialPackageId: proposal.commercial_package_id,
+                    status: proposal.status,
+                    version: proposal.version,
+                    createdAt: proposal.created_at,
+                    updatedAt: proposal.updated_at,
+                    createdBy: proposal.created_by,
+                    validUntil: proposal.valid_until
+                }
+                : null;
+
             return res.json({
                 data: {
                     package: pkg,
-                    pricing: pricing,
-                    offers: offers,
-                    proposal: proposal
+                    pricing: pricingData,
+                    offers: offersData,
+                    proposal: proposalData
                 }
             });
         } catch (error: any) {
@@ -149,7 +215,8 @@ export class CommercialController {
      */
     async approvePricing(req: Request, res: Response) {
         try {
-            const { pricingId, userId, reason } = req.body;
+            const { pricingId, reason } = req.body;
+            const userId = req.user!.id;
 
             // We use the governance service to handle the approval logic
             await commercialGovernanceService.approveArtifact(req.body.approvalId, userId, reason);
@@ -168,7 +235,8 @@ export class CommercialController {
      */
     async approveProposal(req: Request, res: Response) {
         try {
-            const { approvalId, userId, reason } = req.body;
+            const { approvalId, reason } = req.body;
+            const userId = req.user!.id;
             await commercialGovernanceService.approveArtifact(approvalId, userId, reason);
 
             return res.json({ data: { status: 'APPROVED' } });

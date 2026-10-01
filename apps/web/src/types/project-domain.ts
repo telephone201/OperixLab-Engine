@@ -1,12 +1,11 @@
-/**
+﻿/**
  * @file project-domain.ts
  * @description Domain types for Project Delivery operations.
  */
 
-import { ProjectStatus } from '@/types/commercial'; // Reusing if already there or defined separately
 
 export interface Project {
-  id: string;
+  projectId: string;
   contractId: string;
   name: string;
   status: string;
@@ -131,3 +130,4 @@ export interface HandoverItem {
   required: boolean;
   status: string;
 }
+

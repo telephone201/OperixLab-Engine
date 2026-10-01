@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file payment-verification-service.ts
  * @description Human-controlled service for verifying payments.
  * AI verification is explicitly forbidden.
@@ -13,6 +13,11 @@ export class PaymentVerificationService {
     /**
      * Verifies a payment.
      * ONLY an authorized human can call this service.
+     *
+     * Amount rules:
+     * - VERIFY requires verifiedAmount === expectedAmount.
+     * - PARTIALLY_VERIFY requires 0 < verifiedAmount < expectedAmount.
+     * - REJECT returns the payment to REQUIRED.
      *
      * The payment row is locked for the duration of the decision so
      * concurrent verification requests cannot overwrite each other
@@ -44,6 +49,16 @@ export class PaymentVerificationService {
             }
 
             const payment = paymentResult.rows[0];
+            const expectedAmount = Number(payment.expected_amount);
+            const verifiedAmount = Number(params.verifiedAmount);
+
+            if (!Number.isFinite(verifiedAmount) || verifiedAmount < 0) {
+                throw new Error('INVALID_VERIFIED_AMOUNT');
+            }
+
+            if (!Number.isFinite(expectedAmount) || expectedAmount < 0) {
+                throw new Error('INVALID_EXPECTED_AMOUNT');
+            }
 
             if (
                 payment.status === PaymentStatus.VERIFIED &&
@@ -57,8 +72,23 @@ export class PaymentVerificationService {
             let newStatus: PaymentStatus;
 
             if (params.decision === 'VERIFY') {
+                if (verifiedAmount !== expectedAmount) {
+                    throw new Error(
+                        'PAYMENT_AMOUNT_MISMATCH: VERIFY requires verifiedAmount to equal expectedAmount'
+                    );
+                }
+
                 newStatus = PaymentStatus.VERIFIED;
             } else if (params.decision === 'PARTIALLY_VERIFY') {
+                if (
+                    verifiedAmount <= 0 ||
+                    verifiedAmount >= expectedAmount
+                ) {
+                    throw new Error(
+                        'INVALID_PARTIAL_AMOUNT: PARTIALLY_VERIFY requires verifiedAmount greater than 0 and less than expectedAmount'
+                    );
+                }
+
                 newStatus = PaymentStatus.PARTIAL;
             } else {
                 newStatus = PaymentStatus.REQUIRED;
@@ -77,7 +107,7 @@ export class PaymentVerificationService {
                  WHERE id = $6
                  RETURNING id, proposal_id, agreement_id, status`,
                 [
-                    params.verifiedAmount,
+                    verifiedAmount,
                     newStatus,
                     params.verifiedBy,
                     now,

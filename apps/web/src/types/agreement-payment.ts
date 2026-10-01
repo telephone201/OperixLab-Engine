@@ -3,8 +3,6 @@
  * @description Domain types for Agreement and Payment flow.
  */
 
-import { AgreementStatus } from '@/types/commercial'; // Assuming shared status
-import { PaymentStatus } from '@/types/commercial'; // Update to match actual
 
 export interface CommercialAgreement {
   agreementId: string;

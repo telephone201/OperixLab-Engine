@@ -1,8 +1,15 @@
 /**
  * @file manual-instapay-provider.ts
  * @description Implementation of PaymentProvider for InstaPay.
+ *
+ * G1: payment destinations are configuration-driven. No personal payment
+ * identifiers are embedded in source code. The provider fails clearly at
+ * invocation time (not at process startup) when required identifiers are
+ * missing, so environments that never invoke the manual payment provider
+ * are not forced to configure it. Values are never logged.
  */
 
+import { config } from '../../config/config-manager';
 import { PaymentProvider } from './payment-provider';
 
 export class ManualInstaPayProvider implements PaymentProvider {
@@ -13,18 +20,38 @@ export class ManualInstaPayProvider implements PaymentProvider {
         url: string;
         instructions?: string;
     }[]> {
-        return [
+        const primaryIdentifier = config.get('instapayPrimaryIdentifier');
+        const primaryUrl = config.get('instapayPrimaryUrl');
+        const secondaryIdentifier = config.get('instapaySecondaryIdentifier');
+        const secondaryUrl = config.get('instapaySecondaryUrl');
+
+        if (!primaryIdentifier || !primaryUrl) {
+            throw new Error(
+                'INSTAPAY_DESTINATION_MISSING: INSTAPAY_PRIMARY_IDENTIFIER and INSTAPAY_PRIMARY_URL are required when the manual payment provider is used.'
+            );
+        }
+
+        const destinations: {
+            identifier: string;
+            url: string;
+            instructions?: string;
+        }[] = [
             {
-                identifier: 'mazenhegazy22@instapay',
-                url: 'https://ipn.eg/S/mazenhegazy22/instapay/7Or03R',
+                identifier: primaryIdentifier,
+                url: primaryUrl,
                 instructions: 'Primary payment destination for setup and recurring fees.'
-            },
-            {
-                identifier: 'mazenhegazy21@instapay',
-                url: 'https://ipn.eg/S/mazenhegazy21/instapay/7BHsiF',
-                instructions: 'Secondary payment destination.'
             }
         ];
+
+        if (secondaryIdentifier && secondaryUrl) {
+            destinations.push({
+                identifier: secondaryIdentifier,
+                url: secondaryUrl,
+                instructions: 'Secondary payment destination.'
+            });
+        }
+
+        return destinations;
     }
 
     async calculateExpectedAmount(agreementId: string, purpose: string): Promise<number> {

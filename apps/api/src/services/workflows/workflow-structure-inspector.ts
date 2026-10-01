@@ -1,6 +1,6 @@
-/**
+﻿/**
  * @file workflow-structure-inspector.ts
- * @description Read-only utility to analyze workflow JSON structures.
+ * @description Read-only utility to analyze n8n workflow JSON structures.
  * It extracts structural metadata without modifying the original content.
  */
 
@@ -27,9 +27,6 @@ export interface WorkflowStructure {
 }
 
 export class WorkflowStructureInspector {
-    /**
-     * Analyzes a workflow JSON object and extracts its structural components.
-     */
     inspect(workflowJson: any): WorkflowStructure {
         if (!workflowJson || typeof workflowJson !== 'object') {
             throw new Error('Invalid workflow JSON provided for inspection');
@@ -40,46 +37,75 @@ export class WorkflowStructureInspector {
         const triggerNodes: string[] = [];
         const outputNodes: string[] = [];
 
-        // 1. Extract Nodes
-        // n8n workflows typically store nodes as an object where keys are node IDs
-        const nodesData = workflowJson.nodes || {};
-        for (const [id, nodeData] of Object.entries(nodesData as Record<string, Record<string, any>>)) {
+        // n8n stores nodes as an array.
+        const nodesData = Array.isArray(workflowJson.nodes)
+            ? workflowJson.nodes
+            : [];
+
+        for (const nodeData of nodesData) {
+            if (!nodeData || typeof nodeData !== 'object') continue;
+
             const node: WorkflowNode = {
-                id,
-                type: nodeData.type || 'unknown',
-                name: nodeData.name || id,
+                id: String(nodeData.id || nodeData.name || `node_${nodes.length}`),
+                type: String(nodeData.type || 'unknown'),
+                name: String(nodeData.name || nodeData.id || `node_${nodes.length}`),
                 position: nodeData.position || { x: 0, y: 0 },
                 parameters: nodeData.parameters || {}
             };
-            nodes.push(node);
 
-            // Identify triggers (simplified: nodes with no incoming connections are usually triggers)
-            // This is refined later by checking actual node types
+            nodes.push(node);
         }
 
-        // 2. Extract Connections
-        const connectionsData = workflowJson.connections || [];
-        connectionsData.forEach((conn: any) => {
-            connections.push({
-                sourceNode: conn.source || 'unknown',
-                targetNode: conn.target || 'unknown',
-                sourceOutput: conn.main || 'main',
-                targetInput: conn.main || 'main'
-            });
-        });
+        // n8n stores connections as:
+        // {
+        //   "Source Node": {
+        //     "main": [
+        //       [{ "node": "Target Node", "type": "main", "index": 0 }]
+        //     ]
+        //   }
+        // }
+        const connectionsData = workflowJson.connections;
 
-        // 3. Identify Trigger Nodes (Nodes that are not targets of any connection)
-        const targetNodeIds = new Set(connections.map(c => c.targetNode));
+        if (connectionsData && typeof connectionsData === 'object' && !Array.isArray(connectionsData)) {
+            for (const [sourceNode, sourceConnections] of Object.entries(connectionsData as Record<string, any>)) {
+                if (!sourceConnections || typeof sourceConnections !== 'object') continue;
+
+                for (const [outputType, outputBranches] of Object.entries(sourceConnections as Record<string, any>)) {
+                    if (!Array.isArray(outputBranches)) continue;
+
+                    outputBranches.forEach((branch: any, branchIndex: number) => {
+                        if (!Array.isArray(branch)) return;
+
+                        branch.forEach((connection: any) => {
+                            if (!connection || typeof connection !== 'object') return;
+                            if (!connection.node) return;
+
+                            connections.push({
+                                sourceNode,
+                                targetNode: String(connection.node),
+                                sourceOutput: `${outputType}:${branchIndex}`,
+                                targetInput: String(connection.type || outputType)
+                            });
+                        });
+                    });
+                }
+            }
+        }
+
+        // Identify nodes that receive no incoming connections.
+        const targetNodeNames = new Set(connections.map(c => c.targetNode));
+
         nodes.forEach(node => {
-            if (!targetNodeIds.has(node.id)) {
+            if (!targetNodeNames.has(node.name)) {
                 triggerNodes.push(node.id);
             }
         });
 
-        // 4. Identify Output Nodes (Nodes that are not sources of any connection)
-        const sourceNodeIds = new Set(connections.map(c => c.sourceNode));
+        // Identify nodes that produce no outgoing connections.
+        const sourceNodeNames = new Set(connections.map(c => c.sourceNode));
+
         nodes.forEach(node => {
-            if (!sourceNodeIds.has(node.id)) {
+            if (!sourceNodeNames.has(node.name)) {
                 outputNodes.push(node.id);
             }
         });
@@ -92,20 +118,15 @@ export class WorkflowStructureInspector {
         };
     }
 
-    /**
-     * Specifically identifies the trigger node for a workflow.
-     */
     findPrimaryTrigger(structure: WorkflowStructure): string | null {
         if (structure.triggerNodes.length === 0) return null;
-        // In most cases, the first trigger node is the primary one
         return structure.triggerNodes[0];
     }
 
-    /**
-     * Finds a node by its name or ID.
-     */
     findNode(structure: WorkflowStructure, identifier: string): WorkflowNode | null {
-        return structure.nodes.find(n => n.id === identifier || n.name === identifier) || null;
+        return structure.nodes.find(
+            n => n.id === identifier || n.name === identifier
+        ) || null;
     }
 }
 

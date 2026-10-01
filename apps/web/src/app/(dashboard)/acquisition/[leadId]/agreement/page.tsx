@@ -1,3 +1,4 @@
+"use client";
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { agreementPaymentApi } from '@/lib/agreement-payment-api';
@@ -153,13 +154,13 @@ export default function AgreementPaymentPage() {
                 <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                   <span className="text-sm text-gray-600">Payment Verified</span>
                   <span className={`text-sm font-bold ${context.readiness.status === 'VERIFIED' ? 'text-green-600' : 'text-red-600'}`}>
-                    {context.readiness.status === 'VERIFIED' ? '✓' : '✗'}
+                    {context.readiness.status === 'VERIFIED' ? '✓' : '✕'}
                   </span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                   <span className="text-sm text-gray-600">Agreement Accepted</span>
                   <span className={`text-sm font-bold ${context.agreement.status === 'ACCEPTED' ? 'text-green-600' : 'text-red-600'}`}>
-                    {context.agreement.status === 'ACCEPTED' ? '✓' : '✗'}
+                    {context.agreement.status === 'ACCEPTED' ? '✓' : '✕'}
                   </span>
                 </div>
                 <div className={`mt-4 p-3 rounded-lg text-center font-bold text-sm ${

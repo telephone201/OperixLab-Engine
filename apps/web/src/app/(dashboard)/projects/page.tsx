@@ -1,3 +1,4 @@
+"use client";
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { projectApi } from '@/lib/project-api';
@@ -54,7 +55,7 @@ export default function ProjectsPage() {
               </tr>
             ) : (
               projects.map((p) => (
-                <tr key={p.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                <tr key={p.projectId} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                   <td className="p-4 text-sm font-medium">{p.name}</td>
                   <td className="p-4 text-sm">
                     <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 uppercase">
@@ -73,10 +74,10 @@ export default function ProjectsPage() {
                   </td>
                   <td className="p-4 text-right">
                     <Link
-                      href={`/projects/${p.id}`}
+                      href={`/projects/${p.projectId}`}
                       className="text-blue-600 hover:text-blue-800 text-sm font-medium"
                     >
-                      Manage Project →
+                       Manage Project →
                     </Link>
                   </td>
                 </tr>
@@ -88,3 +89,4 @@ export default function ProjectsPage() {
     </div>
   );
 }
+

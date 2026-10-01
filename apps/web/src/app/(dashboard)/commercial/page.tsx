@@ -1,3 +1,4 @@
+"use client";
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { commercialApi } from '@/lib/commercial-api';
@@ -67,7 +68,7 @@ export default function CommercialDashboard() {
                       href={`/acquisition/${item.leadId}/commercial`}
                       className="text-blue-600 hover:text-blue-800 text-sm font-medium"
                     >
-                      Manage Commercials →
+                       Manage Commercials →
                     </Link>
                   </td>
                 </tr>

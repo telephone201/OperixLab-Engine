@@ -63,7 +63,8 @@ For each identified pain, provide:
 - FREQUENCY: (RARE | OCCASIONAL | REGULAR | FREQUENT | CONTINUOUS)
 - POTENTIAL IMPACT: (Operational, Commercial, or Customer impact)
 - CONFIDENCE: (LOW | MEDIUM | HIGH)
-- SOURCES: [Index of evidence]
+- SOURCES: [Index of supporting evidence]
+- CONTRADICTORY SOURCES: [Index of evidence that conflicts with the identified pain, if any]
 - UNKNOWNs: What specific information is missing to confirm this pain?
 `.trim();
     }

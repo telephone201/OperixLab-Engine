@@ -44,19 +44,50 @@ export class AgreementService {
         // 2. Generate material fingerprint
         const fingerprint = await this.calculateFingerprint(params);
 
-        const agreement = await db.commercial_agreements.create({
-            data: {
-                commercial_package_id: params.commercialPackageId,
-                offer_id: params.offerOptionId,
-                proposal_version_id: params.proposalVersionId,
-                solution_version_id: params.solutionVersionId,
-                company_id: params.companyId,
-                contact_id: params.contactId,
-                status: AgreementStatus.DRAFT,
-                fingerprint: fingerprint,
-                created_at: new Date(),
-                updated_at: new Date()
+        // 3. Create the agreement (DRAFT) and its immutable version 1 snapshot
+        // atomically. Raw tx.query is required here because the adapter's table
+        // helpers run on the shared pool and would not join this transaction.
+        const now = new Date();
+        const agreement = await db.transaction(async (tx) => {
+            const agreementResult = await tx.query(
+                `INSERT INTO commercial_agreements
+                    (commercial_package_id, offer_id, proposal_version_id, solution_version_id,
+                     company_id, contact_id, status, fingerprint, created_at, updated_at)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                 RETURNING *`,
+                [
+                    params.commercialPackageId,
+                    params.offerOptionId,
+                    params.proposalVersionId,
+                    params.solutionVersionId,
+                    params.companyId,
+                    params.contactId,
+                    AgreementStatus.DRAFT,
+                    fingerprint,
+                    now,
+                    now
+                ]
+            );
+
+            if (agreementResult.rowCount !== 1) {
+                throw new Error('AGREEMENT_CREATE_FAILED');
             }
+
+            const createdAgreement = agreementResult.rows[0];
+
+            await tx.query(
+                `INSERT INTO commercial_agreement_versions
+                    (agreement_id, version_number, content, hash)
+                 VALUES ($1, $2, $3::jsonb, $4)`,
+                [
+                    createdAgreement.id,
+                    1,
+                    JSON.stringify(this.buildMaterialTerms(params)),
+                    fingerprint
+                ]
+            );
+
+            return createdAgreement;
         });
 
         await auditLogger.log({
@@ -179,15 +210,24 @@ export class AgreementService {
         return { isStale: false };
     }
 
-    private async calculateFingerprint(params: any): Promise<string> {
+    /**
+     * The material inputs hashed by calculateFingerprint and snapshotted as
+     * agreement version content. Kept in one place so the version content
+     * always matches the hashed inputs exactly.
+     */
+    private buildMaterialTerms(params: any): Record<string, string> {
         // In real impl, this fetches PricingRecommendation and OfferOption
         // and hashes their material values (price, fees, scope, etc.)
-        const materialTerms = {
+        return {
             package: params.commercialPackageId,
             offer: params.offerOptionId,
             proposal: params.proposalVersionId,
             solution: params.solutionVersionId
         };
+    }
+
+    private async calculateFingerprint(params: any): Promise<string> {
+        const materialTerms = this.buildMaterialTerms(params);
         return crypto.createHash('sha256').update(JSON.stringify(materialTerms)).digest('hex');
     }
 

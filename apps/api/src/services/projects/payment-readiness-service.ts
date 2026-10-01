@@ -6,6 +6,7 @@
 import { db } from '../../lib/db';
 import { PaymentReadiness, PaymentReadinessStatus } from './payment-types';
 import { PaymentStatus } from './types';
+import { auditLogger } from '../../core/logging/audit-logger';
 
 export class PaymentReadinessService {
     /**
@@ -95,6 +96,20 @@ export class PaymentReadinessService {
                 verified_amount_total: totalVerified,
                 required_amount_total: totalRequired,
                 details: readiness.details
+            }
+        });
+
+        // Audit: readiness evaluation completed
+        await auditLogger.log({
+            action: 'READINESS_EVALUATED',
+            entityType: 'PaymentReadiness',
+            entityId: agreementId,
+            details: {
+                status,
+                verifiedAmountTotal: totalVerified,
+                requiredAmountTotal: totalRequired,
+                paymentCount: payments.length,
+                allVerified: allRequiredVerified
             }
         });
 

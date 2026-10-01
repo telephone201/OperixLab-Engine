@@ -1,9 +1,10 @@
-/**
+﻿/**
  * @file commercial-foundation-service.ts
  * @description Manages the foundation of the commercialization engine, including packages, pricing, and offers.
  */
 
 import { db } from '../../lib/db';
+import type { PoolClient } from 'pg';
 import {
     CommercialPackage,
     CommercialPackageStatus,
@@ -59,6 +60,80 @@ export class CommercialFoundationService {
                 version: 1
             }
         });
+
+        await auditLogger.log({
+            action: 'COMMERCIAL_PACKAGE_CREATED',
+            entityType: 'CommercialPackage',
+            entityId: packageId,
+            details: { leadId: params.leadId, solutionVersionId: params.solutionVersionId }
+        });
+
+        return this.mapToDomain(pkg);
+    }
+
+    /**
+     * Creates a commercial package inside an EXISTING database transaction
+     * (transaction-client pattern, same as HumanApprovalService
+     * .requestApprovalWithClient). Uses only the supplied client for the
+     * write, preserves the existing defaults (DRAFT status, USD currency
+     * fallback, version 1) and the existing audit event. No nested
+     * transaction, no external services, no unrelated records.
+     */
+    async createCommercialPackageWithClient(
+        client: PoolClient,
+        params: {
+            leadId: string;
+            companyId: string;
+            contactId: string;
+            solutionArchitectureId: string;
+            solutionVersionId: string;
+            requirementsVersionId: string;
+            painAnalysisVersionId: string;
+            qualificationVersionId: string;
+            userId: string;
+            currency?: string;
+        }
+    ): Promise<CommercialPackage> {
+        const packageId = crypto.randomUUID();
+
+        const result = await client.query(
+            `INSERT INTO "commercial_packages" (
+                "id",
+                "lead_id",
+                "company_id",
+                "contact_id",
+                "solution_architecture_id",
+                "solution_version_id",
+                "requirements_version_id",
+                "pain_analysis_version_id",
+                "qualification_version_id",
+                "status",
+                "currency",
+                "version",
+                "created_by",
+                "created_at",
+                "updated_at"
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW())
+            RETURNING *`,
+            [
+                packageId,
+                params.leadId,
+                params.companyId,
+                params.contactId,
+                params.solutionArchitectureId,
+                params.solutionVersionId,
+                params.requirementsVersionId,
+                params.painAnalysisVersionId,
+                params.qualificationVersionId,
+                CommercialPackageStatus.DRAFT,
+                params.currency || 'USD',
+                1,
+                params.userId
+            ]
+        );
+
+        const pkg = result.rows[0];
 
         await auditLogger.log({
             action: 'COMMERCIAL_PACKAGE_CREATED',

@@ -42,13 +42,20 @@ export class PainEvidenceValidator {
         else if (contradictions > 0) confidence *= 0.5;
         else if (supportingEvidence.length > 2) confidence = Math.min(confidence + 0.2, 1.0);
 
+        const status =
+            evidenceType === 'UNKNOWN'
+                ? 'NEEDS_RESEARCH'
+                : contradictions > 0
+                    ? 'REVIEW_REQUIRED'
+                    : 'SUPPORTED';
+
         return {
             validatedPain: {
                 ...pain,
                 evidence: supportingEvidence,
                 evidenceType,
                 confidence,
-                status: evidenceType === 'UNKNOWN' ? 'NEEDS_RESEARCH' : pain.status,
+                status,
             },
             confidenceImpact: confidence - pain.confidence,
         };

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file approval-service.ts
  * @description Manages the request and decision lifecycle for human approvals.
  */
@@ -48,6 +48,7 @@ export class HumanApprovalService {
 
         return approvalId;
     }
+
     /**
      * Creates an approval request inside an existing PostgreSQL transaction.
      */
@@ -97,7 +98,42 @@ export class HumanApprovalService {
         return approvalId;
     }
 
-async submitDecision(approvalId: string, decision: ApprovalDecision, userId: string, reason?: string): Promise<void> {
+    /**
+     * Returns actionable pending approvals for the dashboard.
+     * Expired pending approvals are excluded without mutating their state.
+     */
+    async getPendingApprovals(): Promise<HumanApproval[]> {
+        const approvals = await db.governance_approvals.findMany({
+            where: {
+                status: ApprovalDecision.PENDING,
+                OR: [
+                    { expires_at: { equals: null } },
+                    { expires_at: { gt: new Date() } }
+                ]
+            },
+            orderBy: { requested_at: 'desc' }
+        });
+
+        return approvals.map((approval) => ({
+            approvalId: approval.id,
+            entityType: approval.entity_type,
+            entityId: approval.entity_id,
+            approvalType: approval.approval_type as ApprovalType,
+            requestedBy: approval.requested_by,
+            requestedAt: approval.requested_at,
+            decision: approval.status as ApprovalDecision,
+            decidedBy: approval.decided_by,
+            decidedAt: approval.decided_at,
+            reason: approval.reason,
+            expiresAt: approval.expires_at,
+            workflowVersionId: approval.workflow_version_id,
+            artifactHash: approval.artifact_hash,
+            environment: approval.environment,
+            deploymentId: approval.deployment_id
+        }));
+    }
+
+    async submitDecision(approvalId: string, decision: ApprovalDecision, userId: string, reason?: string): Promise<void> {
         const approval = await db.governance_approvals.findUnique({ where: { id: approvalId } });
         if (!approval) throw new Error('APPROVAL_NOT_FOUND');
 
@@ -167,6 +203,7 @@ async submitDecision(approvalId: string, decision: ApprovalDecision, userId: str
             deploymentId: approval.deployment_id
         };
     }
+
     /**
      * Reads the latest non-expired approved approval inside an existing transaction.
      */

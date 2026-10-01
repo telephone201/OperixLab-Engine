@@ -1,8 +1,10 @@
+"use client";
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { commercialApi } from '@/lib/commercial-api';
 import { domainApi } from '@/lib/domain-api';
-import { CommercialContext, PricingRecommendation, OfferOption, Proposal } from '@/types/commercial';
+import { PricingRecommendation, OfferOption, Proposal } from '@/types/commercial';
+import { CommercialContext } from '@/lib/commercial-api';
 import { Lead } from '@/types/domain';
 
 type Tab = 'solution' | 'pricing' | 'offers' | 'proposal';
@@ -175,7 +177,7 @@ export default function LeadCommercialWorkspace() {
                       {offer.description}
                     </div>
                     <div className="text-xs text-gray-400 italic border-t pt-3">
-                      Valid until: {new Date(offer.validUntil).toLocaleDateString()}
+                      Valid until: {offer.validUntil ? new Date(offer.validUntil).toLocaleDateString() : 'Not set'}
                     </div>
                   </div>
                 ))}
@@ -201,7 +203,7 @@ export default function LeadCommercialWorkspace() {
                     onClick={refreshProposal}
                     className="text-xs text-blue-600 hover:underline"
                   >
-                    Refresh Preview 🔄
+                    Refresh Preview ↻
                   </button>
                 </div>
 
@@ -249,19 +251,19 @@ export default function LeadCommercialWorkspace() {
                             <div className="p-3 bg-white border border-gray-200 rounded-lg shadow-sm">
                               <div className="text-xs font-bold text-green-600 uppercase mb-2">Included</div>
                               <ul className="text-xs space-y-1 list-disc pl-4">
-                                {proposalPreview.data.content.scope.included.map((item, i) => <li key={i}>{item}</li>)}
+                                {proposalPreview.data.content.scope.included.map((item: string, i: number) => <li key={i}>{item}</li>)}
                               </ul>
                             </div>
                             <div className="p-3 bg-white border border-gray-200 rounded-lg shadow-sm">
                               <div className="text-xs font-bold text-yellow-600 uppercase mb-2">Optional</div>
                               <ul className="text-xs space-y-1 list-disc pl-4">
-                                {proposalPreview.data.content.scope.optional.map((item, i) => <li key={i}>{item}</li>)}
+                                {proposalPreview.data.content.scope.optional.map((item: string, i: number) => <li key={i}>{item}</li>)}
                               </ul>
                             </div>
                             <div className="p-3 bg-white border border-gray-200 rounded-lg shadow-sm">
                               <div className="text-xs font-bold text-red-600 uppercase mb-2">Out of Scope</div>
                               <ul className="text-xs space-y-1 list-disc pl-4">
-                                {proposalPreview.data.content.scope.outOfScope.map((item, i) => <li key={i}</li>)}
+                                {proposalPreview.data.content.scope.outOfScope.map((item: string, i: number) => <li key={i}>{item}</li>)}
                               </ul>
                             </div>
                           </div>

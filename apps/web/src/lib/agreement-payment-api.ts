@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file agreement-payment-api.ts
  * @description Domain-specific API functions for Agreement and Payment management.
  */
@@ -24,6 +24,15 @@ export const agreementPaymentApi = {
    */
   async getAgreementContext(leadId: string): Promise<{ data: AgreementContext | null; error?: any }> {
     const response = await apiClient.get<AgreementContext>(`/commercial/leads/${leadId}/agreement`);
+    return response;
+  },
+
+  /**
+   * GET /api/dashboard/payments/review
+   * Returns payments currently awaiting human verification.
+   */
+  async getPendingPaymentReviews(): Promise<{ data: Payment[] | null; error?: any }> {
+    const response = await apiClient.get<Payment[]>('/dashboard/payments/review');
     return response;
   },
 

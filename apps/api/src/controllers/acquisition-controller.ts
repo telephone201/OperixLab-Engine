@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file acquisition-controller.ts
  * @description Controller for lead acquisition and retrieval.
  */
@@ -14,17 +14,48 @@ export class AcquisitionController {
      */
     async getLeads(req: Request, res: Response) {
         try {
-            // The service currently has import methods but not a generic 'list' method.
-            // We retrieve from the db.leads table directly via the db client.
             const leads = await db.leads.findMany({
                 take: 100,
                 orderBy: { created_at: 'desc' }
             });
 
-            return res.json({ data: leads });
+            const enrichedLeads = await Promise.all(
+                leads.map(async (lead: any) => {
+                    const company = lead.company_id
+                        ? await db.companies.findUnique({
+                            where: { id: lead.company_id }
+                        })
+                        : null;
+
+                    const contact = lead.contact_id
+                        ? await db.contacts.findUnique({
+                            where: { id: lead.contact_id }
+                        })
+                        : null;
+
+                    const source = lead.source_id
+                        ? await db.lead_sources.findUnique({
+                            where: { id: lead.source_id }
+                        })
+                        : null;
+
+                    return {
+                        ...lead,
+                        company: company?.name || '',
+                        contact: contact
+                            ? [contact.first_name, contact.last_name]
+                                .filter(Boolean)
+                                .join(' ')
+                            : '',
+                        source: source?.name || ''
+                    };
+                })
+            );
+
+            return res.json({ data: enrichedLeads });
         } catch (error: any) {
             return res.status(500).json({
-                error: { code: 'INTERNAL_ERROR', message: error.message }
+                error: { code: 'INTERNAL_ERROR', message: 'An unexpected error occurred' }
             });
         }
     }
@@ -58,17 +89,29 @@ export class AcquisitionController {
                 ? await db.contacts.findUnique({ where: { id: contactId } })
                 : null;
 
+            const source = (lead as any).source_id
+                ? await db.lead_sources.findUnique({
+                    where: { id: (lead as any).source_id }
+                })
+                : null;
+
             return res.json({
                 data: {
                     ...lead,
-                    company,
-                    contact
+                    company: company?.name || '',
+                    contact: contact
+                        ? [contact.first_name, contact.last_name]
+                            .filter(Boolean)
+                            .join(' ')
+                        : '',
+                    source: source?.name || ''
                 }
             });
         } catch (error: any) {
             return res.status(500).json({
-                error: { code: 'INTERNAL_ERROR', message: error.message }
+                error: { code: 'INTERNAL_ERROR', message: 'An unexpected error occurred' }
             });
         }
     }
 }
+

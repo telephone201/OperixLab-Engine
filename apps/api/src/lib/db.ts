@@ -110,15 +110,29 @@ function buildWhere(
 
         if (key === "OR") {
             if (!Array.isArray(value) || value.length === 0) continue;
-            const orParts = value.map((condition) => buildWhere(condition, params)).filter(Boolean);
-            if (orParts.length > 0) parts.push(`(${orParts.join(" OR ")})`);
+
+            const orParts = value
+                .map((condition) => buildWhere(condition, params))
+                .filter(Boolean);
+
+            if (orParts.length > 0) {
+                parts.push(`(${orParts.join(" OR ")})`);
+            }
+
             continue;
         }
 
         if (key === "AND") {
             if (!Array.isArray(value) || value.length === 0) continue;
-            const andParts = value.map((condition) => buildWhere(condition, params)).filter(Boolean);
-            if (andParts.length > 0) parts.push(`(${andParts.join(" AND ")})`);
+
+            const andParts = value
+                .map((condition) => buildWhere(condition, params))
+                .filter(Boolean);
+
+            if (andParts.length > 0) {
+                parts.push(`(${andParts.join(" AND ")})`);
+            }
+
             continue;
         }
 
@@ -136,35 +150,56 @@ function buildWhere(
         }
 
         const operators: string[] = [];
+        const mode =
+            value.mode === "insensitive"
+                ? "insensitive"
+                : "default";
 
         if (Object.prototype.hasOwnProperty.call(value, "equals")) {
             const v = value.equals;
-            if (v === null) operators.push(`${column} IS NULL`);
-            else {
+
+            if (v === null) {
+                operators.push(`${column} IS NULL`);
+            } else {
                 params.push(v);
-                operators.push(`${column} = $${params.length}`);
+                operators.push(
+                    mode === "insensitive"
+                        ? `${column} ILIKE $${params.length}`
+                        : `${column} = $${params.length}`
+                );
             }
         }
 
         if (Object.prototype.hasOwnProperty.call(value, "not")) {
             const v = value.not;
-            if (v === null) operators.push(`${column} IS NOT NULL`);
-            else {
+
+            if (v === null) {
+                operators.push(`${column} IS NOT NULL`);
+            } else {
                 params.push(v);
-                operators.push(`${column} <> $${params.length}`);
+                operators.push(
+                    mode === "insensitive"
+                        ? `${column} NOT ILIKE $${params.length}`
+                        : `${column} <> $${params.length}`
+                );
             }
         }
 
         if (Object.prototype.hasOwnProperty.call(value, "in")) {
             const values = value.in;
+
             if (Array.isArray(values)) {
-                if (values.length === 0) operators.push("FALSE");
-                else {
+                if (values.length === 0) {
+                    operators.push("FALSE");
+                } else {
                     const placeholders = values.map((v) => {
                         params.push(v);
                         return `$${params.length}`;
                     });
-                    operators.push(`${column} IN (${placeholders.join(", ")})`);
+
+                    operators.push(
+                        `${column} IN (${placeholders.join(", ")})`
+                    );
                 }
             }
         }
@@ -189,8 +224,51 @@ function buildWhere(
             operators.push(`${column} <= $${params.length}`);
         }
 
+        if (Object.prototype.hasOwnProperty.call(value, "contains")) {
+            const searchValue = String(value.contains);
+
+            params.push(
+                mode === "insensitive"
+                    ? `%${searchValue}%`
+                    : `%${searchValue}%`
+            );
+
+            operators.push(
+                mode === "insensitive"
+                    ? `${column} ILIKE $${params.length}`
+                    : `${column} LIKE $${params.length}`
+            );
+        }
+
+        if (Object.prototype.hasOwnProperty.call(value, "hasSome")) {
+            const values = value.hasSome;
+
+            if (Array.isArray(values)) {
+                if (values.length === 0) {
+                    operators.push("FALSE");
+                } else {
+                    const placeholders = values.map((v) => {
+                        params.push(String(v).trim().toLowerCase());
+                        return `$${params.length}`;
+                    });
+
+                    operators.push(`
+                        EXISTS (
+                            SELECT 1
+                            FROM unnest(string_to_array(COALESCE(${column}, ''), ',')) AS item
+                            WHERE lower(trim(item)) IN (${placeholders.join(", ")})
+                        )
+                    `.replace(/\s+/g, " ").trim());
+                }
+            }
+        }
+
         if (operators.length > 0) {
-            parts.push(operators.length === 1 ? operators[0] : `(${operators.join(" AND ")})`);
+            parts.push(
+                operators.length === 1
+                    ? operators[0]
+                    : `(${operators.join(" AND ")})`
+            );
         }
     }
 
@@ -229,6 +307,63 @@ function getData(args: any): Record<string, any> {
     const data = args?.data;
     if (!data || typeof data !== "object" || Array.isArray(data)) throw new Error("Expected args.data to be an object");
     return Object.fromEntries(Object.entries(data).filter(([, value]) => value !== undefined));
+}
+
+/**
+ * Prisma-style increment detection (narrow).
+ * Matches ONLY a plain object whose sole key is "increment" with a finite
+ * numeric value, e.g. { increment: 1 }. Returns the amount, otherwise null.
+ */
+function asIncrementOperator(value: any): number | null {
+    if (
+        value !== null &&
+        typeof value === "object" &&
+        !Array.isArray(value) &&
+        !(value instanceof Date) &&
+        Object.keys(value).length === 1 &&
+        Object.prototype.hasOwnProperty.call(value, "increment") &&
+        typeof value.increment === "number" &&
+        Number.isFinite(value.increment)
+    ) {
+        return value.increment;
+    }
+    return null;
+}
+
+/**
+ * Operator keys that are NOT supported in update payloads by this adapter.
+ * "increment" is listed as well: a valid { increment: <number> } is handled
+ * before this check runs, so reaching this check with an "increment" key
+ * means the value was malformed (non-numeric/NaN) and must fail loudly.
+ */
+const UNSUPPORTED_OPERATOR_KEYS = new Set([
+    "increment",
+    "decrement",
+    "multiply",
+    "divide",
+    "set",
+    "push",
+]);
+
+/**
+ * Detects operator-shaped objects this adapter does NOT support, so callers
+ * fail loudly instead of silently binding the object as a JSON value.
+ * Same narrow shape as asIncrementOperator: a plain object whose sole key is
+ * a known operator name. Returns the offending key, otherwise null.
+ */
+function findUnsupportedOperatorKey(value: any): string | null {
+    if (
+        value === null ||
+        typeof value !== "object" ||
+        Array.isArray(value) ||
+        value instanceof Date
+    ) {
+        return null;
+    }
+    const keys = Object.keys(value);
+    if (keys.length !== 1) return null;
+    const key = keys[0];
+    return UNSUPPORTED_OPERATOR_KEYS.has(key) ? key : null;
 }
 
 async function insertRow(tableName: string, data: Record<string, any>) {
@@ -327,8 +462,18 @@ const dbImplementation: DbClient = {
                         if (dataEntries.length === 0) return findOne(tableName, { where }, false);
                         const params: any[] = [];
                         const setClause = dataEntries.map(([key, value]) => {
+                            const column = quoteIdentifier(key);
+                            const incrementAmount = asIncrementOperator(value);
+                            if (incrementAmount !== null) {
+                                params.push(incrementAmount);
+                                return `${column} = ${column} + $${params.length}`;
+                            }
+                            const badOp = findUnsupportedOperatorKey(value);
+                            if (badOp !== null) {
+                                throw new Error(`Unsupported update operator on ${quoteIdentifier(tableName)}.${column}: { ${badOp}: ... }. This adapter only supports { increment: <finite number> }.`);
+                            }
                             params.push(value);
-                            return `${quoteIdentifier(key)} = $${params.length}`;
+                            return `${column} = $${params.length}`;
                         }).join(", ");
                         const whereSql = buildWhere(where, params);
                         if (!whereSql) throw new Error(`Refusing UPDATE on ${tableName} without WHERE`);
@@ -397,8 +542,18 @@ const dbImplementation: DbClient = {
                                 }
                                 const updateParams: any[] = [];
                                 const setClause = updateEntries.map(([key, value]) => {
+                                    const column = quoteIdentifier(key);
+                                    const incrementAmount = asIncrementOperator(value);
+                                    if (incrementAmount !== null) {
+                                        updateParams.push(incrementAmount);
+                                        return `${column} = ${column} + $${updateParams.length}`;
+                                    }
+                                    const badOp = findUnsupportedOperatorKey(value);
+                                    if (badOp !== null) {
+                                        throw new Error(`Unsupported update operator on ${quoteIdentifier(tableName)}.${column}: { ${badOp}: ... }. This adapter only supports { increment: <finite number> }.`);
+                                    }
                                     updateParams.push(value);
-                                    return `${quoteIdentifier(key)} = $${updateParams.length}`;
+                                    return `${column} = $${updateParams.length}`;
                                 }).join(", ");
                                 const updateWhereSql = buildWhere(where, updateParams);
                                 const result = await client.query(

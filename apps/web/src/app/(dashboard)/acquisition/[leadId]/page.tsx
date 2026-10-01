@@ -1,17 +1,41 @@
+"use client";
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { domainApi } from '@/lib/domain-api';
+import { matchingApi, MatchingSessionListItem } from '@/lib/matching-api';
+import { MatchingSessionDetail } from '@/types/matching';
+import { MatchingSessionHeader } from '@/components/domain/matching/MatchingSessionHeader';
+import { MatchingRecommendationCard } from '@/components/domain/matching/MatchingRecommendationCard';
+import { MatchingSelectedWorkflowCard } from '@/components/domain/matching/MatchingSelectedWorkflowCard';
+import { MatchingEvidenceTabs } from '@/components/domain/matching/MatchingEvidenceTabs';
+import { MatchingReviewActions } from '@/components/domain/matching/MatchingReviewActions';
 import { Lead, LeadResearch, LeadQualification, LeadPain, LeadRequirements } from '@/types/domain';
 import { EvidenceItem } from '@/components/domain/EvidenceItem';
 import { QualScoreCard } from '@/components/domain/QualScoreCard';
+import { useAuth } from '@/hooks/use-auth';
+import { cn } from '@/lib/utils';
 
-type Tab = 'overview' | 'research' | 'qualification' | 'pain' | 'requirements';
+type Tab = 'overview' | 'research' | 'qualification' | 'pain' | 'requirements' | 'matching';
 
 export default function LeadDetailPage() {
   const { leadId } = useParams();
   const id = leadId as string;
+  const { user } = useAuth();
+  const canManageResearch =
+    user?.role === 'OWNER' || user?.role === 'OPERATOR';
 
   const [activeTab, setActiveTab] = useState<Tab>('overview');
+  const [researchProvider, setResearchProvider] = useState<'PERPLEXITY' | 'GEMINI'>('PERPLEXITY');
+  const [researchTask, setResearchTask] = useState<{
+    taskId: string;
+    researchRequestId: string;
+    provider: 'PERPLEXITY' | 'GEMINI';
+    prompt: string;
+    status: string;
+  } | null>(null);
+  const [researchTaskLoading, setResearchTaskLoading] = useState(false);
+  const [researchTaskError, setResearchTaskError] = useState<string | null>(null);
+
   const [lead, setLead] = useState<Lead | null>(null);
   const [research, setResearch] = useState<{ data: LeadResearch | null; loading: boolean; error: string | null }>({ data: null, loading: true, error: null });
   const [qualification, setQualification] = useState<{ data: LeadQualification | null; loading: boolean; error: string | null }>({ data: null, loading: true, error: null });
@@ -19,6 +43,13 @@ export default function LeadDetailPage() {
   const [requirements, setRequirements] = useState<{ data: LeadRequirements | null; loading: boolean; error: string | null }>({ data: null, loading: true, error: null });
   const [globalLoading, setGlobalLoading] = useState(true);
   const [globalError, setGlobalError] = useState<string | null>(null);
+
+  // Matching Review Surface (lazy: fetched only while the tab is active).
+  const [matchingSessions, setMatchingSessions] = useState<MatchingSessionListItem[] | null>(null);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  const [matchingDetail, setMatchingDetail] = useState<MatchingSessionDetail | null>(null);
+  const [matchingLoading, setMatchingLoading] = useState(false);
+  const [matchingError, setMatchingError] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadLead() {
@@ -38,29 +69,145 @@ export default function LeadDetailPage() {
     loadLead();
   }, [id]);
 
+  const createResearchTask = async () => {
+    setResearchTaskLoading(true);
+    setResearchTaskError(null);
+
+    try {
+      const { data, error } = await domainApi.createResearchTask(
+        id,
+        researchProvider
+      );
+
+      if (error) {
+        setResearchTaskError(error.message || 'Failed to create research task.');
+        return;
+      }
+
+      setResearchTask(data);
+    } catch {
+      setResearchTaskError('Failed to create research task.');
+    } finally {
+      setResearchTaskLoading(false);
+    }
+  };
+
   const refreshTab = async (tab: Tab) => {
     if (tab === 'research') {
       setResearch(prev => ({ ...prev, loading: true, error: null }));
       const { data, error } = await domainApi.getLeadResearch(id);
-      setResearch({ data, loading: false, error: error?.message || null });
+      setResearch({ data, loading: false, error: error?.code === 'RESOURCE_NOT_FOUND' ? 'RESOURCE_NOT_FOUND' : error?.message || null });
     } else if (tab === 'qualification') {
       setQualification(prev => ({ ...prev, loading: true, error: null }));
       const { data, error } = await domainApi.getLeadQualification(id);
-      setQualification({ data, loading: false, error: error?.message || null });
+      setQualification({ data, loading: false, error: error?.code === 'RESOURCE_NOT_FOUND' ? 'RESOURCE_NOT_FOUND' : error?.message || null });
     } else if (tab === 'pain') {
       setPain(prev => ({ ...prev, loading: true, error: null }));
       const { data, error } = await domainApi.getLeadPain(id);
-      setPain({ data, loading: false, error: error?.message || null });
+      setPain({ data, loading: false, error: error?.code === 'RESOURCE_NOT_FOUND' ? 'RESOURCE_NOT_FOUND' : error?.message || null });
     } else if (tab === 'requirements') {
       setRequirements(prev => ({ ...prev, loading: true, error: null }));
       const { data, error } = await domainApi.getLeadRequirements(id);
-      setRequirements({ data, loading: false, error: error?.message || null });
+      setRequirements({ data, loading: false, error: error?.code === 'RESOURCE_NOT_FOUND' ? 'RESOURCE_NOT_FOUND' : error?.message || null });
+    } else if (tab === 'matching') {
+      // Matching sessions: list first, then the most recently updated
+      // session's detail. Lazy — runs only while the tab is active.
+      setMatchingLoading(true);
+      setMatchingError(null);
+      try {
+        const { data: sessions, error: listError } = await matchingApi.getLeadMatchingSessions(id);
+
+        if (listError) {
+          setMatchingError(listError.message || 'Failed to load matching sessions.');
+          return;
+        }
+
+        const sessionList = sessions ?? [];
+        setMatchingSessions(sessionList);
+
+        if (sessionList.length === 0) {
+          setMatchingDetail(null);
+          setSelectedSessionId(null);
+          return;
+        }
+
+        const preferred =
+          selectedSessionId &&
+          sessionList.some((session) => session.sessionId === selectedSessionId)
+            ? selectedSessionId
+            : [...sessionList].sort(
+                (a, b) =>
+                  (b.decision.updatedAt?.getTime() ?? 0) -
+                  (a.decision.updatedAt?.getTime() ?? 0)
+              )[0].sessionId;
+
+        setSelectedSessionId(preferred);
+
+        const { data: detail, error: detailError } =
+          await matchingApi.getMatchingSessionDetail(id, preferred);
+
+        if (detailError) {
+          setMatchingError(
+            detailError.message || 'Failed to load the matching session detail.'
+          );
+          return;
+        }
+
+        setMatchingDetail(detail);
+      } catch {
+        setMatchingError('Failed to load matching data.');
+      } finally {
+        setMatchingLoading(false);
+      }
     }
   };
 
   useEffect(() => {
     refreshTab(activeTab);
   }, [activeTab, id]);
+
+  /**
+   * Refetch the CURRENT session's detail explicitly by sessionId — not via
+   * refreshTab('matching'), whose closure can capture a stale selectedSessionId
+   * (the session pills set state and then call refreshTab in the same tick).
+   * Runs after approve/reject and on 409 so the UI reflects server truth;
+   * the actions disappear naturally once status leaves REVIEW_REQUIRED.
+   */
+  const refetchMatchingDetail = async (sessionId: string) => {
+    setMatchingLoading(true);
+    setMatchingError(null);
+    try {
+      const { data: detail, error } = await matchingApi.getMatchingSessionDetail(
+        id,
+        sessionId
+      );
+
+      if (error) {
+        setMatchingError(
+          error.message || 'Failed to load the matching session detail.'
+        );
+        return;
+      }
+
+      setMatchingDetail(detail);
+    } catch {
+      setMatchingError('Failed to load matching data.');
+    } finally {
+      setMatchingLoading(false);
+    }
+  };
+
+  /**
+   * Session selection: refetch the clicked session's detail explicitly.
+   * Selection must NOT route through refreshTab('matching') — its closure
+   * captures a stale selectedSessionId, so the preference logic would fetch
+   * (and reset selection to) the previously selected session instead of the
+   * clicked pill.
+   */
+  const selectMatchingSession = async (sessionId: string) => {
+    setSelectedSessionId(sessionId);
+    await refetchMatchingDetail(sessionId);
+  };
 
   if (globalLoading) return <div className="p-6 animate-pulse">Loading lead workspace...</div>;
   if (globalError) return <div className="p-6 text-red-600 font-bold">Error: {globalError}</div>;
@@ -72,6 +219,7 @@ export default function LeadDetailPage() {
     { id: 'qualification', label: 'Qualification' },
     { id: 'pain', label: 'Pain' },
     { id: 'requirements', label: 'Requirements' },
+    { id: 'matching', label: 'Matching' },
   ];
 
   return (
@@ -172,6 +320,97 @@ export default function LeadDetailPage() {
 
         {activeTab === 'research' && (
           <div>
+            {canManageResearch && (
+              <div className="mb-8 p-5 bg-gray-50 border border-gray-200 rounded-xl">
+                <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900">
+                      Start AI Research
+                    </h3>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Generate a research task and a copy-ready prompt for manual AI research.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <select
+                      value={researchProvider}
+                      onChange={(event) =>
+                        setResearchProvider(
+                          event.target.value as 'PERPLEXITY' | 'GEMINI'
+                        )
+                      }
+                      className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm"
+                      disabled={researchTaskLoading}
+                    >
+                      <option value="PERPLEXITY">Perplexity</option>
+                      <option value="GEMINI">Gemini</option>
+                    </select>
+
+                    <button
+                      onClick={createResearchTask}
+                      disabled={researchTaskLoading}
+                      className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {researchTaskLoading
+                        ? 'Creating...'
+                        : 'Create Research Task'}
+                    </button>
+                  </div>
+                </div>
+
+                {researchTaskError && (
+                  <div className="mt-4 p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">
+                    {researchTaskError}
+                  </div>
+                )}
+
+                {researchTask && (
+                  <div className="mt-5 p-4 bg-white border border-gray-200 rounded-lg">
+                    <div className="flex flex-wrap gap-4 text-xs text-gray-500 mb-4">
+                      <span>
+                        Provider:{' '}
+                        <strong className="text-gray-900">
+                          {researchTask.provider}
+                        </strong>
+                      </span>
+                      <span>
+                        Status:{' '}
+                        <strong className="text-gray-900">
+                          {researchTask.status}
+                        </strong>
+                      </span>
+                      <span>
+                        Task:{' '}
+                        <strong className="text-gray-900">
+                          {researchTask.taskId}
+                        </strong>
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-3 mb-2">
+                      <h4 className="text-sm font-bold text-gray-800">
+                        Generated Prompt
+                      </h4>
+
+                      <button
+                        onClick={() =>
+                          navigator.clipboard.writeText(researchTask.prompt)
+                        }
+                        className="px-3 py-1.5 rounded-lg border border-gray-300 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                      >
+                        Copy Prompt
+                      </button>
+                    </div>
+
+                    <pre className="whitespace-pre-wrap text-xs leading-relaxed text-gray-700 bg-gray-50 border border-gray-100 rounded-lg p-4 max-h-96 overflow-auto">
+                      {researchTask.prompt}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            )}
+
             {research.loading ? (
               <div className="animate-pulse space-y-4">
                 <div className="h-6 bg-gray-200 rounded w-1/4 mb-4" />
@@ -335,7 +574,7 @@ export default function LeadDetailPage() {
                   <div className="space-y-3">
                     {requirements.data?.unresolvedQuestions.map((q, i) => (
                       <div key={i} className="text-sm text-gray-600 flex gap-3">
-                        <span className="text-gray-300">•</span> {q}
+                         <span className="text-gray-300">•</span> {q}
                       </div>
                     ))}
                     {requirements.data?.unresolvedQuestions.length === 0 && <div className="text-sm text-gray-400 italic">No remaining gaps.</div>}
@@ -345,7 +584,107 @@ export default function LeadDetailPage() {
             )}
           </div>
         )}
+        {activeTab === 'matching' && (
+          <div className="space-y-6">
+            {/* Session selector — rendered only when multiple sessions exist. */}
+            {matchingSessions && matchingSessions.length > 1 && (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-bold text-gray-400 uppercase">
+                  Sessions
+                </span>
+                {matchingSessions.map((session) => (
+                  <button
+                    key={session.sessionId}
+                    type="button"
+                    onClick={() => selectMatchingSession(session.sessionId)}
+                    className={cn(
+                      'px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors',
+                      selectedSessionId === session.sessionId
+                        ? 'bg-blue-50 text-blue-700 border-blue-200'
+                        : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
+                    )}
+                  >
+                    {session.sessionId.slice(0, 8)} · {session.decision.strategy ?? 'PENDING'} ·{' '}
+                    {session.decision.status}
+                    </button>
+                  ))}
+              </div>
+            )}
+
+            {matchingLoading && (
+              <div className="flex justify-center p-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+              </div>
+            )}
+
+            {!matchingLoading && matchingError && (
+              <div className="text-center py-12 text-gray-500 italic">
+                {matchingError}
+              </div>
+            )}
+
+            {!matchingLoading && !matchingError && matchingSessions && matchingSessions.length === 0 && (
+              <div className="text-center py-12 text-gray-500 italic">
+                No matching sessions have been created for this lead yet.
+              </div>
+            )}
+
+            {!matchingLoading && !matchingError && matchingDetail && (
+              <>
+                <MatchingSessionHeader
+                  sessionId={matchingDetail.sessionId}
+                  decision={matchingDetail.decision}
+                  architecture={matchingDetail.architecture}
+                  review={matchingDetail.review}
+                />
+
+                <MatchingRecommendationCard
+                  recommendation={matchingDetail.recommendation}
+                  rejectedStrategies={
+                    (matchingDetail.architecture?.blueprint?.rejectedStrategies as
+                      | { strategy: string; reason: string }[]
+                      | undefined) ?? []
+                  }
+                />
+
+                <MatchingSelectedWorkflowCard
+                  workflow={
+                    matchingDetail.candidates.find(
+                      (candidate) =>
+                        candidate.workflowId === matchingDetail.recommendation.primaryCandidateId
+                    )?.workflow ?? null
+                  }
+                />
+
+                <MatchingEvidenceTabs
+                  candidates={matchingDetail.candidates}
+                  requirements={matchingDetail.requirements}
+                  primaryCandidateId={matchingDetail.recommendation.primaryCandidateId}
+                />
+
+                {canManageResearch && (
+                  <MatchingReviewActions
+                    sessionId={matchingDetail.sessionId}
+                    decisionStatus={matchingDetail.decision.status}
+                    strategy={matchingDetail.decision.strategy}
+                    hasPrimaryCandidate={Boolean(
+                      matchingDetail.recommendation.primaryCandidateId
+                    )}
+                    onApproved={() => refetchMatchingDetail(matchingDetail.sessionId)}
+                    onRejected={() => refetchMatchingDetail(matchingDetail.sessionId)}
+                    onConflict={() => refetchMatchingDetail(matchingDetail.sessionId)}
+                  />
+                )}
+              </>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
 }
+
+
+
+
+

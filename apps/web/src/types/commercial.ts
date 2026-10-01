@@ -70,7 +70,7 @@ export interface OfferOption {
     cancellationTerms: string;
     scopeChangeTerms: string;
     supportTerms: string;
-    validUntil: Date;
+    validUntil: Date | null;
     status: 'DRAFT' | 'ACTIVE' | 'SUPERSEDED' | 'ARCHIVED';
     version: number;
     createdAt: Date;

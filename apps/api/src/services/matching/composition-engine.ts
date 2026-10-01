@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file composition-engine.ts
  * @description Implements the logic for composing multiple existing workflows
  * into a unified solution blueprint.
@@ -72,7 +72,7 @@ export class CompositionEngine {
         // 1. Filter Candidates by Hard Gates (must be eligible for composition)
         const eligibleCandidates = [];
         for (const cand of candidates) {
-            const { isEligible } = await this.gateEvaluator.evaluate(cand.id, cand.workflow_id, requirements);
+            const { isEligible } = await this.gateEvaluator.evaluate(cand.id, cand.id, requirements);
             if (isEligible) eligibleCandidates.push(cand);
         }
 

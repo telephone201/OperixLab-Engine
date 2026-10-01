@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file commercial-approval-gate.ts
  * @description Deterministic gate to verify commercial readiness and authorization.
  */
@@ -40,7 +40,27 @@ export class CommercialApprovalGate {
             stalenessReasons.push(...staleness.reasons);
         }
 
-        // 3. Proposal Check
+        // 3. Pricing Approval Check
+        const pricing = await db.pricing_recommendations.findFirst({
+            where: { commercial_package_id: commercialPackageId },
+            orderBy: { pricing_version: 'desc' }
+        });
+
+        if (!pricing) {
+            blockingReasons.push('NO_PRICING_RECOMMENDATION');
+        } else {
+            const pricingApproval = await approvalGate.isAuthorized(
+                pricing.id,
+                ApprovalType.PRICING,
+                {}
+            );
+
+            if (!pricingApproval.authorized) {
+                blockingReasons.push('NO_APPROVED_PRICING');
+            }
+        }
+
+        // 4. Proposal Check
         const proposal = await db.proposals.findFirst({
             where: { commercial_package_id: commercialPackageId, status: ProposalStatus.APPROVED }
         });
@@ -70,4 +90,5 @@ export class CommercialApprovalGate {
 }
 
 export const commercialApprovalGate = new CommercialApprovalGate();
+
 

@@ -1,13 +1,17 @@
+"use client";
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { projectApi } from '@/lib/project-api';
 import { Project } from '@/types/project-domain';
+import { useAuth } from '@/hooks/use-auth';
 
 type Tab = 'overview' | 'plan' | 'scope' | 'review' | 'handover';
 
 export default function ProjectDetailPage() {
   const { projectId } = useParams();
   const id = projectId as string;
+  const { user } = useAuth();
+  const canManageProject = user?.role === 'OWNER' || user?.role === 'OPERATOR';
 
   const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [project, setProject] = useState<any | null>(null);
@@ -59,18 +63,30 @@ export default function ProjectDetailPage() {
               </span>
             </div>
           </div>
+          {canManageProject && (
           <div className="flex gap-3">
             <button
               onClick={async () => {
-                const newState = project.project.status === 'PENDING' ? 'STARTED' : 'IMPLEMENTING';
-                await projectApi.transitionProject({ projectId: id, toState: newState, reason: 'Operator transition', actorId: 'operator_1' });
+                const nextStates: Record<string, string> = {
+                  READY_TO_START: 'STARTED',
+                  PENDING: 'STARTED',
+                  STARTED: 'IMPLEMENTING',
+                  IMPLEMENTING: 'REVIEW',
+                  REVIEW: 'ACCEPTED',
+                  ACCEPTED: 'HANDED_OVER',
+                  HANDED_OVER: 'COMPLETED',
+                  COMPLETED: 'ARCHIVED',
+                };
+                const newState = nextStates[project.project.status];
+                await projectApi.transitionProject({ projectId: id, toState: newState, reason: 'Operator transition', actorId: user?.id || '' });
                 window.location.reload();
               }}
               className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-700"
             >
-              Advance State →
+              Advance State
             </button>
           </div>
+          )}
         </div>
       </header>
 
@@ -143,7 +159,7 @@ export default function ProjectDetailPage() {
                       onClick={() => window.location.reload()}
                       className="mt-2 text-xs text-blue-600 hover:underline"
                     >
-                      Refresh Plan Data 🔄
+                       Refresh Plan Data 🔄
                     </button>
                   </div>
                 </div>
@@ -207,3 +223,4 @@ export default function ProjectDetailPage() {
     </div>
   );
 }
+

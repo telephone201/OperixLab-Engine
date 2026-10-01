@@ -120,7 +120,8 @@ export class AgreementPaymentController {
      */
     async verifyPayment(req: Request, res: Response) {
         try {
-            const { paymentId, verifiedAmount, verifiedBy, decision, reason } = req.body;
+            const { paymentId, verifiedAmount, decision, reason } = req.body;
+            const verifiedBy = req.user!.id;
             const result = await paymentVerificationService.verifyPayment({
                 paymentId,
                 verifiedAmount,
@@ -224,7 +225,8 @@ export class AgreementPaymentController {
      */
     async startProject(req: Request, res: Response) {
         try {
-            const { projectId, userId } = req.body;
+            const { projectId } = req.body;
+            const userId = req.user!.id;
 
             // Re-verify eligibility at execution time
             const eligibility = await projectStartEligibilityGate.checkEligibility(projectId);
