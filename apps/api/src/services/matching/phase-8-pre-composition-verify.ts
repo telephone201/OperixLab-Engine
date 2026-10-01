@@ -43,7 +43,7 @@ export class Phase8PreCompositionSuite {
     }
 
     private async testHighScoreHardGateFail() {
-        const candidates = [{ id: 'c1', workflow_id: 'wf1', name: 'Super-Match', quality_score: 95 }];
+        const candidates = [{ id: 'c1', workflow_id: 'wf1', workflowLibraryId: 'c1', matchCandidateId: 'c1', name: 'Super-Match', quality_score: 95 }];
         const requirements = [{ id: 'r1', priority: 'MUST', covered: true, trigger_definition: 'Webhook' }];
 
         // Mock the evaluator to fail the trigger gate
@@ -60,7 +60,7 @@ export class Phase8PreCompositionSuite {
     }
 
     private async testModerateScoreAllPass() {
-        const candidates = [{ id: 'c1', workflow_id: 'wf1', name: 'Mid-Match', quality_score: 70 }];
+        const candidates = [{ id: 'c1', workflow_id: 'wf1', workflowLibraryId: 'c1', matchCandidateId: 'c1', name: 'Mid-Match', quality_score: 70 }];
         const requirements = [{ id: 'r1', priority: 'MUST', covered: true }];
 
         const evalSpy = jest.spyOn(this.gateEvaluator, 'evaluate').mockResolvedValue({
@@ -76,7 +76,7 @@ export class Phase8PreCompositionSuite {
     }
 
     private async testMustRequirementMissing() {
-        const candidates = [{ id: 'c1', workflow_id: 'wf1', name: 'MissingMust', quality_score: 90 }];
+        const candidates = [{ id: 'c1', workflow_id: 'wf1', workflowLibraryId: 'c1', matchCandidateId: 'c1', name: 'MissingMust', quality_score: 90 }];
         const requirements = [{ id: 'r1', priority: 'MUST', covered: false }];
 
         const decision = await this.strategyEngine.determineStrategy('lead1', candidates, requirements);
@@ -85,7 +85,7 @@ export class Phase8PreCompositionSuite {
     }
 
     private async testLicenseNotEligible() {
-        const candidates = [{ id: 'c1', workflow_id: 'wf1', name: 'BadLicense', quality_score: 90 }];
+        const candidates = [{ id: 'c1', workflow_id: 'wf1', workflowLibraryId: 'c1', matchCandidateId: 'c1', name: 'BadLicense', quality_score: 90 }];
         const requirements: any[] = [];
 
         const evalSpy = jest.spyOn(this.gateEvaluator, 'evaluate').mockResolvedValue({
@@ -101,7 +101,7 @@ export class Phase8PreCompositionSuite {
     }
 
     private async testSecurityBlocker() {
-        const candidates = [{ id: 'c1', workflow_id: 'wf1', name: 'Unsafe', quality_score: 90 }];
+        const candidates = [{ id: 'c1', workflow_id: 'wf1', workflowLibraryId: 'c1', matchCandidateId: 'c1', name: 'Unsafe', quality_score: 90 }];
         const requirements: any[] = [];
 
         const evalSpy = jest.spyOn(this.gateEvaluator, 'evaluate').mockResolvedValue({
@@ -118,7 +118,7 @@ export class Phase8PreCompositionSuite {
     }
 
     private async testNoSingleMatchCompose() {
-        const candidates = [{ id: 'c1', workflow_id: 'wf1', name: 'Partial1', quality_score: 50 }];
+        const candidates = [{ id: 'c1', workflow_id: 'wf1', workflowLibraryId: 'c1', matchCandidateId: 'c1', name: 'Partial1', quality_score: 50 }];
         const requirements = [{ id: 'r1', priority: 'MUST', covered: false }];
 
         // Mock gates to allow CUSTOMIZE/COMPOSE but not REUSE

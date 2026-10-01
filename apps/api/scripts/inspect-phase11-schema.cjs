@@ -1,36 +1,38 @@
-const { Client } = require("pg");
-require("dotenv").config({ path: "D:/OperixLabs Engine/config/.env" });
+const { Client } = require('pg');
+require('dotenv').config({ path: '../../config/.env' });
 
 (async () => {
-  const c = new Client({ connectionString: process.env.DATABASE_URL });
-  await c.connect();
+  const client = new Client({
+    host: process.env.DB_HOST,
+    port: Number(process.env.DB_PORT || 5432),
+    database: process.env.DB_NAME,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD
+  });
 
-  const tables = [
-    "commercial_packages",
-    "pricing_recommendations",
-    "offer_options",
-    "proposals",
-    "proposal_versions",
-    "commercial_agreements",
-    "payments",
-    "projects"
-  ];
+  await client.connect();
 
-  for (const table of tables) {
-    const r = await c.query(`
-      SELECT column_name, data_type
-      FROM information_schema.columns
-      WHERE table_schema = 'public'
-        AND table_name = $1
-      ORDER BY ordinal_position
-    `, [table]);
+  const result = await client.query(`
+    SELECT
+      table_name,
+      column_name,
+      data_type,
+      is_nullable,
+      column_default
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name IN (
+        'commercial_packages',
+        'pricing_recommendations',
+        'offer_options'
+      )
+    ORDER BY table_name, ordinal_position
+  `);
 
-    console.log("\\nTABLE:", table);
-    console.log(r.rows.map(x => `${x.column_name}: ${x.data_type}`).join("\\n"));
-  }
+  console.table(result.rows);
 
-  await c.end();
-})().catch(async e => {
-  console.error(e);
+  await client.end();
+})().catch((error) => {
+  console.error(error);
   process.exit(1);
 });

@@ -12,66 +12,122 @@ import fs from 'fs/promises';
 import crypto from 'crypto';
 
 export class Phase9Step3Verify {
+    private readonly testLeadId = '00000000-0000-0000-0000-000000000911';
+    private readonly testSolutionId = '00000000-0000-0000-0000-000000000901';
     async runTests() {
         console.log('[VERIFY] Starting Phase 9 Step 3 Verification Suite...');
-        const results = [];
 
-        try {
-            // Setup: Create a dummy solution and requirements for testing
-            const testSolutionId = 'sol_verify_p9s3';
-            const testRequirements = [
-                { id: 'req_1', priority: 'MUST', title: 'Lead Capture', integration_requirements: ['Form'] },
-                { id: 'req_2', priority: 'SHOULD', title: 'CRM Sync', integration_requirements: ['CRM'] }
-            ];
-            const testArch = { id: 'arch_1', strategy: 'REUSE' };
+        const results: Array<{
+            test: string;
+            status: 'PASS' | 'FAIL';
+            error?: string;
+        }> = [];
 
-            // 1. Structural Tests
-            results.push(await this.testInvalidJson());
-            results.push(await this.testDuplicateNodeIds());
-            results.push(await this.testBrokenConnection());
+        const tests: Array<{
+            name: string;
+            run: () => Promise<{ test: string; status: string }>;
+        }> = [
+            { name: 'Invalid JSON', run: () => this.testInvalidJson() },
+            { name: 'Duplicate Node IDs', run: () => this.testDuplicateNodeIds() },
+            { name: 'Broken Connection', run: () => this.testBrokenConnection() },
 
-            // 2. Dependency Tests
-            results.push(await this.testMissingCredential());
-            results.push(await this.testMissingEnvVar());
+            { name: 'Missing Credential', run: () => this.testMissingCredential() },
+            { name: 'Missing Env Var', run: () => this.testMissingEnvVar() },
 
-            // 3. Data Tests
-            results.push(await this.testExactMapping());
-            results.push(await this.testIncompatibleTypes());
-            results.push(await this.testUnknownMappingReview());
+            { name: 'Exact Mapping', run: () => this.testExactMapping() },
+            { name: 'Incompatible Types', run: () => this.testIncompatibleTypes() },
+            { name: 'Unknown Mapping Review', run: () => this.testUnknownMappingReview() },
 
-            // 4. Security Tests
-            results.push(await this.testEmbeddedSecret());
-            results.push(await this.testSafeCredentialReference());
+            { name: 'Embedded Secret', run: () => this.testEmbeddedSecret() },
+            { name: 'Safe Credential Reference', run: () => this.testSafeCredentialReference() },
 
-            // 5. Business Tests
-            results.push(await this.testMustRequirementSatisfied());
-            results.push(await this.testMustRequirementUnsatisfied());
+            { name: 'MUST Satisfied', run: () => this.testMustRequirementSatisfied() },
+            { name: 'MUST Unsatisfied', run: () => this.testMustRequirementUnsatisfied() },
 
-            // 6. Operational Tests
-            results.push(await this.testMissingTrigger());
-            results.push(await this.testDeadEndPath());
+            { name: 'Missing Trigger', run: () => this.testMissingTrigger() },
+            { name: 'Dead End Path', run: () => this.testDeadEndPath() },
 
-            // 7. Aggregation Tests
-            results.push(await this.testCriticalFindingFails());
-            results.push(await this.testReviewFindingRequiresReview());
+            { name: 'Critical Finding Fails', run: () => this.testCriticalFindingFails() },
+            { name: 'Review Finding Requires Review', run: () => this.testReviewFindingRequiresReview() },
 
-            // 8. Integrity & Boundary
-            results.push(await this.testArtifactHashVerification());
-            results.push(await this.testZipImmutability());
+            { name: 'Artifact Hash Verification', run: () => this.testArtifactHashVerification() },
+            { name: 'ZIP Immutability', run: () => this.testZipImmutability() }
+        ];
 
-        } catch (e) {
-            console.error('[VERIFY] Suite encountered critical error:', e);
+        for (const test of tests) {
+            try {
+                const result = await test.run();
+
+                results.push({
+                    test: result.test || test.name,
+                    status: 'PASS'
+                });
+
+                console.log(`[VERIFY] PASS: ${result.test || test.name}`);
+            } catch (error: any) {
+                const message = error instanceof Error
+                    ? error.message
+                    : String(error);
+
+                results.push({
+                    test: test.name,
+                    status: 'FAIL',
+                    error: message
+                });
+
+                console.error(`[VERIFY] FAIL: ${test.name} -> ${message}`);
+            }
         }
 
         return results;
     }
 
+    // --- Test fixture setup ---
+    private async ensureTestSolution(): Promise<void> {
+        const existingSolution = await db.solution_architectures.findUnique({
+            where: { id: this.testSolutionId }
+        });
+
+        if (existingSolution) {
+            return;
+        }
+
+        const existingLead = await db.leads.findUnique({
+            where: { id: this.testLeadId }
+        });
+
+        if (!existingLead) {
+            await db.leads.create({
+                data: {
+                    id: this.testLeadId,
+                    status: 'NEW',
+                    lead_score: 0,
+                    intent_score: 0,
+                    intent_status: 'NO_SIGNAL'
+                }
+            });
+        }
+
+        await db.solution_architectures.create({
+            data: {
+                id: this.testSolutionId,
+                lead_id: this.testLeadId,
+                strategy: 'REUSE',
+                blueprint: {
+                    verification: true,
+                    purpose: 'Phase 9 Step 3 validation verification'
+                },
+                version: 1,
+                status: 'DRAFT'
+            }
+        });
+    }
     // --- Helper: Create a versioned artifact for testing ---
-    private async createTestVersion(content: any, sourceId = 'src_test'): Promise<string> {
+    private async createTestVersion(content: any): Promise<string> {
+        await this.ensureTestSolution();
         const buffer = Buffer.from(JSON.stringify(content));
         const { versionId } = await workflowVersionService.createVersion({
-            solutionId: 'sol_test_verify',
-            workflowSourceId: sourceId,
+            solutionId: this.testSolutionId,
             content: buffer,
             originType: OriginType.REUSED
         });
@@ -99,53 +155,256 @@ export class Phase9Step3Verify {
     }
 
     private async testDuplicateNodeIds() {
-        // n8n usually uses objects for nodes, but we test the logic if it's processed as an array or has collisions
         const content = {
-            nodes: { 'n1': { name: 'A' }, 'n2': { name: 'B' } },
-            connections: []
+            nodes: [
+                {
+                    id: 'duplicate-node',
+                    name: 'First Node',
+                    type: 'n8n-nodes-base.set',
+                    position: [0, 0],
+                    parameters: {}
+                },
+                {
+                    id: 'duplicate-node',
+                    name: 'Second Node',
+                    type: 'n8n-nodes-base.set',
+                    position: [200, 0],
+                    parameters: {}
+                }
+            ],
+            connections: {}
         };
+
         const versionId = await this.createTestVersion(content);
-        const report = await validationOrchestrator.validateVersion(versionId, [], {}, []);
-        // Note: structuralValidator currently checks array-based nodes for duplicates.
+
+        const report = await validationOrchestrator.validateVersion(
+            versionId,
+            [],
+            {},
+            []
+        );
+
+        const finding = report.allFindings.find(
+            f => f.ruleId === 'STR-001'
+        );
+
+        if (!finding) {
+            throw new Error('Expected STR-001 duplicate node finding was not produced');
+        }
+
+        if (finding.severity !== FindingSeverity.CRITICAL) {
+            throw new Error(
+                `Expected STR-001 severity CRITICAL, got ${finding.severity}`
+            );
+        }
+
+        if (!finding.blocking) {
+            throw new Error('Duplicate node finding must be blocking');
+        }
+
+        if (report.overallStatus !== ValidationStatus.BLOCKED) {
+            throw new Error(
+                `Expected overall status BLOCKED, got ${report.overallStatus}`
+            );
+        }
+
         return { test: 'Duplicate Node IDs', status: 'PASS' };
     }
 
     private async testBrokenConnection() {
         const content = {
-            nodes: { 'n1': { type: 'start' } },
-            connections: [{ source: 'n1', target: 'NON_EXISTENT' }]
+            nodes: [
+                {
+                    id: 'n1',
+                    name: 'Start',
+                    type: 'n8n-nodes-base.manualTrigger',
+                    position: [0, 0],
+                    parameters: {}
+                }
+            ],
+            connections: {
+                Start: {
+                    main: [
+                        [
+                            {
+                                node: 'NON_EXISTENT',
+                                type: 'main',
+                                index: 0
+                            }
+                        ]
+                    ]
+                }
+            }
         };
+
         const versionId = await this.createTestVersion(content);
         const report = await validationOrchestrator.validateVersion(versionId, [], {}, []);
-        if (report.overallStatus !== ValidationStatus.FAILED) throw new Error('Broken connection must fail');
+        const finding = report.allFindings.find(f => f.ruleId === 'STR-003');
+
+        if (!finding) throw new Error('Expected STR-003 broken connection target finding was not produced');
+        if (finding.severity !== FindingSeverity.CRITICAL) throw new Error('Expected STR-003 severity CRITICAL');
+        if (!finding.blocking) throw new Error('Broken connection target finding must be blocking');
+        if (report.overallStatus !== ValidationStatus.BLOCKED) throw new Error('Expected overall status BLOCKED');
+
         return { test: 'Broken Connection', status: 'PASS' };
     }
 
     private async testMissingCredential() {
         const content = {
-            nodes: { 'n1': { parameters: { credentials: { crm: { id: null } } } } },
-            connections: []
+            nodes: [
+                {
+                    id: 'n1',
+                    name: 'CRM Action',
+                    type: 'n8n-nodes-base.set',
+                    position: [0, 0],
+                    parameters: {
+                        credentials: {
+                            crm: {
+                                id: null
+                            }
+                        }
+                    }
+                }
+            ],
+            connections: {}
         };
+
         const versionId = await this.createTestVersion(content);
         const report = await validationOrchestrator.validateVersion(versionId, [], {}, []);
-        if (report.overallStatus !== ValidationStatus.FAILED && report.overallStatus !== ValidationStatus.REQUIRES_REVIEW) {
-            throw new Error('Missing credential should be a finding');
-        }
+        const finding = report.allFindings.find(f => f.ruleId === 'DEP-001');
+
+        if (!finding) throw new Error('Expected DEP-001 missing credential finding was not produced');
+        if (finding.severity !== FindingSeverity.HIGH) throw new Error('Expected DEP-001 severity HIGH, got ' + finding.severity);
+        if (!finding.blocking) throw new Error('Missing credential finding must be blocking');
+        if (!finding.requiresReview) throw new Error('Missing credential finding must require review');
+        if (report.overallStatus !== ValidationStatus.REQUIRES_REVIEW) throw new Error('Expected overall status REQUIRES_REVIEW, got ' + report.overallStatus);
+
         return { test: 'Missing Credential', status: 'PASS' };
     }
 
     private async testMissingEnvVar() {
-        // Currently a placeholder in DependencyValidator
-        return { test: 'Missing Env Var', status: 'PASS' };
+        const variableName = 'OPERIX_VERIFY_MISSING_ENV_9_3';
+        const previousValue = process.env[variableName];
+
+        try {
+            delete process.env[variableName];
+
+            const content = {
+                nodes: [
+                    {
+                        id: 'n1',
+                        name: 'Environment Consumer',
+                        type: 'n8n-nodes-base.set',
+                        position: [0, 0],
+                        parameters: {
+                            value: '{{ .OPERIX_VERIFY_MISSING_ENV_9_3 }}'
+                        }
+                    }
+                ],
+                connections: {}
+            };
+
+            const versionId = await this.createTestVersion(content);
+            const report = await validationOrchestrator.validateVersion(versionId, [], {}, []);
+
+            const finding = report.allFindings.find(
+                f => f.ruleId === 'DEP-002'
+            );
+
+            if (!finding) {
+                throw new Error('Expected DEP-002 missing environment variable finding was not produced');
+            }
+
+            if (finding.severity !== FindingSeverity.HIGH) {
+                throw new Error(
+                    'Expected DEP-002 severity HIGH, got ' + finding.severity
+                );
+            }
+
+            if (!finding.blocking) {
+                throw new Error('Missing environment variable finding must be blocking');
+            }
+
+            if (!finding.requiresReview) {
+                throw new Error('Missing environment variable finding must require review');
+            }
+
+            if (report.overallStatus !== ValidationStatus.REQUIRES_REVIEW) {
+                throw new Error(
+                    'Expected overall status REQUIRES_REVIEW, got ' + report.overallStatus
+                );
+            }
+
+            return { test: 'Missing Env Var', status: 'PASS' };
+        } finally {
+            if (previousValue === undefined) {
+                delete process.env[variableName];
+            } else {
+                process.env[variableName] = previousValue;
+            }
+        }
     }
 
     private async testExactMapping() {
-        const content = { nodes: { 'n1': { parameters: { key: 'val' } } }, connections: [] };
-        const versionId = await this.createTestVersion(content);
-        const mappings = [{ sourceNodeId: 'n1', sourcePath: 'key', targetNodeId: 'n2', targetPath: 'key', transformationType: 'DIRECT' }];
+        const content = {
+            nodes: [
+                {
+                    id: 'n1',
+                    name: 'Source',
+                    type: 'n8n-nodes-base.set',
+                    position: [0, 0],
+                    parameters: {
+                        key: 'val'
+                    }
+                },
+                {
+                    id: 'n2',
+                    name: 'Target',
+                    type: 'n8n-nodes-base.set',
+                    position: [200, 0],
+                    parameters: {
+                        key: 'target'
+                    }
+                }
+            ],
+            connections: {
+                Source: {
+                    main: [
+                        [
+                            {
+                                node: 'Target',
+                                type: 'main',
+                                index: 0
+                            }
+                        ]
+                    ]
+                }
+            }
+        };
 
-        const report = await validationOrchestrator.validateVersion(versionId, [], {}, mappings);
-        if (report.overallStatus === ValidationStatus.FAILED) throw new Error('Exact mapping should not fail');
+        const versionId = await this.createTestVersion(content);
+
+        const mappings = [
+            {
+                sourceNodeId: 'n1',
+                sourcePath: 'key',
+                targetNodeId: 'n2',
+                targetPath: 'key',
+                transformationType: 'DIRECT'
+            }
+        ];
+
+        const report = await validationOrchestrator.validateVersion(
+            versionId,
+            [],
+            {},
+            mappings
+        );
+
+        if (report.overallStatus === ValidationStatus.FAILED) {
+            throw new Error('Exact mapping should not fail');
+        }
+
         return { test: 'Exact Mapping', status: 'PASS' };
     }
 
@@ -175,20 +434,75 @@ export class Phase9Step3Verify {
     }
 
     private async testSafeCredentialReference() {
-        const content = { nodes: { 'n1': { parameters: { credentials: { crm: { id: 'cred_123' } } } } }, connections: [] };
+        const content = {
+            nodes: [
+                {
+                    id: 'n1',
+                    name: 'CRM Action',
+                    type: 'n8n-nodes-base.set',
+                    position: [0, 0],
+                    parameters: {
+                        credentials: {
+                            crm: {
+                                id: 'cred_123'
+                            }
+                        }
+                    }
+                }
+            ],
+            connections: {}
+        };
+
         const versionId = await this.createTestVersion(content);
-        const report = await validationOrchestrator.validateVersion(versionId, [], {}, []);
-        if (report.overallStatus === ValidationStatus.FAILED) throw new Error('Credential reference should be safe');
+        const report = await validationOrchestrator.validateVersion(
+            versionId,
+            [],
+            {},
+            []
+        );
+
+        if (report.overallStatus === ValidationStatus.FAILED) {
+            throw new Error('Credential reference should be safe');
+        }
+
         return { test: 'Safe Credential Reference', status: 'PASS' };
     }
 
     private async testMustRequirementSatisfied() {
-        const requirements = [{ id: 'req_1', priority: 'MUST', title: 'Lead Capture' }];
-        const content = { nodes: { 'n1': { name: 'Lead Capture' } }, connections: [] };
+        const requirements = [
+            {
+                id: 'req_1',
+                priority: 'MUST',
+                title: 'Lead Capture'
+            }
+        ];
+
+        const content = {
+            nodes: [
+                {
+                    id: 'n1',
+                    name: 'Lead Capture',
+                    type: 'n8n-nodes-base.manualTrigger',
+                    position: [0, 0],
+                    parameters: {}
+                }
+            ],
+            connections: {}
+        };
+
         const versionId = await this.createTestVersion(content);
 
-        const report = await validationOrchestrator.validateVersion(versionId, requirements, {}, []);
-        if (report.overallStatus === ValidationStatus.FAILED) throw new Error('Satisfied MUST req should not fail');
+        const report = await validationOrchestrator.validateVersion(
+            versionId,
+            requirements,
+            {},
+            []
+        );
+
+        if (report.overallStatus === ValidationStatus.FAILED) {
+            throw new Error('Satisfied MUST req should not fail');
+        }
+
         return { test: 'MUST Satisfied', status: 'PASS' };
     }
 
@@ -236,7 +550,7 @@ export class Phase9Step3Verify {
     private async testArtifactHashVerification() {
         const content = Buffer.from('{"test": 1}');
         const { versionId } = await workflowVersionService.createVersion({
-            solutionId: 'sol_hash',
+            solutionId: this.testSolutionId,
             content,
             originType: OriginType.REUSED
         });
@@ -248,7 +562,7 @@ export class Phase9Step3Verify {
     }
 
     private async testZipImmutability() {
-        const zipPath = 'D:\\OperixLabs\\N8N.zip';
+        const zipPath = 'D:\\OperixLabs Engine\\N8N.zip';
         const hashBefore = await this.getFileHash(zipPath);
 
         // Run a validation run
@@ -266,4 +580,3 @@ export class Phase9Step3Verify {
 }
 
 export const phase9Step3Verify = new Phase9Step3Verify();
-
